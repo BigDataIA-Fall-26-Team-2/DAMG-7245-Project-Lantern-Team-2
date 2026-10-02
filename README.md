@@ -1,1 +1,1 @@
-# DAMG-7245-Project-Lantern--Team-2
+# DAMG-7245-Project-Lantern-Team-2
