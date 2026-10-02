@@ -2,7 +2,7 @@
 
 This file is the shared contract for whichever AI coding assistant you use — Claude, Codex, Copilot, or anything else. Open it at the start of every session and follow it regardless of tool. It encodes the Case Study 1 grading contract — deviating from it costs points, not just style.
 
-> If your tool auto-loads a specific filename (e.g. Claude Code reads `CLAUDE.md`, Codex CLI reads `AGENTS.md`), keep a one-line stub of that name that just says "read `SKILLS.md`" so it still loads automatically — don't fork the content into two files that can drift apart.
+No `CLAUDE.md`, `AGENTS.md`, or other tool-specific stub files — this is the only copy. If your assistant doesn't auto-load `SKILLS.md`, paste it in yourself at the start of the session.
 
 ## Non-negotiable structure
 - Repo layout, DVC stage names (`download, render, parse_pdfplumber, tables, layout, parse_docling, export, xbrl, evaluate`), and `data/` subfolder names are fixed by the assignment (Case Study 1, Appendix A). Do not rename or restructure them, even if a different name reads better.
