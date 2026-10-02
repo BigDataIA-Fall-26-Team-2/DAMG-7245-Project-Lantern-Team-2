@@ -2,7 +2,7 @@
 
 ## Before you start any work
 - `git fetch origin` and `git checkout main && git pull --ff-only` before branching — never branch off a stale `main`.
-- Create a branch per task: `feat/p0-download`, `feat/p5-schema`, `fix/xbrl-scale-bug`. Prefix with the Case Study 1 Part number when the work maps to one.
+- Create a branch per task, namespaced by your name: `name/pN-shortdesc` (e.g. `sai/p0-download`, `priya/p5-schema`) when the work maps to a Case Study Part. If it doesn't map to a Part (infra, a bugfix, docs), drop the part number: `name/shortdesc` (e.g. `sai/fix-xbrl-scale-bug`).
 
 ## Workflow
 1. Branch from up-to-date `main`.
