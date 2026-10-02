@@ -1,0 +1,4 @@
+# Auto-requests a reviewer on every PR and (once branch protection is enabled)
+# blocks merging without approval from one of these owners.
+# Replace the placeholders below with real GitHub usernames once the team confirms them.
+* @teammate1 @teammate2 @teammate3 @teammate4
