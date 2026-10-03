@@ -12,4 +12,8 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 
 | Tool | Used for | Pinned in |
 |---|---|---|
+| sec-edgar-downloader | Fetching raw 10-K/10-Q filings from EDGAR (`src/download.py`) | `requirements.txt` |
+| Playwright | Rendering filings to PDF (`src/render.py`) | `requirements.txt` |
+| PyYAML | Reading `params.yaml` | `requirements.txt` |
+| pypdf | Reading back each rendered PDF's actual page size for `manifest.csv` (`src/render.py`) | `requirements.txt` |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->

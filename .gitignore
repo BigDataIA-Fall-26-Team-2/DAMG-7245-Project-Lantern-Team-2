@@ -1,3 +1,6 @@
+# Pipeline data — large binaries, shared via Drive/DVC remote, not git
+/data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
