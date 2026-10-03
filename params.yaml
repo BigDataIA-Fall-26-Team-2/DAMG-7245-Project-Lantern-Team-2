@@ -1,0 +1,50 @@
+# LANTERN pipeline parameters — one section per DVC stage.
+# Minimum keys per Case Study 1, Appendix A. Each owner tunes their section in their own Part's PR.
+# See docs/CONTRACTS.md for shared data shapes (stems, bbox convention, table CSV layout).
+
+# Owner: Lokesh (Part 0 - download)
+download:
+  ticker: AAPL
+  forms: ["10-K", "10-Q"]
+  after: "2024-01-01"
+  before: "2026-08-01"
+  user_agent_name: "LANTERN Team 2"
+  user_agent_email: "nandavarapu.s@northeastern.edu"
+
+# Owner: Lokesh (Part 0 - render)
+render:
+  page_format: "Letter"
+
+# Owner: Lokesh (Part 1 - OCR fallback)
+ocr:
+  min_chars: 20
+  junk_ratio: 0.3
+  dpi: 300
+
+# Owner: Dhruvi (Part 2 - tables)
+tables:
+  min_rulings: 4
+  accept_score: 0.6
+
+# Owner: Dhruvi (Part 11 - XBRL); keys to be filled in once mapping/tolerance approach is set
+xbrl: {}
+
+# Owner: Shravya (Part 3 - layout)
+layout:
+  model: "efficientdet"
+  score_threshold: 0.5
+  pad_pt: 2.0
+
+# Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
+docling: {}
+
+# Owner: Shravya (Part 10 - benchmarking); keys to be filled in during that part
+bench: {}
+
+# Owner: Guna (Part 7 - managed document AI)
+managed:
+  enabled: false
+  provider: "aws_textract"
+
+# Owner: Guna (Part 9 - evaluation); thresholds to be set from the measured baseline
+evaluate: {}
