@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Data (DVC-managed; pull with `dvc pull`, not git)
+data/*
+!data/.gitkeep
