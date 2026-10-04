@@ -1,5 +1,2 @@
-sec-edgar-downloader==5.1.0
-playwright==1.55.0
-PyYAML==6.0.3
-pypdf==6.19.0
-pytest==9.1.1
+# Lokesh P0/P1/P8 environment; add other owners as their stages land.
+-r requirements/lokesh.txt

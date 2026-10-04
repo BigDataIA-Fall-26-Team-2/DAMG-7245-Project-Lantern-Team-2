@@ -12,42 +12,52 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 
 | Tool | Used for | Pinned in |
 |---|---|---|
-| sec-edgar-downloader | Fetching raw 10-K/10-Q filings from EDGAR (`src/download.py`) | `requirements.txt` |
-| Playwright | Rendering filings to PDF (`src/render.py`) | `requirements.txt` |
-| PyYAML | Reading `params.yaml` | `requirements.txt` |
-| pypdf | Reading back each rendered PDF's actual page size for `manifest.csv` (`src/render.py`) | `requirements.txt` |
-| pytest | Offline download-selection and rerun regression checks | `requirements.txt` |
+| sec-edgar-downloader | P0: SEC filing downloads | requirements/lokesh.txt |
+| Playwright | P0: Chromium HTML-to-PDF rendering | requirements/lokesh.txt |
+| PyYAML | Pipeline parameter loading | requirements/lokesh.txt |
+| pypdf | PDF metadata and fixture inspection | requirements/lokesh.txt |
+| pdfplumber | P1: text and word boxes | requirements/lokesh.txt |
+| pytesseract | P1: Tesseract OCR wrapper | requirements/lokesh.txt |
+| pdf2image | P0/P1: Poppler rasterization | requirements/lokesh.txt |
+| img2pdf | P0: image-only scanned fixtures | requirements/lokesh.txt |
+| DVC + dvc-s3 | P8: pipeline and S3 remote support | requirements/lokesh.txt |
+| pytest | P8: smoke and regression checks | requirements/lokesh.txt |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->
 
-## P0 corpus and reproduction
+## Lokesh's development environment (issue #11)
 
-The corpus is exactly one Apple 10-K and one Apple 10-Q:
-
-| Form | Fiscal period end | Accession | PDF stem |
-|---|---|---|---|
-| 10-K | 2025-09-27 | 0000320193-25-000079 | AAPL_10K_20250927 |
-| 10-Q | 2026-06-27 | 0000320193-26-000020 | AAPL_10Q_20260627 |
-
-`params.yaml` pins the date window, `limit: 1` per form, and expected accessions
-and fiscal periods. The downloader verifies the returned corpus against those
-pins. Each filing retains its original primary iXBRL filename next to its XSD
-and linkbases under `unpacked/`. The manifest includes accession/doc_id, CIK,
-original source path, ticker, form, period, PDF path, and renderer details.
-
-With Python 3.11 and an activated virtual environment:
+Use Python 3.11 explicitly: the default `python3` on the verified Mac is 3.14.
+Install Python 3.11, Tesseract (English language data), and Poppler first. On
+macOS: `brew install python@3.11 tesseract poppler`. On Linux, install the
+Python 3.11 interpreter and venv support plus `tesseract-ocr`,
+`tesseract-ocr-eng`, and `poppler-utils` with the distribution package manager.
 
 ```bash
-python -m pip install -r requirements.txt
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements/lokesh.txt
 python -m playwright install chromium
-python src/download.py --params params.yaml --output data/raw
-python src/render.py --params params.yaml --input data/raw --output data/rendered
-python -m pytest -q
+python -m pip check
+python -c "import sec_edgar_downloader, yaml, pypdf, pdfplumber, pytesseract, pdf2image, img2pdf, dvc, dvc_s3, pytest; from playwright.sync_api import sync_playwright; print('Imports OK')"
+tesseract --version
+pdftoppm -v
+dvc --version
 ```
 
-Existing raw directories containing other filings, or rendered directories
-containing other PDFs, are rejected. Archive those output directories outside
-`data/` before migrating an older corpus, then run these commands with clean
-output directories. Matching-corpus reruns are supported: the downloader
-re-fetches deleted submission bundles before unpacking; rendering overwrites
-the same two PDFs and rebuilds the manifest. Raw and rendered data remain
-local/ignored until the separate DVC integration lands.
+On Linux, Playwright may also require `python -m playwright install-deps chromium`.
+The root `requirements.txt` includes this pinned environment. Activate `.venv`
+in every new terminal; virtual environments are local and are not committed.
+Ghostscript is not needed by this P0/P1/P8 toolset; the table owner should add it
+only if the selected table extractor requires it.
+
+Verified locally on macOS arm64 with Python 3.11.11, Tesseract 5.5.2, and
+Poppler 26.09.0: dependency consistency, all listed imports, existing
+`download`/`render`/`contracts` module imports from PR #88, and an offline
+Chromium -> PDF -> pdfplumber -> Poppler -> Tesseract -> img2pdf smoke check.
+The synthetic text `LANTERN 12345` survived both text extraction and OCR.
+DVC 3.67.1 and pytest 9.1.1 start successfully.
+
+This verifies the local prerequisite only. Linux reproduction, the DVC pipeline,
+S3 access, and project regression tests remain separate work; those stages and
+tests do not yet exist on main. The download/render implementation remains in
+PR #88 and is not included in this environment branch.
