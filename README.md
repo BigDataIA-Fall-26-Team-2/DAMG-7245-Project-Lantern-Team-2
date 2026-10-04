@@ -12,19 +12,19 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 
 | Tool | Used for | Pinned in |
 |---|---|---|
-| sec-edgar-downloader | P0: SEC filing downloads | requirements/lokesh.txt |
-| Playwright | P0: Chromium HTML-to-PDF rendering | requirements/lokesh.txt |
-| PyYAML | Pipeline parameter loading | requirements/lokesh.txt |
-| pypdf | PDF metadata and fixture inspection | requirements/lokesh.txt |
-| pdfplumber | P1: text and word boxes | requirements/lokesh.txt |
-| pytesseract | P1: Tesseract OCR wrapper | requirements/lokesh.txt |
-| pdf2image | P0/P1: Poppler rasterization | requirements/lokesh.txt |
-| img2pdf | P0: image-only scanned fixtures | requirements/lokesh.txt |
-| DVC + dvc-s3 | P8: pipeline and S3 remote support | requirements/lokesh.txt |
-| pytest | P8: smoke and regression checks | requirements/lokesh.txt |
+| sec-edgar-downloader | P0: SEC filing downloads | requirements.txt |
+| Playwright | P0: Chromium HTML-to-PDF rendering | requirements.txt |
+| PyYAML | Pipeline parameter loading | requirements.txt |
+| pypdf | PDF metadata and fixture inspection | requirements.txt |
+| pdfplumber | P1: text and word boxes | requirements.txt |
+| pytesseract | P1: Tesseract OCR wrapper | requirements.txt |
+| pdf2image | P0/P1: Poppler rasterization | requirements.txt |
+| img2pdf | P0: image-only scanned fixtures | requirements.txt |
+| DVC + dvc-s3 | P8: pipeline and S3 remote support | requirements.txt |
+| pytest | P8: smoke and regression checks | requirements.txt |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->
 
-## Lokesh's development environment (issue #11)
+## Shared development environment
 
 Use Python 3.11 explicitly: the default `python3` on the verified Mac is 3.14.
 Install Python 3.11, Tesseract (English language data), and Poppler first. On
@@ -35,7 +35,7 @@ Python 3.11 interpreter and venv support plus `tesseract-ocr`,
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements/lokesh.txt
+python -m pip install -r requirements.txt
 python -m playwright install chromium
 python -m pip check
 python -c "import sec_edgar_downloader, yaml, pypdf, pdfplumber, pytesseract, pdf2image, img2pdf, dvc, dvc_s3, pytest; from playwright.sync_api import sync_playwright; print('Imports OK')"
@@ -45,7 +45,7 @@ dvc --version
 ```
 
 On Linux, Playwright may also require `python -m playwright install-deps chromium`.
-The root `requirements.txt` includes this pinned environment. Activate `.venv`
+All teammates install from the root `requirements.txt` and add new pinned dependencies there. Activate `.venv`
 in every new terminal; virtual environments are local and are not committed.
 Ghostscript is not needed by this P0/P1/P8 toolset; the table owner should add it
 only if the selected table extractor requires it.

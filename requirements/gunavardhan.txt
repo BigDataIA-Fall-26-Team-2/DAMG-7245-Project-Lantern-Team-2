@@ -1,1 +1,0 @@
-# Personal prototyping dependencies for gunavardhan; pin versions as added.
