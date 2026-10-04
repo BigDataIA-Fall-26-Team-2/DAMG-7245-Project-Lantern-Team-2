@@ -7,3 +7,10 @@
 - Changes: selected installed Python 3.11.11 explicitly instead of the shell's Python 3.14; reused installed Tesseract, Poppler, and Chromium; retained the four dependency versions already pinned by PR #88. Added tools for the assigned P0/P1/P8 scope and froze resolved dependencies.
 - Limitation: verified on macOS arm64 only; no Linux clean-room run, cloud access, DVC pipeline run, or project tests were claimed. Existing P0 scripts were imported from the original checkout, since they are not merged into main. No data downloads or cloud services were invoked.
 - Confidence: high for the observed local setup; cross-platform and full-pipeline reproduction remain unverified. Author must review this entry and be able to explain, modify, test, and defend the changes before submission.
+
+
+## Shared dependency-file consolidation
+
+- Tool: Codex (GPT-6). Moved all 122 existing pins unchanged into the shared root `requirements.txt`, removed per-person files, and updated setup commands and tool references.
+- Verification: compared the exact dependency lists before and after on every affected branch; checked installation against the existing Python 3.11 environment and ran the P0 regression tests. No package versions changed.
+- Limitation: this reorganizes the verified local environment; Linux clean-room reproduction remains unverified. Author review remains required.
