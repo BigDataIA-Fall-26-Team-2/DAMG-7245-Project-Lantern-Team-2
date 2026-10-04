@@ -12,4 +12,52 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 
 | Tool | Used for | Pinned in |
 |---|---|---|
+| sec-edgar-downloader | P0: SEC filing downloads | requirements/lokesh.txt |
+| Playwright | P0: Chromium HTML-to-PDF rendering | requirements/lokesh.txt |
+| PyYAML | Pipeline parameter loading | requirements/lokesh.txt |
+| pypdf | PDF metadata and fixture inspection | requirements/lokesh.txt |
+| pdfplumber | P1: text and word boxes | requirements/lokesh.txt |
+| pytesseract | P1: Tesseract OCR wrapper | requirements/lokesh.txt |
+| pdf2image | P0/P1: Poppler rasterization | requirements/lokesh.txt |
+| img2pdf | P0: image-only scanned fixtures | requirements/lokesh.txt |
+| DVC + dvc-s3 | P8: pipeline and S3 remote support | requirements/lokesh.txt |
+| pytest | P8: smoke and regression checks | requirements/lokesh.txt |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->
+
+## Lokesh's development environment (issue #11)
+
+Use Python 3.11 explicitly: the default `python3` on the verified Mac is 3.14.
+Install Python 3.11, Tesseract (English language data), and Poppler first. On
+macOS: `brew install python@3.11 tesseract poppler`. On Linux, install the
+Python 3.11 interpreter and venv support plus `tesseract-ocr`,
+`tesseract-ocr-eng`, and `poppler-utils` with the distribution package manager.
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements/lokesh.txt
+python -m playwright install chromium
+python -m pip check
+python -c "import sec_edgar_downloader, yaml, pypdf, pdfplumber, pytesseract, pdf2image, img2pdf, dvc, dvc_s3, pytest; from playwright.sync_api import sync_playwright; print('Imports OK')"
+tesseract --version
+pdftoppm -v
+dvc --version
+```
+
+On Linux, Playwright may also require `python -m playwright install-deps chromium`.
+The root `requirements.txt` includes this pinned environment. Activate `.venv`
+in every new terminal; virtual environments are local and are not committed.
+Ghostscript is not needed by this P0/P1/P8 toolset; the table owner should add it
+only if the selected table extractor requires it.
+
+Verified locally on macOS arm64 with Python 3.11.11, Tesseract 5.5.2, and
+Poppler 26.09.0: dependency consistency, all listed imports, existing
+`download`/`render`/`contracts` module imports from PR #88, and an offline
+Chromium -> PDF -> pdfplumber -> Poppler -> Tesseract -> img2pdf smoke check.
+The synthetic text `LANTERN 12345` survived both text extraction and OCR.
+DVC 3.67.1 and pytest 9.1.1 start successfully.
+
+This verifies the local prerequisite only. Linux reproduction, the DVC pipeline,
+S3 access, and project regression tests remain separate work; those stages and
+tests do not yet exist on main. The download/render implementation remains in
+PR #88 and is not included in this environment branch.

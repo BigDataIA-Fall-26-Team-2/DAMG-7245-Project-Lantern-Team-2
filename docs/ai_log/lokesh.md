@@ -1,9 +1,9 @@
-# AI Engineering Log — Lokesh
+# Lokesh AI Engineering Log
 
-## 2026-10-03 — Issue #4: params.yaml skeleton
+## Issue #11 — Python 3.11 environment
 
-- **Tool/model:** Claude Code (Sonnet 5)
-- **What it contributed:** Read Case Study 1 Appendix A (minimum `params.yaml` keys) to build the skeleton's 10 sections (one per owner/stage). When the plan changed from "two 10-Ks" to "one 10-K, one 10-Q," it found the tutorial's own worked example (`ticker/forms/after/before` block in the Tool Tutorial PDF) and pinned the actual filings by querying SEC EDGAR's `data.sec.gov/submissions` API directly for Apple's real accession numbers and period dates, then updated `params.yaml` and issue #5 (`docs/CONTRACTS.md`) to match.
-- **How verified:** Parsed the generated `params.yaml` with `python3 -c "import yaml"` to confirm valid YAML and the exact key names from Appendix A; cross-checked the pinned 10-K/10-Q dates and accessions against SEC EDGAR's raw submissions JSON (not a summarized fetch — see limitation below).
-- **Failure/limitation found:** A first attempt to look up Apple's most recent 10-Q via a web-fetch summarization tool returned an incorrect period date. Caught by re-fetching the raw EDGAR JSON and parsing filing dates/forms directly instead of trusting the summary.
-- **Confidence statement:** High confidence in the 6 Appendix-A-mandated sections (`download`, `render`, `ocr`, `tables`, `layout`, `managed`). The other 4 sections (`xbrl`, `docling`, `bench`, `evaluate`) are intentionally left empty — the brief doesn't mandate keys for them, and their real values depend on work not yet done (Parts 4, 9, 10, 11).
+- Tool: Codex (GPT-6). Created the isolated environment, pinned its dependencies, and drafted setup documentation.
+- Verification: `pip check` passed; P0 scripts and P1/P8 package imports passed; Chromium rendered a synthetic page, pdfplumber extracted its text, Poppler rasterized it, Tesseract recognized `LANTERN 12345`, and img2pdf produced a readable one-page image-only PDF. DVC and pytest version commands passed.
+- Changes: selected installed Python 3.11.11 explicitly instead of the shell's Python 3.14; reused installed Tesseract, Poppler, and Chromium; retained the four dependency versions already pinned by PR #88. Added tools for the assigned P0/P1/P8 scope and froze resolved dependencies.
+- Limitation: verified on macOS arm64 only; no Linux clean-room run, cloud access, DVC pipeline run, or project tests were claimed. Existing P0 scripts were imported from the original checkout, since they are not merged into main. No data downloads or cloud services were invoked.
+- Confidence: high for the observed local setup; cross-platform and full-pipeline reproduction remain unverified. Author must review this entry and be able to explain, modify, test, and defend the changes before submission.
