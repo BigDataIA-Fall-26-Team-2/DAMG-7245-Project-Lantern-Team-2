@@ -13,6 +13,7 @@ from sec_edgar_downloader import Downloader
 DOCUMENT_RE = re.compile(r"<DOCUMENT>(.*?)</DOCUMENT>", re.DOTALL)
 FILENAME_RE = re.compile(r"<FILENAME>(.*?)[\r\n]")
 HEADER_FIELD_RE = {
+    "cik": re.compile(r"^\s*CENTRAL INDEX KEY:\s*(\d+)", re.MULTILINE),
     "accession": re.compile(r"^ACCESSION NUMBER:\s*(\S+)", re.MULTILINE),
     "period": re.compile(r"^CONFORMED PERIOD OF REPORT:\s*(\S+)", re.MULTILINE),
     "filing_date": re.compile(r"^FILED AS OF DATE:\s*(\S+)", re.MULTILINE),
@@ -32,6 +33,7 @@ def unpack_submission(submission_path: Path) -> dict:
             raise ValueError(f"{submission_path}: missing header field for '{key}'")
         meta[key] = match.group(1)
 
+    meta["cik"] = meta["cik"].zfill(10)
     unpacked_dir = submission_path.parent / "unpacked"
     unpacked_dir.mkdir(exist_ok=True)
 
@@ -41,9 +43,11 @@ def unpack_submission(submission_path: Path) -> dict:
         filename_match = FILENAME_RE.search(doc)
         if not filename_match:
             continue
-        if i == 0:
-            continue  # SEQUENCE 1 is the primary document, already kept as primary-document.*
         filename = filename_match.group(1).strip()
+        if Path(filename).name != filename or filename in {".", ".."}:
+            raise ValueError(f"unsafe embedded filename: {filename}")
+        if i == 0:
+            meta["source_file"] = filename
         if filename in seen_filenames:
             raise ValueError(f"{submission_path}: duplicate document filename '{filename}'")
         seen_filenames.add(filename)
@@ -62,6 +66,17 @@ def main(params_path: str, output: str) -> None:
     raw_dir = Path(output)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
+    expected = params["filings"]
+    if params["limit"] != 1 or set(expected) != set(params["forms"]):
+        raise ValueError("configure one pinned filing per form with limit: 1")
+    expected_dirs = {
+        raw_dir / "sec-edgar-filings" / params["ticker"] / form / filing["accession"]
+        for form, filing in expected.items()
+    }
+    existing_dirs = set(raw_dir.glob("sec-edgar-filings/*/*/*/"))
+    if existing_dirs - expected_dirs:
+        raise ValueError("raw output contains filings outside params.yaml; archive it and use a clean output directory")
+
     dl = Downloader(params["user_agent_name"], params["user_agent_email"], raw_dir)
 
     for form in params["forms"]:
@@ -70,6 +85,7 @@ def main(params_path: str, output: str) -> None:
         count = dl.get(
             form,
             params["ticker"],
+            limit=params["limit"],
             after=params["after"],
             before=params["before"],
             download_details=True,
@@ -79,16 +95,21 @@ def main(params_path: str, output: str) -> None:
         print(f"downloaded {count} {form} filing(s)")
 
     filing_dirs = sorted(raw_dir.glob(f"sec-edgar-filings/{params['ticker']}/*/*/"))
+    if set(filing_dirs) != expected_dirs:
+        raise ValueError("downloaded accessions do not match params.yaml pinned filings")
     for filing_dir in filing_dirs:
         if len(list(filing_dir.glob("primary-document.*"))) != 1:
             raise RuntimeError(f"{filing_dir}: expected one primary-document file from download_details")
 
         submission_path = filing_dir / "full-submission.txt"
         meta = unpack_submission(submission_path)
-        submission_path.unlink()  # fully decomposed into unpacked_dir; avoid storing it twice
         meta["ticker"] = params["ticker"]
         meta["form"] = filing_dir.parent.name
+        pinned = expected[meta["form"]]
+        if meta["accession"] != pinned["accession"] or meta["period"] != pinned["period"]:
+            raise ValueError(f"{filing_dir}: filing header does not match pinned accession/period")
         (filing_dir / "unpacked" / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+        submission_path.unlink()  # downloader re-fetches this on reruns
         print(f"unpacked {filing_dir.name} ({meta['form']}, period {meta['period']})")
 
 

@@ -15,13 +15,14 @@ from pypdf import PdfReader
 from contracts import stem_for
 
 MANIFEST_FIELDS = [
-    "doc_id", "ticker", "form", "period", "stem", "pdf_path",
+    "doc_id", "accession", "cik", "source_file", "ticker", "form", "period", "stem", "pdf_path",
     "renderer", "renderer_version", "page_width_pt", "page_height_pt",
 ]
 
 
 def main(params_path: str, input_dir: str, output: str) -> None:
-    params = yaml.safe_load(Path(params_path).read_text())["render"]
+    config = yaml.safe_load(Path(params_path).read_text())
+    params = config["render"]
     page_format = params["page_format"]
 
     out_dir = Path(output)
@@ -31,6 +32,19 @@ def main(params_path: str, input_dir: str, output: str) -> None:
     if not filing_dirs:
         raise RuntimeError(f"no filings found under {input_dir} — run src/download.py first")
 
+    expected_dirs = {
+        Path(input_dir) / "sec-edgar-filings" / config["download"]["ticker"] / form / filing["accession"]
+        for form, filing in config["download"]["filings"].items()
+    }
+    if set(filing_dirs) != expected_dirs:
+        raise ValueError("render input does not match params.yaml pinned filings")
+    expected_stems = {
+        stem_for({"ticker": config["download"]["ticker"], "form": form, "period": filing["period"]})
+        for form, filing in config["download"]["filings"].items()
+    }
+    if {p.stem for p in out_dir.glob("*.pdf")} - expected_stems:
+        raise ValueError("render output contains stale PDFs; archive it and use a clean output directory")
+
     with sync_playwright() as pw, (out_dir / "manifest.csv").open("w", newline="") as f:
         browser = pw.chromium.launch()
         page = browser.new_page()
@@ -39,6 +53,10 @@ def main(params_path: str, input_dir: str, output: str) -> None:
 
         for filing_dir in filing_dirs:
             meta = json.loads((filing_dir / "unpacked" / "meta.json").read_text())
+            pinned = config["download"]["filings"][filing_dir.parent.name]
+            if (meta["accession"] != pinned["accession"] or meta["period"] != pinned["period"]
+                    or meta["form"] != filing_dir.parent.name or meta["ticker"] != config["download"]["ticker"]):
+                raise ValueError(f"{filing_dir}: metadata does not match pinned filing")
             primary_docs = list(filing_dir.glob("primary-document.*"))
             if len(primary_docs) != 1:
                 raise RuntimeError(f"{filing_dir}: expected one primary-document file, found {len(primary_docs)}")
@@ -54,6 +72,9 @@ def main(params_path: str, input_dir: str, output: str) -> None:
 
             writer.writerow({
                 "doc_id": meta["accession"],
+                "accession": meta["accession"],
+                "cik": meta["cik"],
+                "source_file": str(filing_dir / "unpacked" / meta["source_file"]),
                 "ticker": meta["ticker"],
                 "form": meta["form"],
                 "period": meta["period"],

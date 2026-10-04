@@ -5,6 +5,10 @@
 download:
   ticker: AAPL
   forms: ["10-K", "10-Q"]
+  limit: 1  # exactly one of each form, per the case study's scope
+  filings:
+    10-K: {accession: "0000320193-25-000079", period: "20250927"}
+    10-Q: {accession: "0000320193-26-000020", period: "20260627"}
   after: "2024-01-01"
   before: "2026-08-01"  # pinned for reproducibility; bump manually to pick up newer filings
   user_agent_name: "LANTERN Team 2"
