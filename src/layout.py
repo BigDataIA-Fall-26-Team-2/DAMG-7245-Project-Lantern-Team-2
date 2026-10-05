@@ -1,16 +1,19 @@
 """Detect layout blocks on every rendered page with LayoutParser (EfficientDet, PubLayNet).
 
 Stage: layout. Reads params.yaml:layout, data/rendered/ and its manifest.csv.
-Writes data/layout/{stem}.blocks.jsonl and QA overlays in reports/layout/.
+Writes data/layout/{stem}.blocks.jsonl, data/layout/{stem}.pages.csv,
+figure crops in data/figures/, and QA overlays in reports/layout/.
 """
 import argparse
 import csv
 import json
+import re
 import urllib.request
 from pathlib import Path
 
 import numpy as np
 import pdfplumber
+import pytesseract
 import torch
 import yaml
 import layoutparser as lp
@@ -33,7 +36,14 @@ torch.serialization.add_safe_globals([
 
 DPI = 150         # resolution the page image is rendered at for the detector
 K = 72 / DPI      # pixels -> PDF points
+TEXT_TYPES = {"Text", "Title", "List", "Table"}   # boxes whose text we read (Table: placeholder until P2 routing)
+# Apple's running page footer, e.g. "Apple Inc. | 2025 Form 10-K | 5" or "... Form 10-Q | 12"
+FOOTER = re.compile(r"form\s+10-[kq]\s*\|\s*\d+\s*$", re.IGNORECASE)
 
+
+def is_footer(text):
+    """True if a block's text is the running page footer, not a real heading."""
+    return bool(text) and bool(FOOTER.search(text.strip().splitlines()[-1]))
 
 def load_model():
     """Load the PubLayNet EfficientDet model, downloading the weights first if missing."""
@@ -76,6 +86,29 @@ def detect_page(model, page, params):
     return img, lp.Layout(kept), records
 
 
+def reading_order(records, page_width):
+    """Sort blocks for reading: left column before right column, then top to bottom."""
+    mid = page_width / 2
+    def column(r):
+        return 1 if r["bbox"][0] >= mid else 0   # a block that starts in the right half is the right column
+    return sorted(records, key=lambda r: (column(r), r["bbox"][1], r["bbox"][0]))
+
+
+def block_text(page, bbox, ocr_dpi, pad=0.0):
+    """Text inside a box via pdfplumber; OCR the crop with Tesseract only if pdfplumber finds nothing.
+
+    pad widens the box left and right only (the detector's boxes often clip first/last letters);
+    no vertical padding, so we don't pull in lines from neighbouring blocks."""
+    x0, top, x1, bottom = bbox
+    x0, x1 = max(x0 - pad, 0), min(x1 + pad, float(page.width))
+    crop = page.crop((x0, top, x1, bottom))
+    text = (crop.extract_text() or "").strip()
+    if text:
+        return text, False
+    img = crop.to_image(resolution=ocr_dpi).original
+    return pytesseract.image_to_string(img).strip(), True
+
+
 COLORS = {"Text": "blue", "Title": "red", "List": "green", "Table": "orange", "Figure": "purple"}
 
 def draw(img, layout):
@@ -93,11 +126,14 @@ def draw(img, layout):
 def load_params(path="params.yaml"):
     return yaml.safe_load(Path(path).read_text())
 
-def main(params_path, input_dir, output, qa_dir):
-    params = load_params(params_path)["layout"]
-    out, qa = Path(output), Path(qa_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    qa.mkdir(parents=True, exist_ok=True)
+
+def main(params_path, input_dir, output, qa_dir, figures_dir):
+    all_params = load_params(params_path)
+    params = all_params["layout"]
+    ocr_dpi = all_params["ocr"]["dpi"]          # reuse Lokesh's OCR resolution (Part 1)
+    out, qa, figs = Path(output), Path(qa_dir), Path(figures_dir)
+    for d in (out, qa, figs):
+        d.mkdir(parents=True, exist_ok=True)
 
     # stem -> doc_id (accession), from Lokesh's render manifest
     manifest = {}
@@ -113,13 +149,24 @@ def main(params_path, input_dir, output, qa_dir):
         stem = pdf_path.stem
         doc_id = manifest.get(stem, stem)
         counts, page_rows = {}, []
+        section = ""   # most recent Title; carries across pages until the next one
         with pdfplumber.open(pdf_path) as pdf, open(out / f"{stem}.blocks.jsonl", "w") as f:
             for page in pdf.pages:
                 n = page.page_number
                 img, kept, recs = detect_page(model, page, params)
-                for i, r in enumerate(recs, start=1):
-                    rec = {"doc_id": doc_id, "page": n, "block_id": f"p{n:04d}_b{i:03d}",
-                           **r, "model": MODEL_URI}
+                recs = reading_order(recs, float(page.width))
+                for i, r in enumerate(recs, start=1):     # ids follow reading order
+                    block_id = f"p{n:04d}_b{i:03d}"
+                    text, used_ocr = None, False
+                    if r["block_type"] in TEXT_TYPES:
+                        text, used_ocr = block_text(page, r["bbox"], ocr_dpi, params["text_pad_pt"])
+                    footer = is_footer(text)
+                    if r["block_type"] == "Title" and text and not footer:
+                        section = text.splitlines()[0][:200]
+                    if r["block_type"] == "Figure":
+                        page.crop(r["bbox"]).to_image(resolution=DPI).save(figs / f"{stem}_{block_id}.png")
+                    rec = {"doc_id": doc_id, "page": n, "block_id": block_id, **r, "model": MODEL_URI,
+                           "section": section, "text": text, "ocr": used_ocr, "footer": footer}
                     f.write(json.dumps(rec) + "\n")
                     counts[r["block_type"]] = counts.get(r["block_type"], 0) + 1
                 # one row per page, so blank pages are recorded instead of silently missing
@@ -145,5 +192,6 @@ if __name__ == "__main__":
     ap.add_argument("--input", default="data/rendered")
     ap.add_argument("--output", default="data/layout")
     ap.add_argument("--qa", default="reports/layout")
+    ap.add_argument("--figures", default="data/figures")
     a = ap.parse_args()
-    main(a.params, a.input, a.output, a.qa)
+    main(a.params, a.input, a.output, a.qa, a.figures)
