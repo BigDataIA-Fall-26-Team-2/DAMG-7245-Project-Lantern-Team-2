@@ -1,3 +1,6 @@
+# Pipeline data — large binaries, shared via Drive/DVC remote, not git
+/data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -216,3 +219,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Data (DVC-managed; pull with `dvc pull`, not git)
+data/*
+!data/.gitkeep
