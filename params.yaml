@@ -36,8 +36,12 @@ xbrl: {}
 # Owner: Shravya (Part 3 - layout)
 layout:
   model: "efficientdet"
-  score_threshold: 0.5
+  score_threshold: 0.25  # sweep on 9 pages: 0.25/0.2/0.1 identical; 0.3 drops blocks on 6/9; 0.5 leaves a page empty
+  max_overlap: 0.5  # drop a box if >50% of it lies inside a higher-scoring box
   pad_pt: 2.0
+  qa_pages:              # pages that get a box-overlay picture in reports/layout/
+    AAPL_10K_20250927: [1, 10, 20, 32, 34, 50]
+    AAPL_10Q_20260627: [4]
 
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
 docling: {}
