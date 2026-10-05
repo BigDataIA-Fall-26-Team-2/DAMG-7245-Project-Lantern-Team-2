@@ -22,6 +22,11 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 | img2pdf | P0: image-only scanned fixtures | requirements.txt |
 | DVC + dvc-s3 | P8: pipeline and S3 remote support | requirements.txt |
 | pytest | P8: smoke and regression checks | requirements.txt |
+| Camelot (camelot-py) + OpenCV (opencv-python-headless) | P2: table bake-off (lattice/stream/network/hybrid) and hybrid extractor | requirements.txt |
+| pandas | P2/P11: table CSVs and XBRL value comparison | requirements.txt |
+| Arelle (arelle-release) | P11: iXBRL fact extraction | requirements.txt |
+| difflib | P11: fuzzy label-to-concept matching | Python standard library |
+| Streamlit | App: team UI (frontend/) | requirements.txt |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->
 
 ## Shared development environment
@@ -39,6 +44,7 @@ python -m pip install -r requirements.txt
 python -m playwright install chromium
 python -m pip check
 python -c "import sec_edgar_downloader, yaml, pypdf, pdfplumber, pytesseract, pdf2image, img2pdf, dvc, dvc_s3, pytest; from playwright.sync_api import sync_playwright; print('Imports OK')"
+python -c "import camelot, cv2, pandas, streamlit, difflib; from camelot.parsers import Lattice, Stream, Network, Hybrid; from arelle import Cntlr; print('Table, XBRL and app imports OK')"
 tesseract --version
 pdftoppm -v
 dvc --version
@@ -61,3 +67,14 @@ This verifies the local prerequisite only. Linux reproduction, the DVC pipeline,
 S3 access, and project regression tests remain separate work; those stages and
 tests do not yet exist on main. The download/render implementation remains in
 PR #88 and is not included in this environment branch.
+
+Table, XBRL and app tools (issue #12): `camelot-py`, `opencv-python-headless`,
+`pandas`, `arelle-release` and `streamlit` were added to the root
+`requirements.txt` (35 new pins including dependencies). A
+`pip install --dry-run` was run first and confirmed that no existing pin
+changes. Verified locally on macOS arm64 with Python 3.11.17, Tesseract 5.5.3,
+Poppler 26.09.0 and Ghostscript 10.08.0: `pip check` reports no broken
+requirements, and camelot (Lattice/Stream/Network/Hybrid parsers), cv2,
+pdfplumber, pandas, streamlit, arelle and difflib all import. These are import
+checks only: table extraction quality is measured in the P2 bake-off (#17),
+which will also confirm whether this Camelot version needs Ghostscript.
