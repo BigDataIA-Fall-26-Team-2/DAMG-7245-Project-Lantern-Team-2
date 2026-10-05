@@ -14,3 +14,12 @@
 - Tool: Codex (GPT-6). Moved all 122 existing pins unchanged into the shared root `requirements.txt`, removed per-person files, and updated setup commands and tool references.
 - Verification: compared the exact dependency lists before and after on every affected branch; checked installation against the existing Python 3.11 environment and ran the P0 regression tests. No package versions changed.
 - Limitation: this reorganizes the verified local environment; Linux clean-room reproduction remains unverified. Author review remains required.
+
+
+## 2026-10-05 — Issue #15: offline PDF fixtures
+
+- **Tool/model:** Codex (GPT-6). Selected source pages, built three Git-tracked PDFs, added a parameterized rebuild script, provenance README, and offline artifact checks.
+- **Verification:** Inspected all five output pages visually; scanned PDF has three image-only pages, statement PDF retains its text layer, and Amdocs PDF has four prose columns across an original spread. Full repository suite: 13 passed. A second build produced byte-identical PDFs. Final scan rendering matches the visually inspected version pixel-for-pixel. Total fixture size: 1,817,188 bytes.
+- **Failure/fix:** Default img2pdf backend changed bytes between runs despite date suppression; explicitly selecting the internal backend fixed this. Full test collection initially failed because the local environment lacked the already-pinned pandas dependency; installed it under root requirements constraints, then reran successfully.
+- **Limits:** External multi-column page is an SEC-filed Amdocs annual-report exhibit, not an Apple corpus document. Scans are clean rasterizations, not degraded real-world scans. No OCR accuracy or P9 ground-truth completeness is claimed; Linux execution remains unverified.
+- **Confidence/responsibility:** High confidence in fixture structure, documented provenance, and measured checks. Author review and ability to explain, modify, test, and defend the deliverables remain required.
