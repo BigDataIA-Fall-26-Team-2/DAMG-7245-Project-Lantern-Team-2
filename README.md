@@ -78,9 +78,3 @@ requirements, and camelot (Lattice/Stream/Network/Hybrid parsers), cv2,
 pdfplumber, pandas, streamlit, arelle and difflib all import. These are import
 checks only: table extraction quality is measured in the P2 bake-off (#17),
 which will also confirm whether this Camelot version needs Ghostscript.
-
-## Offline test fixtures
-
-Three Git-tracked PDFs in `tests/fixtures/` cover scanned OCR input, an income
-statement, and multi-column prose. See [fixture provenance and preparation notes](tests/fixtures/README.md).
-Run `python -m pytest -q tests/test_fixtures.py` without SEC, DVC, or cloud access.
