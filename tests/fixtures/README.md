@@ -29,36 +29,26 @@ it does not add Amdocs to the two-filing Apple corpus or XBRL evaluation.
 Apple's narrative pages inspected were single-column; numeric table columns
 were not used as a substitute for multi-column prose.
 
-## Rebuild (developer only)
+## Preparation record
 
-Install root `requirements.txt` in Python 3.11 and install Poppler. Download the
-external source to a temporary directory with the configured SEC User-Agent:
+Codex prepared these PDFs as a one-time task:
 
-```bash
-python - <<'PY'
-from pathlib import Path
-import requests, yaml
-config = yaml.safe_load(Path('params.yaml').read_text())
-d = config['download']
-r = requests.get(config['fixtures']['multicolumn_url'],
-                 headers={'User-Agent': d['user_agent_name'] + ' ' + d['user_agent_email']},
-                 timeout=60)
-r.raise_for_status()
-Path('/tmp/lantern-amdocs-2024.pdf').write_bytes(r.content)
-PY
-python src/fixtures.py --params params.yaml --input data/rendered \
-  --external /tmp/lantern-amdocs-2024.pdf --output tests/fixtures
-python -m pytest -q tests/test_fixtures.py
-```
+- Rasterized Apple PDF pages 4, 32, and 37 with `pdftoppm` at 200 DPI in
+  grayscale PNG mode, then combined them with `img2pdf` into an image-only
+  PDF preserving Letter dimensions (612 × 792 pt).
+- Extracted Apple page 32 and Amdocs page 6 with pypdf, preserving native
+  text and layout.
+- Used Poppler 26.09.0, pypdf 6.19.0, and img2pdf 0.6.3. The img2pdf
+  internal engine and disabled date metadata produced repeatable output.
 
-The `fixtures` section of `params.yaml` pins source SHA-256 values, page choices,
-and 200 DPI. A changed source (including a re-render with changed PDF metadata)
-is rejected: visually recheck pagination before deliberately updating the hash.
-The builder calls `pdftoppm` in grayscale PNG mode, then `img2pdf` without a
-text layer, preserving the original Letter dimensions. Native pages are copied
-with pypdf. The img2pdf internal engine avoids variable PDF identifiers; a second
-build produced byte-identical PDFs for all three fixtures. Verified tools: Poppler 26.09.0, pypdf 6.19.0, img2pdf 0.6.3,
-PyYAML 6.0.3. Other system-tool versions may change output bytes.
+No fixture-generation script or pipeline stage is required. The finished PDFs
+are the inputs; tests consume them directly. If replacing them later, verify
+source pagination visually and update this provenance record.
+
+Source SHA-256 values used during preparation:
+
+- Apple rendered PDF: `d4b8c0b3a643378938e7c6277039ac7c50e0135743acd8955230dd654fd16066`
+- Amdocs original PDF: `9921801eb9f4100083918555a8f9908cd179d0ef540fd5f407044f0309deb604`
 
 ## Validation and limitations
 

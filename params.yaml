@@ -52,14 +52,3 @@ managed:
 
 # Owner: Guna (Part 9 - evaluation); thresholds to be set from the measured baseline
 evaluate: {}
-
-# P0: small Git-tracked inputs for offline CI.
-fixtures:
-  apple_pdf: AAPL_10K_20250927.pdf
-  scanned_pages: [4, 32, 37]  # 1-based rendered PDF pages, not printed footers
-  statement_page: 32
-  dpi: 200
-  multicolumn_page: 6  # original PDF page; printed spread 10-11
-  multicolumn_url: https://www.sec.gov/Archives/edgar/data/1062579/000119312524281286/d865204dex991.pdf
-  apple_sha256: d4b8c0b3a643378938e7c6277039ac7c50e0135743acd8955230dd654fd16066
-  multicolumn_sha256: 9921801eb9f4100083918555a8f9908cd179d0ef540fd5f407044f0309deb604

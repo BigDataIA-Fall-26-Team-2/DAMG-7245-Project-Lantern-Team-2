@@ -82,5 +82,5 @@ which will also confirm whether this Camelot version needs Ghostscript.
 ## Offline test fixtures
 
 Three Git-tracked PDFs in `tests/fixtures/` cover scanned OCR input, an income
-statement, and multi-column prose. See [fixture provenance and rebuild commands](tests/fixtures/README.md).
+statement, and multi-column prose. See [fixture provenance and preparation notes](tests/fixtures/README.md).
 Run `python -m pytest -q tests/test_fixtures.py` without SEC, DVC, or cloud access.

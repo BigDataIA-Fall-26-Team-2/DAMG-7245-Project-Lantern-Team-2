@@ -18,7 +18,7 @@
 
 ## 2026-10-05 — Issue #15: offline PDF fixtures
 
-- **Tool/model:** Codex (GPT-6). Selected source pages, built three Git-tracked PDFs, added a parameterized rebuild script, provenance README, and offline artifact checks.
+- **Tool/model:** Codex (GPT-6). Selected source pages, built three Git-tracked PDFs, documented their provenance and added offline artifact checks. A temporary rebuild script was removed at the author’s request; fixture generation is a one-time preparation step, not part of the pipeline.
 - **Verification:** Inspected all five output pages visually; scanned PDF has three image-only pages, statement PDF retains its text layer, and Amdocs PDF has four prose columns across an original spread. Full repository suite: 13 passed. A second build produced byte-identical PDFs. Final scan rendering matches the visually inspected version pixel-for-pixel. Total fixture size: 1,817,188 bytes.
 - **Failure/fix:** Default img2pdf backend changed bytes between runs despite date suppression; explicitly selecting the internal backend fixed this. Full test collection initially failed because the local environment lacked the already-pinned pandas dependency; installed it under root requirements constraints, then reran successfully.
 - **Limits:** External multi-column page is an SEC-filed Amdocs annual-report exhibit, not an Apple corpus document. Scans are clean rasterizations, not degraded real-world scans. No OCR accuracy or P9 ground-truth completeness is claimed; Linux execution remains unverified.
