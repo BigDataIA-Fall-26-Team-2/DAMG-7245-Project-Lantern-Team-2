@@ -280,6 +280,27 @@ def to_long(df, page_text):
     return out, skipped
 
 
+def clear_page_csvs(out, stem, page_no=None):
+    """Delete table CSVs left by an earlier run: one page, or every page of `stem` if page_no is None.
+
+    Without this, a page that no longer yields a table (or a re-rendered, shorter PDF) keeps its
+    old _tK.csv in the output folder, and downstream stages (XBRL comparison, evaluation) read it
+    as current output.
+    """
+    pattern = f"{stem}_p{page_no:04d}_t*.csv" if page_no is not None else f"{stem}_p*_t*.csv"
+    for old in Path(out).glob(pattern):
+        old.unlink()
+
+
+def write_table_csv(rows, path):
+    """Write one normalized table CSV; if the write fails part-way, remove the partial file."""
+    try:
+        pd.DataFrame(rows, columns=COLUMNS).to_csv(path, index=False)
+    except Exception:
+        Path(path).unlink(missing_ok=True)
+        raise
+
+
 def main():
     ap = argparse.ArgumentParser(description="Part 2 hybrid table extraction + normalization")
     ap.add_argument("--params", default="params.yaml")
@@ -300,15 +321,18 @@ def main():
     for pdf_path in sorted(Path(args.input).glob("*.pdf")):
         if wanted and pdf_path.stem not in wanted:
             continue
+        if not wanted:  # full run: remove every table CSV this filing produced before
+            clear_page_csvs(out, pdf_path.stem)
         with pdfplumber.open(pdf_path) as pdf:
             texts = [p.extract_text() or "" for p in pdf.pages]
         for page_no in sorted(wanted.get(pdf_path.stem, [])) or range(1, len(texts) + 1):
+            clear_page_csvs(out, pdf_path.stem, page_no)  # never keep this page's CSV from an earlier run
             best, log = choose_table(pdf_path, page_no, tp)
             log.update(stem=pdf_path.stem, page=page_no, table="", skipped_rows=0)
             if best is not None:
                 rows, skipped = to_long(best["df"], texts[page_no - 1])
                 if rows:
-                    pd.DataFrame(rows, columns=COLUMNS).to_csv(out / f"{pdf_path.stem}_p{page_no:04d}_t1.csv", index=False)
+                    write_table_csv(rows, out / f"{pdf_path.stem}_p{page_no:04d}_t1.csv")
                     log.update(table=1, skipped_rows=skipped)
                 else:
                     log["accepted"] = False
