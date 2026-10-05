@@ -1,0 +1,201 @@
+stem,page,method,label,period,expected,extracted,correct,label_found,value_anywhere
+AAPL_10K_20250927,32,camelot-lattice,Products,FY2025,"307,003",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Total net sales,FY2025,"416,161",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Total net sales,FY2024,"391,035",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Total net sales,FY2023,"383,285",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Total cost of sales,FY2025,"220,960",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Gross margin,FY2025,"195,201",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Operating income,FY2025,"133,050",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Provision for income taxes,FY2025,"20,719",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Net income,FY2025,"112,010",,False,False,False
+AAPL_10K_20250927,32,camelot-lattice,Diluted,FY2025,7.46,,False,False,False
+AAPL_10K_20250927,32,camelot-stream,Products,FY2025,"307,003","307,003",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Total net sales,FY2025,"416,161","416,161",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Total net sales,FY2024,"391,035","391,035",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Total net sales,FY2023,"383,285","383,285",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Total cost of sales,FY2025,"220,960","220,960",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Gross margin,FY2025,"195,201","195,201",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Operating income,FY2025,"133,050","133,050",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Provision for income taxes,FY2025,"20,719","20,719",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Net income,FY2025,"112,010","112,010",True,True,True
+AAPL_10K_20250927,32,camelot-stream,Diluted,FY2025,7.46,7.46,True,True,True
+AAPL_10K_20250927,32,camelot-network,Products,FY2025,"307,003",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Total net sales,FY2025,"416,161",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Total net sales,FY2024,"391,035",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Total net sales,FY2023,"383,285",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Total cost of sales,FY2025,"220,960",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Gross margin,FY2025,"195,201",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Operating income,FY2025,"133,050",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Provision for income taxes,FY2025,"20,719",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Net income,FY2025,"112,010",,False,False,True
+AAPL_10K_20250927,32,camelot-network,Diluted,FY2025,7.46,,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Products,FY2025,"307,003",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Total net sales,FY2025,"416,161",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Total net sales,FY2024,"391,035",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Total net sales,FY2023,"383,285",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Total cost of sales,FY2025,"220,960",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Gross margin,FY2025,"195,201",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Operating income,FY2025,"133,050",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Provision for income taxes,FY2025,"20,719",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Net income,FY2025,"112,010",,False,False,True
+AAPL_10K_20250927,32,camelot-hybrid,Diluted,FY2025,7.46,,False,False,True
+AAPL_10K_20250927,32,pdfplumber-text,Products,FY2025,"307,003","307,003",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Total net sales,FY2025,"416,161","416,161",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Total net sales,FY2024,"391,035","391,035",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Total net sales,FY2023,"383,285","383,285",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Total cost of sales,FY2025,"220,960","220,960",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Gross margin,FY2025,"195,201","195,201",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Operating income,FY2025,"133,050","133,050",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Provision for income taxes,FY2025,"20,719","20,719",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Net income,FY2025,"112,010","112,010",True,True,True
+AAPL_10K_20250927,32,pdfplumber-text,Diluted,FY2025,7.46,7.46,True,True,True
+AAPL_10K_20250927,34,camelot-lattice,Cash and cash equivalents,Sep 2025,"35,934",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total current assets,Sep 2025,"147,957",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total assets,Sep 2025,"359,241",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total assets,Sep 2024,"364,980",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total current liabilities,Sep 2025,"165,631",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total liabilities,Sep 2025,"285,508",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Accumulated other comprehensive loss,Sep 2025,"(5,571)",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total shareholders' equity,Sep 2025,"73,733",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total shareholders' equity,Sep 2024,"56,950",,False,False,False
+AAPL_10K_20250927,34,camelot-lattice,Total liabilities and shareholders' equity,Sep 2025,"359,241",,False,False,False
+AAPL_10K_20250927,34,camelot-stream,Cash and cash equivalents,Sep 2025,"35,934","35,934",True,True,True
+AAPL_10K_20250927,34,camelot-stream,Total current assets,Sep 2025,"147,957","147,957",True,True,True
+AAPL_10K_20250927,34,camelot-stream,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10K_20250927,34,camelot-stream,Total assets,Sep 2024,"364,980","364,980",True,True,True
+AAPL_10K_20250927,34,camelot-stream,Total current liabilities,Sep 2025,"165,631",,False,False,False
+AAPL_10K_20250927,34,camelot-stream,Total liabilities,Sep 2025,"285,508",,False,False,False
+AAPL_10K_20250927,34,camelot-stream,Accumulated other comprehensive loss,Sep 2025,"(5,571)",,False,False,False
+AAPL_10K_20250927,34,camelot-stream,Total shareholders' equity,Sep 2025,"73,733",,False,False,False
+AAPL_10K_20250927,34,camelot-stream,Total shareholders' equity,Sep 2024,"56,950",,False,False,False
+AAPL_10K_20250927,34,camelot-stream,Total liabilities and shareholders' equity,Sep 2025,"359,241",,False,False,True
+AAPL_10K_20250927,34,camelot-network,Cash and cash equivalents,Sep 2025,"35,934","35,934",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total current assets,Sep 2025,"147,957","147,957",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total assets,Sep 2024,"364,980","364,980",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total current liabilities,Sep 2025,"165,631","165,631",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total liabilities,Sep 2025,"285,508","285,508",True,True,True
+AAPL_10K_20250927,34,camelot-network,Accumulated other comprehensive loss,Sep 2025,"(5,571)","(5,571)",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total shareholders' equity,Sep 2025,"73,733","73,733",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total shareholders' equity,Sep 2024,"56,950","56,950",True,True,True
+AAPL_10K_20250927,34,camelot-network,Total liabilities and shareholders' equity,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Cash and cash equivalents,Sep 2025,"35,934","35,934",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total current assets,Sep 2025,"147,957","147,957",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total assets,Sep 2024,"364,980","364,980",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total current liabilities,Sep 2025,"165,631","165,631",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total liabilities,Sep 2025,"285,508","285,508",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Accumulated other comprehensive loss,Sep 2025,"(5,571)","(5,571)",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total shareholders' equity,Sep 2025,"73,733","73,733",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total shareholders' equity,Sep 2024,"56,950","56,950",True,True,True
+AAPL_10K_20250927,34,camelot-hybrid,Total liabilities and shareholders' equity,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Cash and cash equivalents,Sep 2025,"35,934","35,934",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total current assets,Sep 2025,"147,957","147,957",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total assets,Sep 2024,"364,980","364,980",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total current liabilities,Sep 2025,"165,631","165,631",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total liabilities,Sep 2025,"285,508","285,508",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Accumulated other comprehensive loss,Sep 2025,"(5,571)","(5,571)",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total shareholders' equity,Sep 2025,"73,733","73,733",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total shareholders' equity,Sep 2024,"56,950","56,950",True,True,True
+AAPL_10K_20250927,34,pdfplumber-text,Total liabilities and shareholders' equity,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10Q_20260627,4,camelot-lattice,Products,3M Jun 2026,"78,678",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Total net sales,3M Jun 2026,"109,417",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Total net sales,3M Jun 2025,"94,036",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Total net sales,9M Jun 2026,"364,357",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Total net sales,9M Jun 2025,"313,695",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Gross margin,3M Jun 2026,"54,770",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,"Other income/(expense), net",3M Jun 2025,(171),,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Operating income,9M Jun 2026,"122,432",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Net income,3M Jun 2026,"29,789",,False,False,False
+AAPL_10Q_20260627,4,camelot-lattice,Diluted,3M Jun 2026,2.02,,False,False,False
+AAPL_10Q_20260627,4,camelot-stream,Products,3M Jun 2026,"78,678","78,678",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Total net sales,3M Jun 2026,"109,417","109,417",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Total net sales,3M Jun 2025,"94,036","94,036",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Total net sales,9M Jun 2026,"364,357","364,357",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Total net sales,9M Jun 2025,"313,695","313,695",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Gross margin,3M Jun 2026,"54,770","54,770",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,"Other income/(expense), net",3M Jun 2025,(171),(171),True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Operating income,9M Jun 2026,"122,432","122,432",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Net income,3M Jun 2026,"29,789","29,789",True,True,True
+AAPL_10Q_20260627,4,camelot-stream,Diluted,3M Jun 2026,2.02,2.02,True,True,True
+AAPL_10Q_20260627,4,camelot-network,Products,3M Jun 2026,"78,678",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Total net sales,3M Jun 2026,"109,417",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Total net sales,3M Jun 2025,"94,036",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Total net sales,9M Jun 2026,"364,357",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Total net sales,9M Jun 2025,"313,695",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Gross margin,3M Jun 2026,"54,770",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,"Other income/(expense), net",3M Jun 2025,(171),,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Operating income,9M Jun 2026,"122,432",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Net income,3M Jun 2026,"29,789",,False,False,True
+AAPL_10Q_20260627,4,camelot-network,Diluted,3M Jun 2026,2.02,,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Products,3M Jun 2026,"78,678",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Total net sales,3M Jun 2026,"109,417",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Total net sales,3M Jun 2025,"94,036",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Total net sales,9M Jun 2026,"364,357",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Total net sales,9M Jun 2025,"313,695",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Gross margin,3M Jun 2026,"54,770",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,"Other income/(expense), net",3M Jun 2025,(171),,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Operating income,9M Jun 2026,"122,432",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Net income,3M Jun 2026,"29,789",,False,False,True
+AAPL_10Q_20260627,4,camelot-hybrid,Diluted,3M Jun 2026,2.02,,False,False,True
+AAPL_10Q_20260627,4,pdfplumber-text,Products,3M Jun 2026,"78,678","78,678",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Total net sales,3M Jun 2026,"109,417","109,417",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Total net sales,3M Jun 2025,"94,036","94,036",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Total net sales,9M Jun 2026,"364,357","364,357",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Total net sales,9M Jun 2025,"313,695","313,695",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Gross margin,3M Jun 2026,"54,770","54,770",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,"Other income/(expense), net",3M Jun 2025,(171),(171),True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Operating income,9M Jun 2026,"122,432","122,432",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Net income,3M Jun 2026,"29,789","29,789",True,True,True
+AAPL_10Q_20260627,4,pdfplumber-text,Diluted,3M Jun 2026,2.02,2.02,True,True,True
+AAPL_10Q_20260627,6,camelot-lattice,Cash and cash equivalents,Jun 2026,"39,544",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,"Intangible assets, net",Jun 2026,"20,342",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Total current assets,Jun 2026,"149,818",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Total assets,Jun 2026,"383,266",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Total assets,Sep 2025,"359,241",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Total current liabilities,Jun 2026,"149,326",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Total liabilities,Jun 2026,"275,746",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Retained earnings/(Accumulated deficit),Jun 2026,"11,326",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Retained earnings/(Accumulated deficit),Sep 2025,"(14,264)",,False,False,False
+AAPL_10Q_20260627,6,camelot-lattice,Total liabilities and shareholders' equity,Jun 2026,"383,266",,False,False,False
+AAPL_10Q_20260627,6,camelot-stream,Cash and cash equivalents,Jun 2026,"39,544","39,544",True,True,True
+AAPL_10Q_20260627,6,camelot-stream,"Intangible assets, net",Jun 2026,"20,342","20,342",True,True,True
+AAPL_10Q_20260627,6,camelot-stream,Total current assets,Jun 2026,"149,818","149,818",True,True,True
+AAPL_10Q_20260627,6,camelot-stream,Total assets,Jun 2026,"383,266","383,266",True,True,True
+AAPL_10Q_20260627,6,camelot-stream,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10Q_20260627,6,camelot-stream,Total current liabilities,Jun 2026,"149,326",,False,False,False
+AAPL_10Q_20260627,6,camelot-stream,Total liabilities,Jun 2026,"275,746",,False,False,False
+AAPL_10Q_20260627,6,camelot-stream,Retained earnings/(Accumulated deficit),Jun 2026,"11,326",,False,False,False
+AAPL_10Q_20260627,6,camelot-stream,Retained earnings/(Accumulated deficit),Sep 2025,"(14,264)",,False,False,False
+AAPL_10Q_20260627,6,camelot-stream,Total liabilities and shareholders' equity,Jun 2026,"383,266",,False,False,True
+AAPL_10Q_20260627,6,camelot-network,Cash and cash equivalents,Jun 2026,"39,544","39,544",True,True,True
+AAPL_10Q_20260627,6,camelot-network,"Intangible assets, net",Jun 2026,"20,342","20,342",True,True,True
+AAPL_10Q_20260627,6,camelot-network,Total current assets,Jun 2026,"149,818","149,818",True,True,True
+AAPL_10Q_20260627,6,camelot-network,Total assets,Jun 2026,"383,266","383,266",True,True,True
+AAPL_10Q_20260627,6,camelot-network,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10Q_20260627,6,camelot-network,Total current liabilities,Jun 2026,"149,326","149,326",True,True,True
+AAPL_10Q_20260627,6,camelot-network,Total liabilities,Jun 2026,"275,746","275,746",True,True,True
+AAPL_10Q_20260627,6,camelot-network,Retained earnings/(Accumulated deficit),Jun 2026,"11,326",,False,False,True
+AAPL_10Q_20260627,6,camelot-network,Retained earnings/(Accumulated deficit),Sep 2025,"(14,264)",,False,False,True
+AAPL_10Q_20260627,6,camelot-network,Total liabilities and shareholders' equity,Jun 2026,"383,266",,False,False,True
+AAPL_10Q_20260627,6,camelot-hybrid,Cash and cash equivalents,Jun 2026,"39,544","39,544",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,"Intangible assets, net",Jun 2026,"20,342","20,342",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,Total current assets,Jun 2026,"149,818","149,818",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,Total assets,Jun 2026,"383,266","383,266",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,Total current liabilities,Jun 2026,"149,326","149,326",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,Total liabilities,Jun 2026,"275,746","275,746",True,True,True
+AAPL_10Q_20260627,6,camelot-hybrid,Retained earnings/(Accumulated deficit),Jun 2026,"11,326",,False,False,True
+AAPL_10Q_20260627,6,camelot-hybrid,Retained earnings/(Accumulated deficit),Sep 2025,"(14,264)",,False,False,True
+AAPL_10Q_20260627,6,camelot-hybrid,Total liabilities and shareholders' equity,Jun 2026,"383,266",,False,False,True
+AAPL_10Q_20260627,6,pdfplumber-text,Cash and cash equivalents,Jun 2026,"39,544","39,544",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,"Intangible assets, net",Jun 2026,"20,342","20,342",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Total current assets,Jun 2026,"149,818","149,818",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Total assets,Jun 2026,"383,266","383,266",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Total assets,Sep 2025,"359,241","359,241",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Total current liabilities,Jun 2026,"149,326","149,326",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Total liabilities,Jun 2026,"275,746","275,746",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Retained earnings/(Accumulated deficit),Jun 2026,"11,326","11,326",True,True,True
+AAPL_10Q_20260627,6,pdfplumber-text,Retained earnings/(Accumulated deficit),Sep 2025,"(14,264)","(14,264",False,True,False
+AAPL_10Q_20260627,6,pdfplumber-text,Total liabilities and shareholders' equity,Jun 2026,"383,266","383,266",True,True,True
