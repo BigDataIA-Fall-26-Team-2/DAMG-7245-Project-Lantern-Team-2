@@ -98,3 +98,47 @@ def test_to_long_labels_from_page_text_when_extractor_truncates_a_header():
     assert skipped == 1                                          # the page footer
     nc = out[(out.row_label == "Non-current assets: Marketable securities") & (out.col_label == "2025-09-27")]
     assert nc.value.iloc[0] == pytest.approx(77_723_000_000.0) and nc.scale.iloc[0] == 1e6
+
+
+# --- Reruns must not leave stale or partial table CSVs (same issue as PR #92 review) ---
+STEM = "AAPL_10K_20250927"
+
+
+def _touch(folder, name):
+    (folder / name).write_text("row_label,col_label,raw,value,scale\nOLD,x,1,1,1\n")
+
+
+def test_clear_page_csvs_one_page_keeps_other_pages_and_filings(tmp_path):
+    for name in [f"{STEM}_p0032_t1.csv", f"{STEM}_p0034_t1.csv", "AAPL_10Q_20260627_p0032_t1.csv"]:
+        _touch(tmp_path, name)
+
+    tables.clear_page_csvs(tmp_path, STEM, 32)
+
+    assert sorted(p.name for p in tmp_path.glob("*.csv")) == [
+        f"{STEM}_p0034_t1.csv", "AAPL_10Q_20260627_p0032_t1.csv"]
+
+
+def test_clear_page_csvs_whole_filing_keeps_other_filing_and_log(tmp_path):
+    for name in [f"{STEM}_p0001_t1.csv", f"{STEM}_p0032_t1.csv", "AAPL_10Q_20260627_p0004_t1.csv"]:
+        _touch(tmp_path, name)
+    (tmp_path / "log").mkdir()
+    _touch(tmp_path / "log", "tables_log.csv")
+
+    tables.clear_page_csvs(tmp_path, STEM)
+
+    assert sorted(p.name for p in tmp_path.glob("*.csv")) == ["AAPL_10Q_20260627_p0004_t1.csv"]
+    assert (tmp_path / "log" / "tables_log.csv").exists()
+
+
+def test_write_table_csv_removes_partial_file_on_failure(tmp_path, monkeypatch):
+    path = tmp_path / f"{STEM}_p0032_t1.csv"
+
+    def half_write(self, target, *args, **kwargs):
+        Path(target).write_text("row_label,col_label\nNet sa")  # simulate a write cut off mid-file
+        raise OSError("simulated write failure")
+
+    monkeypatch.setattr(pd.DataFrame, "to_csv", half_write)
+
+    with pytest.raises(OSError):
+        tables.write_table_csv([], path)
+    assert not path.exists()
