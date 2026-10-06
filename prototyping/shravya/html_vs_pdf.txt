@@ -1,0 +1,6 @@
+HTML tables: 62 | completely empty: 8
+columns per table: median 18 | max 42
+t23 Net income -> ['Net income', '$', '112,010', '93,736', '96,995']
+t24 Net income -> ['Net income', '$', '112,010', '93,736', '96,995']
+t26 Net income -> ['Net income', '112,010', '93,736', '96,995']
+PDF tables: 48 | columns per table: median 4 | max 8
