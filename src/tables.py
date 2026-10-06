@@ -5,6 +5,14 @@ lattice is tried; Camelot stream, Camelot network and pdfplumber 'text' are alwa
 Each candidate table is scored as label_ratio x coverage and the best one is kept when its
 score >= accept_score. The winner is written in the long format of docs/CONTRACTS.md
 (row_label, col_label, raw, value, scale) and every decision is logged.
+
+Values are scaled per cell: a column header that states its own unit (a price, a per-share
+amount, a share count, "in thousands") overrides the page caption, so mixed-unit tables such as
+the 10-Q share-repurchase table are not all multiplied by the caption's "in millions". Period
+labels are taken from the header block directly above each group of rows, so two tables merged
+into one extraction keep their own periods. Rows are matched to page lines by their values and,
+when several lines carry the same values, by the extractor's own label text; a row that is still
+ambiguous is skipped and counted instead of being given a confident wrong label.
 Rules are justified by the bake-off in prototyping/dhruvi/bakeoff/ (README.md).
 """
 import argparse
@@ -31,6 +39,9 @@ YEAR_IN_TEXT = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
           "August", "September", "October", "November", "December"]
 MONTH_DAY = re.compile(r"(" + "|".join(MONTHS) + r")(\d{1,2})")
+FOOTNOTE_REF = re.compile(r"^\(\d\)$")
+PERIODS = [("threemonthsended", "3M"), ("sixmonthsended", "6M"), ("ninemonthsended", "9M"),
+           ("twelvemonthsended", "FY"), ("yearsended", "FY"), ("yearended", "FY")]
 
 
 # ---------- normalization (#30) ----------
@@ -170,12 +181,43 @@ def load_params(path="params.yaml"):
         return yaml.safe_load(f)
 
 
-def extract_best_df(pdf_path, page, bbox=None, params_path="params.yaml"):
-    """Shared function (docs/CONTRACTS.md): best-scoring table DataFrame for a page, or None.
+def extractor_version(method):
+    if method.startswith("camelot"):
+        return f"camelot-py {camelot.__version__}"
+    if method.startswith("pdfplumber"):
+        return f"pdfplumber {pdfplumber.__version__}"
+    return ""
 
-    bbox: optional [x0, top, x1, bottom] in points, top-left origin (Part 3 table routing)."""
-    best, _ = choose_table(Path(pdf_path), page, load_params(params_path)["tables"], bbox)
-    return None if best is None else best["df"]
+
+def page_text_and_words(pdf_path, page, bbox=None):
+    """Page (or bbox crop) text and word boxes; crops keep the page's coordinates."""
+    with pdfplumber.open(pdf_path) as pdf:
+        p = pdf.pages[page - 1]
+        if bbox:
+            p = p.crop(bbox)
+        return p.extract_text() or "", p.extract_words()
+
+
+def extract_best_df(pdf_path, page, bbox=None, params_path="params.yaml"):
+    """Shared function (docs/CONTRACTS.md): the best table on a page, in contract format.
+
+    Returns (df, info). df has the contract columns row_label, col_label, raw, value, scale (or is
+    None when no candidate is accepted); info = {"method", "score", "extractor_version",
+    "accepted", "skipped_rows"} for the extractor fields of the Part 5 schema.
+    bbox: optional [x0, top, x1, bottom] in points, top-left origin (Part 3 table routing); it is
+    converted to Camelot's bottom-left origin inside candidate_tables()."""
+    best, log = choose_table(Path(pdf_path), page, load_params(params_path)["tables"], bbox)
+    info = {"method": log["method"], "score": log["score"],
+            "extractor_version": extractor_version(log["method"]),
+            "accepted": best is not None, "skipped_rows": 0}
+    if best is None:
+        return None, info
+    text, words = page_text_and_words(pdf_path, page, bbox)
+    rows, info["skipped_rows"] = to_long(best["df"], text, words)
+    if not rows:
+        info["accepted"] = False
+        return None, info
+    return pd.DataFrame(rows, columns=COLUMNS), info
 
 
 # ---------- long-format output ----------
@@ -194,7 +236,10 @@ def page_lines(page_text):
 
 
 def column_labels(header_cells, n_cols):
-    """ISO period labels from the header, e.g. 'FY ended 2025-09-27', '3M ended 2026-06-27', '2025-09-27'."""
+    """ISO period labels from the header, e.g. 'FY ended 2025-09-27', '3M ended 2026-06-27', '2025-09-27'.
+
+    One period phrase ("Nine Months Ended") applies to every column; two ("Three Months Ended",
+    "Nine Months Ended") split the columns in half, in the order they appear; none means instants."""
     joined = re.sub(r"\s+", "|", "|".join(header_cells))
     no_sep = joined.replace("|", "")
     days = MONTH_DAY.findall(no_sep)
@@ -202,32 +247,187 @@ def column_labels(header_cells, n_cols):
     if len(days) == n_cols and len(years) == n_cols:
         dates = [f"{y}-{MONTHS.index(m) + 1:02d}-{int(d):02d}" for (m, d), y in zip(days, years)]
         low = no_sep.lower()
-        if "threemonthsended" in low and "ninemonthsended" in low and n_cols % 2 == 0:
+        tags = []
+        for _, tag in sorted((low.find(p), t) for p, t in PERIODS if p in low):
+            if tag not in tags:
+                tags.append(tag)
+        if len(tags) == 1:
+            return [f"{tags[0]} ended {d}" for d in dates]
+        if len(tags) == 2 and n_cols % 2 == 0:
             half = n_cols // 2
-            return [f"{p} ended {d}" for p, d in zip(["3M"] * half + ["9M"] * half, dates)]
-        if "yearsended" in low or "yearended" in low:
-            return [f"FY ended {d}" for d in dates]
+            return [f"{t} ended {d}" for t, d in zip([tags[0]] * half + [tags[1]] * half, dates)]
         return dates
     return [f"col{k + 1}" for k in range(n_cols)]
 
 
-def header_lines(page_text):
-    """Page text lines above the first line that holds a label plus a non-year number."""
-    lines = []
+def is_data_line(line):
+    """A page line with a label and at least one non-year number (footnote refs like (1) excluded)."""
+    tokens = line.split()
+    numbers = [t for t in tokens if is_number_cell(t) and not YEAR.match(clean_token(t))
+               and not FOOTNOTE_REF.match(t)]
+    return bool(numbers) and len(tokens) > len(numbers)
+
+
+def _header_text(run):
+    return [l for l in run if not l.rstrip().endswith(":")]  # section labels are not headers
+
+
+def header_from_run(run, n_cols):
+    """Period labels from a block of non-data lines, or None. Tries the whole block, then shorter
+    suffixes, because the header sits just above the data (a caption sentence may precede it)."""
+    lines = _header_text(run)
+    for i in range(len(lines)):
+        labels = column_labels(lines[i:], n_cols)
+        if not labels[0].startswith("col"):
+            return labels
+    return None
+
+
+def header_blocks(page_text, n_cols):
+    """For each page line: (period labels or None, block number) of the nearest header above it.
+
+    Every non-data run that parses as a period header starts a new block, so a second table on
+    the page uses its own header. A run that has dates but does not parse ends the previous
+    header (labels None) rather than letting the next rows inherit the wrong periods."""
+    info, labels, block, run = [], None, 0, []
     for line in page_text.splitlines():
-        tokens = line.split()
-        numbers = [t for t in tokens if is_number_cell(t) and not YEAR.match(clean_token(t))]
-        if numbers and len(tokens) > len(numbers):
+        if is_data_line(line):
+            if run:
+                parsed = header_from_run(run, n_cols)
+                if parsed is not None:
+                    labels, block = parsed, block + 1
+                elif MONTH_DAY.search(re.sub(r"\s+", "", " ".join(_header_text(run)))):
+                    labels = None
+                run = []
+        else:
+            run.append(line)
+        info.append((labels, block))
+    return info
+
+
+# ---------- per-column units from the header words above the data (P1) ----------
+def word_lines(words, tol=3):
+    """pdfplumber word boxes -> lines of words, top to bottom, each left to right."""
+    lines = []
+    for w in sorted(words, key=lambda w: (w["top"], w["x0"])):
+        if lines and abs(w["top"] - lines[-1][0]["top"]) <= tol:
+            lines[-1].append(w)
+        else:
+            lines.append([w])
+    return [sorted(l, key=lambda w: w["x0"]) for l in lines]
+
+
+def align_lines(text_lines, wlines):
+    """Map each page-text line index to the index of the word line with the same text (in order)."""
+    keys = [norm(" ".join(w["text"] for w in l)) for l in wlines]
+    mapping, k = {}, 0
+    for j, text in enumerate(text_lines):
+        t = norm(text)
+        if not t:
+            continue
+        for kk in range(k, len(keys)):
+            if keys[kk] == t:
+                mapping[j], k = kk, kk + 1
+                break
+    return mapping
+
+
+def trailing_number_words(wline):
+    nums = []
+    for w in reversed(wline):
+        if w["text"] == "$":
+            continue
+        if not is_number_cell(w["text"]):
             break
-        lines.append(line)
-    return lines
+        nums.append(w)
+    return nums[::-1]
 
 
-def to_long(df, page_text):
+def header_unit(header, share_scale):
+    """Scale a column header states for its own values, or None when it says nothing about units."""
+    h = norm(header)
+    if "pershare" in h or "price" in h:
+        return 1.0
+    if "inthousands" in h:
+        return 1e3
+    if "inmillions" in h:
+        return 1e6
+    if "numberofshares" in h or "sharespurchased" in h:
+        return share_scale
+    return None
+
+
+def column_units(wlines, idx, data_lines, n_cols, share_scale, max_dist=45, max_gap=30):
+    """Per-column scales (None = no statement) from the header words directly above a table.
+
+    Number columns are located from the data rows' trailing number words; header words are the
+    lines above the first data row, up to a prose line (the caption sentence), another data row or
+    a vertical gap. Each header word goes to the nearest number column within max_dist points;
+    lines entirely in the label column (section labels) are skipped."""
+    spans = [[] for _ in range(n_cols)]
+    for j in data_lines:
+        if j in idx:
+            nums = trailing_number_words(wlines[idx[j]])
+            if len(nums) >= n_cols:
+                for k, w in enumerate(nums[-n_cols:]):
+                    spans[k].append(w)
+    if not all(spans):
+        return [None] * n_cols
+    cols = [(min(w["x0"] for w in s), max(w["x1"] for w in s)) for s in spans]
+    edge = cols[0][0] - 20
+    first = min(idx[j] for j in data_lines if j in idx)
+    texts = [[] for _ in range(n_cols)]
+    prev_top = wlines[first][0]["top"]
+    for wl in reversed(wlines[:first]):
+        top = wl[0]["top"]
+        if prev_top - top > max_gap:
+            break
+        prev_top = top
+        in_cols = [w for w in wl if (w["x0"] + w["x1"]) / 2 >= edge]
+        if not in_cols:
+            continue
+        gaps = [b["x0"] - a["x1"] for a, b in zip(wl, wl[1:])]
+        if len(wl) >= 4 and max(gaps) < 6:  # evenly spaced words = a caption or prose sentence
+            break
+        if is_data_line(" ".join(w["text"] for w in wl)):
+            break
+        for w in in_cols:
+            c = (w["x0"] + w["x1"]) / 2
+            k, dist = min(((k, max(lo - c, 0, c - hi)) for k, (lo, hi) in enumerate(cols)),
+                          key=lambda t: t[1])
+            if dist <= max_dist:
+                texts[k].append((w["top"], w["x0"], w["text"]))
+    # read each column's header top to bottom: "Number / of Shares / Purchased", not bottom-up
+    return [header_unit(" ".join(t for _, _, t in sorted(col)), share_scale) for col in texts]
+
+
+def match_line(lines, cursor, key, fragments):
+    """Index of the page line (from cursor on) that carries these values, or None.
+
+    Several lines can carry the same values (a balance sheet's Total assets and Total liabilities
+    and equity). The extractor's own label fragments pick the line whose label fits; without label
+    evidence a match must be unique, otherwise the row is rejected instead of mislabelled."""
+    cands = [j for j in range(cursor, len(lines)) if lines[j][1] == key]
+    if not cands:
+        return None
+    frag = norm("".join(fragments))
+    if len(frag) >= 3:
+        for j in cands:
+            prev = lines[j - 1][0] if j > 0 and not lines[j - 1][1] else ""
+            label = norm(lines[j][0])
+            if frag in norm(prev) + label or (len(label) >= 6 and label in frag):
+                return j
+    return cands[0] if len(cands) == 1 else None
+
+
+def to_long(df, page_text, words=None):
     """Winning table -> contract rows [row_label, col_label, raw, value, scale]; returns (rows, skipped).
 
     Numbers and columns come from the table; labels and section headers come from the page's own
-    text lines, matched to each table row by its values (scanning forward, so repeated totals keep order)."""
+    text lines, matched to each table row by its values (scanning forward, so repeated totals keep
+    order, and using the extractor's label text when several lines carry the same values).
+    Period labels come from the header block above each group of rows. With word boxes (`words`,
+    from pdfplumber extract_words) each column's header can set its own unit."""
     rows = parse_rows(df)
     data_idx = [i for i, (l, n) in enumerate(rows) if len(n) >= 2 and not is_year_row(l, n)]
     if not data_idx:
@@ -235,14 +435,14 @@ def to_long(df, page_text):
     first = data_idx[0]
     n_cols = Counter(len(rows[i][1]) for i in data_idx).most_common(1)[0][0]
     header_cells = [c for r in df.fillna("").astype(str).values.tolist()[:first] for c in r if c.strip()]
-    col_labels = column_labels(header_lines(page_text), n_cols)
-    if col_labels[0].startswith("col"):
-        col_labels = column_labels(header_cells, n_cols)
+    fallback = column_labels(header_cells, n_cols)
     page_n = norm(page_text)
     table_scale = 1e6 if "inmillions" in page_n else 1e3 if "inthousands" in page_n else 1.0
     share_scale = 1e3 if "reflectedinthousands" in page_n else table_scale
     lines = page_lines(page_text)
-    out, skipped, section, pending, cursor = [], 0, "", "", 0
+    headers = header_blocks(page_text, n_cols)
+
+    matches, skipped, cursor = [], 0, 0
     for fragments, numbers in rows:
         if not numbers or is_year_row(fragments, numbers):
             continue
@@ -251,30 +451,52 @@ def to_long(df, page_text):
         if len(numbers) != n_cols:
             skipped += 1
             continue
-        key = tuple(normalize(n) for n in numbers)
-        match = next((j for j in range(cursor, len(lines)) if lines[j][1] == key), None)
-        if match is None:  # no page line carries these values (page footer, stray numbers)
+        match = match_line(lines, cursor, tuple(normalize(n) for n in numbers), fragments)
+        if match is None:  # no page line carries these values, or the match is ambiguous
             skipped += 1
             continue
-        for text, values in lines[cursor:match]:  # lines between the previous match and this one
+        matches.append((cursor, match, numbers))
+        cursor = match + 1
+
+    units = {}
+    if words:
+        wlines = word_lines(words)
+        idx = align_lines(page_text.splitlines(), wlines)
+        for block in {headers[j][1] for _, j, _ in matches}:
+            js = [j for _, j, _ in matches if headers[j][1] == block]
+            units[block] = column_units(wlines, idx, js, n_cols, share_scale)
+
+    out, section, pending, block_seen = [], "", "", None
+    for start, match, numbers in matches:
+        labels, block = headers[match]
+        if block != block_seen:  # first row under a new header: a new table, sections start fresh
+            section, pending, block_seen = "", "", block
+        for text, values in lines[start:match]:  # lines between the previous match and this one
             if values:
                 pending = ""
             elif text.endswith(":"):
                 section, pending = text[:-1].strip(), ""
-            elif text and cursor > 0:
+            elif text and start > 0:
                 pending = text  # first line of a two-line label
-        label, cursor = lines[match][0], match + 1
+        label = lines[match][0]
         full = f"{pending} {label}".strip() if pending else label
         pending = ""
+        if not full:  # a line of footnote markers such as "(2) (2) (2)", not a data row
+            skipped += 1
+            continue
         row_label = f"{section}: {full}" if section and full else full
+        col_labels = labels or (fallback if block == 0 else [f"col{k + 1}" for k in range(n_cols)])
         sec = norm(section)
         if "sharesused" in sec:
-            scale = share_scale
+            row_scale = share_scale
         elif "pershare" in sec or "pershare" in norm(full):
-            scale = 1.0
+            row_scale = 1.0
         else:
-            scale = table_scale
-        out += [[row_label, col_labels[k], raw, normalize(raw, scale), scale] for k, raw in enumerate(numbers)]
+            row_scale = table_scale
+        col_units = units.get(block) or [None] * n_cols
+        for k, raw in enumerate(numbers):
+            scale = col_units[k] if col_units[k] is not None else row_scale
+            out.append([row_label, col_labels[k], raw, normalize(raw, scale), scale])
         if norm(full).startswith("total"):
             section = ""
     return out, skipped
@@ -325,12 +547,13 @@ def main():
             clear_page_csvs(out, pdf_path.stem)
         with pdfplumber.open(pdf_path) as pdf:
             texts = [p.extract_text() or "" for p in pdf.pages]
+            words = [p.extract_words() for p in pdf.pages]
         for page_no in sorted(wanted.get(pdf_path.stem, [])) or range(1, len(texts) + 1):
             clear_page_csvs(out, pdf_path.stem, page_no)  # never keep this page's CSV from an earlier run
             best, log = choose_table(pdf_path, page_no, tp)
             log.update(stem=pdf_path.stem, page=page_no, table="", skipped_rows=0)
             if best is not None:
-                rows, skipped = to_long(best["df"], texts[page_no - 1])
+                rows, skipped = to_long(best["df"], texts[page_no - 1], words[page_no - 1])
                 if rows:
                     write_table_csv(rows, out / f"{pdf_path.stem}_p{page_no:04d}_t1.csv")
                     log.update(table=1, skipped_rows=skipped)
