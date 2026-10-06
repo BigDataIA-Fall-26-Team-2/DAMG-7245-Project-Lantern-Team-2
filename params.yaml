@@ -24,6 +24,7 @@ ocr:
   min_chars: 20
   junk_ratio: 0.3
   dpi: 300
+  language: eng
 
 # Owner: Dhruvi (Part 2 - tables)
 tables:
