@@ -43,7 +43,10 @@ layout:
   pad_pt: 2.0
 
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
-docling: {}
+docling:
+  do_ocr: false             # Apple PDFs have a text layer (P1: 0 OCR pages); OCR only slows Docling down
+  table_mode: "accurate"    # TableFormer mode: "accurate" or "fast"
+  html_stem: "AAPL_10K_20250927"   # the filing whose original iXBRL HTML is also converted (Part 4 task 2)
 
 # Owner: Shravya (Part 10 - benchmarking); keys to be filled in during that part
 bench: {}
