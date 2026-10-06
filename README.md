@@ -82,3 +82,33 @@ requirements, and camelot (Lattice/Stream/Network/Hybrid parsers), cv2,
 pdfplumber, pandas, streamlit, arelle and difflib all import. These are import
 checks only: table extraction quality is measured in the P2 bake-off (#17),
 which will also confirm whether this Camelot version needs Ghostscript.
+
+## P1: text and OCR
+
+```bash
+python src/parse_text.py --params params.yaml --input data/rendered --output data/parsed
+python src/parse_text.py --params params.yaml --input tests/fixtures --output /tmp/lantern-parsed-fixtures
+```
+
+pdfplumber reads native text and word boxes page by page. A page uses Tesseract
+when its non-whitespace character count is below `ocr.min_chars` **or** its
+fraction of tokens containing `(cid:NN)` or the replacement character exceeds
+`ocr.junk_ratio`. Tesseract reads a Poppler raster at `ocr.dpi` in `ocr.language`.
+OCR supplies both text and boxes; pdfplumber does not perform OCR.
+
+Outputs are `{stem}_p{NNNN}.txt`, `{stem}.words.jsonl` (one record per word), and
+`ocr_log.csv` (one decision per page). Word records carry `doc_id`, `page`, `text`,
+`bbox`, `ocr`, and `ocr_conf`. Pages are 1-based; boxes are top-left PDF points
+in displayed page orientation, including rotation. Pixel boxes are scaled using
+the actual raster dimensions. Confidence is Tesseract's 0–100 score, not a
+calibrated probability; native words have null confidence. `doc_id` comes from
+the input manifest; fixture directories without a manifest use null IDs and are
+identified by stem in the log. The log records both trigger signals, reason,
+engine, mean word confidence, and output text length, including empty pages.
+
+Outputs are staged before replacement so an extraction error leaves the previous
+run intact. Use a dedicated output directory for each input corpus: after a
+successful run,
+stale page-text and word-box files are removed, including those for PDFs no
+longer in the input. Other files are retained. The log covers the current run.
+Multi-column ordering and table structure remain P3/P2 work.

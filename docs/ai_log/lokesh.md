@@ -14,3 +14,30 @@
 - Tool: Codex (GPT-6). Moved all 122 existing pins unchanged into the shared root `requirements.txt`, removed per-person files, and updated setup commands and tool references.
 - Verification: compared the exact dependency lists before and after on every affected branch; checked installation against the existing Python 3.11 environment and ran the P0 regression tests. No package versions changed.
 - Limitation: this reorganizes the verified local environment; Linux clean-room reproduction remains unverified. Author review remains required.
+
+
+## 2026-10-05 — Issue #15: offline PDF fixtures
+
+- **Tool/model:** Codex (GPT-6).
+- **Contribution:** Selected source pages and prepared three Git-tracked PDFs: `scanned.pdf` (Apple FY2025 10-K rendered pages 4, 32, 37, rasterized at 200 DPI), `statement.pdf` (Apple rendered page 32), and `multicolumn.pdf` (SEC-filed Amdocs Annual Report 2024 PDF page 6, printed spread 10–11). Used pdftoppm and img2pdf for the scan and pypdf for native-page extraction.
+- **Final deliverables:** The three PDFs and this AI log entry. At the author’s request, removed the temporary generator, fixture parameters, optional fixture test file, fixture README, and root README additions. No reusable fixture-generation code or fixture-specific tests remain in this PR.
+- **Verification performed during preparation:** Visually inspected all five output pages and checked that the scan has three image-only pages, the statement retains text, and the external spread has four prose columns. Rebuilding produced byte-identical PDFs, and the final scan rendered identically to the inspected version. Total fixture size: 1,817,188 bytes. These were preparation checks; their temporary automation is not a delivered test suite.
+- **Current validation:** After removing the optional fixture tests, the remaining repository suite passed 10 tests. The earlier 13-test run included three now-removed fixture tests and does not describe the current suite. PDF contents were unchanged by the removals.
+- **Failure/fix:** The default img2pdf backend changed PDF bytes between runs despite date suppression; selecting its internal backend fixed this during preparation. Full test collection initially lacked the already-pinned pandas dependency locally; installing it under root requirements constraints resolved collection.
+- **Limits:** The Amdocs page is a layout fixture only, outside the two-filing Apple corpus. Scans are clean synthetic rasterizations, not degraded photocopies. Issue #15’s requested fixture provenance README is omitted at the author’s request. No OCR accuracy, P9 ground-truth completeness, or Linux reproduction is claimed.
+- **Confidence/responsibility:** High confidence in the observed fixture structure and preparation checks. Author review and ability to explain, modify, test, and defend the delivered PDFs remain required.
+
+## 2026-10-05 — P1: native text and OCR fallback (issues #16, #28)
+
+- **Tool/model:** Codex (GPT-6). Implemented `src/parse_text.py`, independent character-count/junk-token OCR signals, Tesseract text and word boxes, pixel-to-point conversion, per-page text/word output, and decision logging. Added targeted P1 regression tests and usage documentation; dependencies already exist in shared root requirements.
+- **Verification:** Live local extraction produced 91 text files from the two Apple PDFs: 90 native pages and one OCR attempt on 10-Q page 7. That page returned empty text and was visually confirmed blank. Fixture run: three scanned pages used OCR with 3,620 / 1,194 / 2,759 output characters and mean confidence 94.27 / 92.51 / 95.38; statement and multi-column pages stayed native. All emitted boxes were checked against displayed page dimensions. Regression checks cover independent triggers, coordinate scaling/line grouping, native routing, rotated pages, output identities, stale page cleanup, and retaining previous outputs on extraction failure.
+- **Failure/limitation:** An initial verification script compared rotated fixture boxes against its unrotated MediaBox and flagged a false error; checking pdfplumber's displayed dimensions confirmed the coordinates. Blank pages can legitimately yield empty OCR output and remain visible in the log. No WER, table accuracy, corrected multi-column order, or managed fallback is claimed. DVC/CI integration remains separate.
+- **Confidence/responsibility:** High confidence in observed routing and box conversion; accuracy still needs P9 ground truth. Author must review, explain, modify, test, and defend the implementation.
+
+
+## P1 local code review
+
+- **Tool/model:** Codex (GPT-6). Reviewed OCR routing, coordinate conversion, manifest identity, output lifecycle, and assignment scope.
+- **Finding/fix:** Removing a PDF from the input left its old text and word JSONL in the output while the log described only the new corpus. Reproduced this in a temporary directory. Successful runs now remove stale stage-owned files, including removed documents and obsolete page files, while preserving unrelated files. Cleanup follows successful extraction and output replacement.
+- **Verification:** Temporary checks confirmed removed-document cleanup, shortened-document cleanup, unrelated-file retention, and exact 20-character / 30-percent decision boundaries. Existing repository suite: 16 passed. Fresh fixture run: all three scans used OCR with nonempty text; statement and multi-column fixtures remained native. No new permanent tests were added. `git diff --check` passed.
+- **Limits/responsibility:** No further blocking P1 findings in this review. Accuracy still needs P9 ground truth; P2/P3 and DVC integration remain separate. Multi-file publication is not an atomic transaction against disk/process failure. Author review remains required; commits are local only pending explicit push approval.
