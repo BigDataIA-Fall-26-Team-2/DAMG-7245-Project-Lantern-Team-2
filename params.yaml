@@ -42,6 +42,7 @@ layout:
   qa_pages:              # pages that get a box-overlay picture in reports/layout/ (also the 10 audit pages)
     AAPL_10K_20250927: [1, 10, 20, 22, 32, 34, 50]
     AAPL_10Q_20260627: [4, 15, 28]
+    multicolumn: [1]
   text_pad_pt: 8         # sweep: clipped first letters 132->35 (10-K), 51->10 (10-Q); 12 pt gains little and risks the column gap
 
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
