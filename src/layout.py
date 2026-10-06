@@ -18,6 +18,7 @@ import torch
 import yaml
 import layoutparser as lp
 from PIL import ImageDraw
+import tables as tbl   # Dhruvi's P2 extractor; extract_best_df is a shared function in CONTRACTS.md
 
 MODEL_URI = "lp://efficientdet/PubLayNet/tf_efficientdet_d0"
 MODEL_PATH = Path("models/publaynet-tf_efficientdet_d0.pth.tar")
@@ -108,6 +109,21 @@ def block_text(page, bbox, ocr_dpi, pad=0.0):
     img = crop.to_image(resolution=ocr_dpi).original
     return pytesseract.image_to_string(img).strip(), True
 
+def route_table(pdf_path, page, bbox, pad, params_path):
+    """Send a Table block to the P2 extractor.
+
+    The box is stretched to the full page width, because the audit found the detector's Table boxes
+    often cover only the number columns (not the row labels), and padded vertically by `pad`."""
+    _, top, _, bottom = bbox
+    wide = [0.0, max(top - pad, 0.0), float(page.width), min(bottom + pad, float(page.height))]
+    try:
+        df, info = tbl.extract_best_df(str(pdf_path), page.page_number, wide, params_path)
+    except Exception as e:  # one bad table shouldn't stop the whole stage
+        return None, {"accepted": False, "error": f"{type(e).__name__}: {e}",
+                      "routed_bbox": [round(v, 2) for v in wide]}
+    info = {**info, "routed_bbox": [round(v, 2) for v in wide]}
+    return (df.to_dict(orient="records") if df is not None else None), info
+
 
 COLORS = {"Text": "blue", "Title": "red", "List": "green", "Table": "orange", "Figure": "purple"}
 
@@ -160,13 +176,25 @@ def main(params_path, input_dir, output, qa_dir, figures_dir):
                     text, used_ocr = None, False
                     if r["block_type"] in TEXT_TYPES:
                         text, used_ocr = block_text(page, r["bbox"], ocr_dpi, params["text_pad_pt"])
+                    table, table_info = None, None
+                    if r["block_type"] == "Table":
+                        table, table_info = route_table(pdf_path, page, r["bbox"], params["pad_pt"], params_path)
+                    if table is not None:
+                        extractor, version = table_info["method"], table_info["extractor_version"]
+                    elif text is not None:
+                        extractor, version = ("tesseract" if used_ocr else "pdfplumber"), None
+                    else:
+                        extractor, version = None, None
+
                     footer = is_footer(text)
                     if r["block_type"] == "Title" and text and not footer:
                         section = text.splitlines()[0][:200]
                     if r["block_type"] == "Figure":
                         page.crop(r["bbox"]).to_image(resolution=DPI).save(figs / f"{stem}_{block_id}.png")
                     rec = {"doc_id": doc_id, "page": n, "block_id": block_id, **r, "model": MODEL_URI,
-                           "section": section, "text": text, "ocr": used_ocr, "footer": footer}
+                           "section": section, "text": text, "ocr": used_ocr, "footer": footer,
+                           "table": table, "table_info": table_info,
+                           "extractor": extractor, "extractor_version": version}
                     f.write(json.dumps(rec) + "\n")
                     counts[r["block_type"]] = counts.get(r["block_type"], 0) + 1
                 # one row per page, so blank pages are recorded instead of silently missing
