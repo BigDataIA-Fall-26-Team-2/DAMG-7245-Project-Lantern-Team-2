@@ -82,9 +82,28 @@ Pages: 10-K 1, 10, 20, 22, 32, 34, 50; 10-Q 4, 15, 28.
 - **Figures:** cropped to `data/figures/`. Note: the two checked "figures" are repurchase tables (see 3).
 
 ## 5. Table routing
-Pending Dhruvi's PR #93 (`extract_best_df(pdf_path, page, bbox)` returning `(df, info)`).
-Given the audit, Table boxes are stretched to full page width before routing so the row-label column is included.
-Financial statements should not depend on layout boxes: Dhruvi's heading-based page extraction stays the primary path for them.
+
+Table blocks are sent to `tables.extract_best_df(pdf_path, page, bbox)` (Part 2, PR #93), which returns `(df, info)` in the
+contract table format. Before routing, each Table box is **stretched to the full page width** and padded vertically by
+`pad_pt` (2 pt), because the audit showed Table boxes often cover only the number columns (10-K p32, p50).
+The detector's own box stays in `bbox`; the box actually sent is stored as `table_info.routed_bbox`.
+Every block now carries `extractor` / `extractor_version` (the table method for tables, pdfplumber or tesseract for text).
+
+| Filing | Table blocks | Accepted | Errors | Winning method |
+|---|---|---|---|---|
+| 10-K | 36 | 17 (47%) | 0 | camelot-stream x17 |
+| 10-Q | 19 | 12 (63%) | 0 | camelot-stream x11, pdfplumber-text x1 |
+
+- Both income statements are accepted with score 1.0 and keep their row labels (10-K p32: 57 rows; 10-Q p4: 76 rows).
+  Without the full-width stretch, the 10-K p32 box covers numbers only.
+- Rejections are mostly the extractor correctly refusing non-tables: e.g. the Table box over empty space on 10-K p22.
+- The 10-K balance sheet (p34) is absent because the detector drew no Table box there. Financial statements therefore keep
+  Dhruvi's heading-based page extraction as the primary path; layout routing adds the other tables.
+
+**Bug found end to end:** on 10-K p32, Net income comes back as `112010.0` with `scale 1.0` instead of `112010000000`.
+With a bbox, the scale caption "(In millions...)" sits above the table box, so it falls outside the text the extractor reads.
+On 10-Q p4 the caption falls inside and the value is scaled correctly. Reported to the Part 2 owner: the scale lookup
+should use the full page text even when a bbox is passed.
 
 ## 6. Known limitations
 - Straddling and split boxes garble or fragment some paragraphs; documented, not fixed (a model limitation).
