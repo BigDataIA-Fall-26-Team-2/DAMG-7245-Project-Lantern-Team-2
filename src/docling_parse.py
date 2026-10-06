@@ -43,12 +43,12 @@ def load_params(path="params.yaml"):
 
 
 def load_manifest(input_dir):
-    """stem -> doc_id (accession), from the render manifest; empty for folders without one (e.g. fixtures)."""
+    """stem -> manifest row (doc_id, source_file, ...), from the render manifest; empty for folders without one (e.g. fixtures)."""
     path = Path(input_dir) / "manifest.csv"
     if not path.exists():
         return {}
     with open(path, newline="") as f:
-        return {r["stem"]: r["doc_id"] for r in csv.DictReader(f)}
+        return {r["stem"]: r for r in csv.DictReader(f)}
 
 
 def make_converter(p):
@@ -146,6 +146,21 @@ def export_tables(doc, stem, pdf_path, out):
     return written, empty
 
 
+def convert_html(conv, row, out):
+    """Part 4 task 2: also convert the filing's original iXBRL HTML, to isolate what PDF rendering changed.
+
+    HTML has no pages, so there are no page numbers or boxes: only text and tables can be compared."""
+    stem = row["stem"]
+    t = time.perf_counter()
+    doc = conv.convert(row["source_file"]).document
+    md = doc.export_to_markdown()
+    (out / f"{stem}.html.md").write_text(md)
+    doc.save_as_json(out / f"{stem}.html.json")
+    for k, table in enumerate(doc.tables, start=1):
+        table.export_to_dataframe(doc=doc).to_csv(out / f"{stem}_html_t{k}_raw.csv", index=False)
+    print(f"{stem} (original HTML): {len(doc.tables)} tables, {len(md)} chars, {time.perf_counter() - t:.1f}s")
+
+
 def main(params_path, input_dir, output):
     p = load_params(params_path)["docling"]
     out = Path(output)
@@ -157,9 +172,11 @@ def main(params_path, input_dir, output):
         t = time.perf_counter()
         doc = conv.convert(str(pdf_path)).document
         n_pages = export_document(doc, stem, out)
-        counts = export_blocks(doc, stem, manifest.get(stem, stem), out, crop_offsets(pdf_path))
+        counts = export_blocks(doc, stem, manifest.get(stem, {}).get("doc_id", stem), out, crop_offsets(pdf_path))
         written, empty = export_tables(doc, stem, pdf_path, out)
         print(f"{stem}: {n_pages} pages, {len(doc.tables)} tables ({written} in team format, {empty} empty), blocks {counts}, {time.perf_counter() - t:.1f}s")
+    if p.get("html_stem") in manifest:   # skipped for folders without a manifest (fixtures)
+        convert_html(conv, manifest[p["html_stem"]], out)
 
 
 if __name__ == "__main__":
