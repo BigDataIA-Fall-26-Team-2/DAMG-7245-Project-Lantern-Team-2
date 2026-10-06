@@ -176,8 +176,9 @@ def main():
 # ---------------------------------------------------------------------------
 
 COMPARE_COLUMNS = ["path", "stem", "statement", "page", "pdf_label", "period_label",
-                   "prefix", "concept", "dims", "mapping", "pdf_raw", "pdf_value",
-                   "xbrl_value", "decimals", "tolerance", "status"]
+                   "xbrl_period", "prefix", "concept", "dims", "mapping", "pdf_raw",
+                   "pdf_value", "xbrl_value", "decimals", "tolerance", "status", "cause"]
+NEGATED_CAUSE = "presentation: negated label in _pre.xml"
 SCALE_EXPONENTS = (3, 6, 9)
 
 
@@ -236,7 +237,7 @@ def manual_candidates(entries, label):
     key = norm(label)
     for e in entries:
         if key == e["key"] or (e.get("match") == "prefix" and key.startswith(e["key"])):
-            return [("manual", {"prefix": "us-gaap", "concept": e["concept"],
+            return [("manual", {"prefix": e.get("prefix", "us-gaap"), "concept": e["concept"],
                                 "dims": e.get("dims") or ""})]
     return []
 
@@ -293,22 +294,69 @@ def candidates(label, entries, labels, choices, cutoff):
     return []
 
 
-def resolve(cands, stem, period, pdf_value, idx):
-    """Disambiguate by value: prefer the candidate whose fact matches the PDF number."""
-    best = None
+def period_bounds(facts):
+    """{duration period_label: (start, end)} so a duration column can find its instants."""
+    d = facts[facts.period_type == "duration"].drop_duplicates("period_label")
+    return dict(zip(d.period_label, zip(d.start, d.end)))
+
+
+def period_options(period, bounds):
+    """The column's own period, then (duration columns only) its end and opening instants.
+    Beginning/ending balance rows are instants printed inside a duration column."""
+    options = [period]
+    if period in bounds:
+        start, end = bounds[period]
+        opening = (pd.Timestamp(start) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        options += [str(end), opening]
+    return options
+
+
+def negated_concepts(source_file):
+    """{(prefix, concept)} the filing presents with a negated label, from its _pre.xml."""
+    found = sorted(Path(source_file).parent.glob("*_pre.xml"))
+    if not found:
+        return set()
+    root = ET.fromstring(unwrap(found[0].read_bytes()))
+    xl = "{http://www.w3.org/1999/xlink}"
+    loc_concept, negated = {}, set()
+    for el in root.iter():
+        if el.tag.rsplit("}", 1)[-1] == "loc":
+            frag = el.get(xl + "href", "").rsplit("#", 1)[-1]
+            prefix, _, local = frag.partition("_")
+            loc_concept[el.get(xl + "label")] = (prefix, local)
+    for el in root.iter():
+        if el.tag.rsplit("}", 1)[-1] == "presentationArc" and "negated" in (el.get("preferredLabel") or ""):
+            target = loc_concept.get(el.get(xl + "to"))
+            if target:
+                negated.add(target)
+    return negated
+
+
+def resolve(cands, stem, period, pdf_value, idx, bounds):
+    """Pick the candidate and period the PDF number agrees with.
+    Rank: match > sign > the only candidate with a fact. Several candidate concepts and
+    no agreement -> 'ambiguous' (never guess silently)."""
+    empty = {"prefix": "", "concept": "", "dims": ""}
+    found = []
     for method, c in cands:
-        fact = idx.get((stem, c["prefix"], c["concept"], c["dims"], period))
-        if fact is None:
-            continue
-        if best is None:
-            best = (method, c, fact[0], fact[1])
-        if classify(pdf_value, fact[0], tolerance(fact[1])) == "match":
-            return method, c, fact[0], fact[1]
-    if best:
-        return best
+        for p in period_options(period, bounds):
+            fact = idx.get((stem, c["prefix"], c["concept"], c["dims"], p))
+            if fact is not None:
+                status = classify(pdf_value, fact[0], tolerance(fact[1]))
+                found.append((status, method, c, p, fact[0], fact[1]))
+    for wanted in ("match", "sign"):
+        for status, method, c, p, val, dec in found:
+            if status == wanted:
+                return method, c, p, val, dec
+    concepts = {(c["prefix"], c["concept"], c["dims"]) for _, c in cands}
+    if len(concepts) > 1:
+        return "ambiguous", empty, period, None, None
+    if found:
+        _, method, c, p, val, dec = found[0]
+        return method, c, p, val, dec
     if cands:
-        return cands[0][0], cands[0][1], None, None
-    return "none", {"prefix": "", "concept": "", "dims": ""}, None, None
+        return cands[0][0], cands[0][1], period, None, None
+    return "none", empty, period, None, None
 
 
 def compare_main(argv=None):
@@ -326,13 +374,16 @@ def compare_main(argv=None):
     pages, cutoff = cfg["statement_pages"], float(cfg["fuzzy_cutoff"])
     facts = pd.read_csv(a.facts)
     idx = fact_index(facts)
+    bounds = period_bounds(facts)
     face = facts[facts.n_dims == 0]
     manifest = pd.read_csv(a.manifest).set_index("stem")
     label_map = load_label_map(a.label_map)
 
     rows = []
     for stem, statements in pages.items():
-        labels = linkbase_labels(manifest.loc[stem, "source_file"])
+        source = manifest.loc[stem, "source_file"]
+        labels = linkbase_labels(source)
+        negated = negated_concepts(source)
         have = set(zip(face[face.stem == stem].prefix, face[face.stem == stem].concept))
         choices = [k for k, v in labels.items() if any(pc in have for pc in v)]
         for statement, page in statements.items():
@@ -345,31 +396,34 @@ def compare_main(argv=None):
             seen = set()
             for r in df.itertuples(index=False):
                 cands = candidates(r.row_label, entries, labels, choices, cutoff)
-                method, c, xval, dec = resolve(cands, stem, r.col_label, r.value, idx)
+                method, c, xper, xval, dec = resolve(cands, stem, r.col_label, r.value, idx, bounds)
                 tol = tolerance(dec)
                 status = "xbrl_missing" if xval is None else classify(r.value, xval, tol)
+                cause = NEGATED_CAUSE if status == "sign" and (c["prefix"], c["concept"]) in negated else ""
                 rows.append({"path": a.path, "stem": stem, "statement": statement,
                              "page": page, "pdf_label": r.row_label,
-                             "period_label": r.col_label, "prefix": c["prefix"],
-                             "concept": c["concept"], "dims": c["dims"], "mapping": method,
-                             "pdf_raw": r.raw, "pdf_value": r.value, "xbrl_value": xval,
-                             "decimals": dec, "tolerance": tol, "status": status})
+                             "period_label": r.col_label, "xbrl_period": xper,
+                             "prefix": c["prefix"], "concept": c["concept"], "dims": c["dims"],
+                             "mapping": method, "pdf_raw": r.raw, "pdf_value": r.value,
+                             "xbrl_value": xval, "decimals": dec, "tolerance": tol,
+                             "status": status, "cause": cause})
                 seen.add((c["concept"], c["dims"], r.col_label))
             # pdf_missing: a curated line has an XBRL fact for this table's periods, no PDF row
             for e in entries:
                 dims = e.get("dims") or ""
                 for period in df.col_label.unique():
-                    key = (stem, "us-gaap", e["concept"], dims, period)
+                    key = (stem, e.get("prefix", "us-gaap"), e["concept"], dims, period)
                     if key in idx and (e["concept"], dims, period) not in seen:
                         seen.add((e["concept"], dims, period))
                         xval, dec = idx[key]
                         rows.append({"path": a.path, "stem": stem, "statement": statement,
                                      "page": page, "pdf_label": e["pdf"],
-                                     "period_label": period, "prefix": "us-gaap",
-                                     "concept": e["concept"], "dims": dims,
-                                     "mapping": "manual", "pdf_raw": None, "pdf_value": None,
-                                     "xbrl_value": xval, "decimals": dec,
-                                     "tolerance": tolerance(dec), "status": "pdf_missing"})
+                                     "period_label": period, "xbrl_period": period,
+                                     "prefix": key[1], "concept": e["concept"],
+                                     "dims": dims, "mapping": "manual", "pdf_raw": None,
+                                     "pdf_value": None, "xbrl_value": xval, "decimals": dec,
+                                     "tolerance": tolerance(dec), "status": "pdf_missing",
+                                     "cause": ""})
 
     out = pd.DataFrame(rows, columns=COMPARE_COLUMNS)
     out_dir = Path(a.output)
@@ -381,13 +435,14 @@ def compare_main(argv=None):
 
     rates = (out.assign(is_match=out.status.eq("match"))
                 .groupby("statement").is_match.agg(lines="size", matches="sum"))
+    rates.loc["ALL"] = [len(out), int(out.status.eq("match").sum())]
+    rates = rates.astype(int)
     rates["match_rate"] = (rates.matches / rates.lines).round(4)
-    rates.loc["ALL"] = [len(out), int(out.status.eq("match").sum()),
-                        round(out.status.eq("match").mean(), 4) if len(out) else 0.0]
     rates.to_csv(out_dir / f"match_rates_{a.path}.csv")
     print(f"wrote {target} ({len(out)} rows)")
     print(out.status.value_counts().to_string())
     print(out.mapping.value_counts().to_string())
+    print(out[out.cause != ""].cause.value_counts().to_string())
     print(rates.to_string())
 
 
