@@ -17,7 +17,7 @@ import pytesseract
 import torch
 import yaml
 import layoutparser as lp
-from PIL import ImageDraw
+from PIL import ImageDraw, ImageOps
 import tables as tbl   # Dhruvi's P2 extractor; extract_best_df is a shared function in CONTRACTS.md
 
 MODEL_URI = "lp://efficientdet/PubLayNet/tf_efficientdet_d0"
@@ -69,7 +69,17 @@ def detect_page(model, page, params):
     """Detect blocks on one pdfplumber page, dropping low scores and duplicates.
 
     Returns (page image, kept LayoutParser boxes, records with bbox in points, top-left origin)."""
-    img = page.to_image(resolution=DPI).original.convert("RGB")
+    # Render the full mediabox: pdfplumber's coordinates use the mediabox, but by default it renders only
+    # the cropbox, which shifted every box on the cropped, rotated multicolumn fixture.
+    img = page.to_image(resolution=DPI, force_mediabox=True).original.convert("RGB")
+    expected = (round(float(page.width) * DPI / 72), round(float(page.height) * DPI / 72))
+    if abs(img.size[0] - expected[0]) > 2 or abs(img.size[1] - expected[1]) > 2:
+        raise ValueError(f"page {page.page_number}: rendered {img.size}, expected {expected}; "
+                         "pixel->point conversion would be wrong")
+     # PubLayNet is black-on-white; flip dark designed pages (e.g. annual-report spreads) before detecting
+    inverted = np.asarray(img.convert("L")).mean() / 255 < params["dark_page_brightness"]
+    if inverted:
+        img = ImageOps.invert(img)
     raw = sorted((b for b in model.detect(np.array(img)) if b.score >= params["score_threshold"]),
                  key=lambda b: b.score, reverse=True)
     kept = []
@@ -83,15 +93,22 @@ def detect_page(model, page, params):
         bbox = [min(max(x1 * K, 0), w), min(max(y1 * K, 0), h),
                 min(max(x2 * K, 0), w), min(max(y2 * K, 0), h)]   # clip to the page
         records.append({"block_type": b.type, "score": round(float(b.score), 3),
-                        "bbox": [round(v, 2) for v in bbox]})
+                        "bbox": [round(v, 2) for v in bbox], "inverted": bool(inverted)})
     return img, lp.Layout(kept), records
 
 
-def reading_order(records, page_width):
-    """Sort blocks for reading: left column before right column, then top to bottom."""
-    mid = page_width / 2
+def reading_order(records, gap):
+    """Sort blocks for reading: find columns by clustering block left edges, then read
+    columns left to right and each column top to bottom.
+
+    Left edges are sorted; a new column starts wherever the next edge jumps by more than `gap`
+    points. A single-column page stays one column, so it simply reads top to bottom."""
+    if not records:
+        return records
+    xs = sorted(r["bbox"][0] for r in records)
+    starts = [xs[0]] + [b for a, b in zip(xs, xs[1:]) if b - a > gap]   # left edge of each column
     def column(r):
-        return 1 if r["bbox"][0] >= mid else 0   # a block that starts in the right half is the right column
+        return max(i for i, s in enumerate(starts) if r["bbox"][0] >= s)
     return sorted(records, key=lambda r: (column(r), r["bbox"][1], r["bbox"][0]))
 
 
@@ -170,7 +187,7 @@ def main(params_path, input_dir, output, qa_dir, figures_dir):
             for page in pdf.pages:
                 n = page.page_number
                 img, kept, recs = detect_page(model, page, params)
-                recs = reading_order(recs, float(page.width))
+                recs = reading_order(recs, params["column_gap_pt"])
                 for i, r in enumerate(recs, start=1):     # ids follow reading order
                     block_id = f"p{n:04d}_b{i:03d}"
                     text, used_ocr = None, False
