@@ -103,5 +103,8 @@ identified by stem in the log. The log records both trigger signals, reason,
 engine, mean word confidence, and output text length, including empty pages.
 
 Outputs are staged before replacement so an extraction error leaves the previous
-run intact. Use a dedicated output directory for each input corpus; the log covers
-the current run. Multi-column ordering and table structure remain P3/P2 work.
+run intact. Use a dedicated output directory for each input corpus: after a
+successful run,
+stale page-text and word-box files are removed, including those for PDFs no
+longer in the input. Other files are retained. The log covers the current run.
+Multi-column ordering and table structure remain P3/P2 work.

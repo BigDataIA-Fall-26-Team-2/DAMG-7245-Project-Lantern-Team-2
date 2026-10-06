@@ -113,11 +113,13 @@ def main(params_path, input_dir, output_dir):
                         writer.writerow({"doc_id": doc_id, "stem": pdf.stem,
                                          **{key: page[key] for key in LOG_FIELDS if key in page}})
                         print(f"{pdf.stem} page {page['page']}: {page['engine']} ({page['reason']}), {page['text_chars']} chars")
-        for pdf in pdfs:
-            for stale in output.glob(f"{pdf.stem}_p[0-9][0-9][0-9][0-9].txt"):
-                stale.unlink()
+        current_files = {artifact.name for artifact in staged.iterdir()}
         for artifact in staged.iterdir():
             artifact.replace(output / artifact.name)
+        for artifact in output.iterdir():
+            owned = artifact.name.endswith(".words.jsonl") or re.fullmatch(r".+_p\d{4,}\.txt", artifact.name)
+            if artifact.is_file() and owned and artifact.name not in current_files:
+                artifact.unlink()
 
 
 if __name__ == "__main__":
