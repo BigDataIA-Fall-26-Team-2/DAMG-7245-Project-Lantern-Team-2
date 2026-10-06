@@ -27,6 +27,8 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 | Arelle (arelle-release) | P11: iXBRL fact extraction | requirements.txt |
 | difflib | P11: fuzzy label-to-concept matching | Python standard library |
 | Streamlit | App: team UI (frontend/) | requirements.txt |
+| Docling | P4: alternative parsing path (layout, reading order, tables in one pass) | requirements.txt |
+| docling-ibm-models (TableFormer) | P4: Docling's layout and table-structure models | requirements.txt |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->
 
 ## Shared development environment
