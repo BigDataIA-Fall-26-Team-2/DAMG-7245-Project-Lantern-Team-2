@@ -105,7 +105,52 @@ With a bbox, the scale caption "(In millions...)" sits above the table box, so i
 On 10-Q p4 the caption falls inside and the value is scaled correctly. Reported to the Part 2 owner: the scale lookup
 should use the full page text even when a bbox is passed.
 
-## 6. Known limitations
+## 6. Layout-aware extraction demo (multi-column)
+
+**Page:** `tests/fixtures/multicolumn.pdf`, Amdocs Annual Report 2024 (SEC-filed PDF), page 6 = printed spread 10-11
+(source per `docs/ai_log/lokesh.md`). Two printed pages side by side, **4 text columns**, white text on a dark designed background.
+
+**Plain pdfplumber** (`page.extract_text()`, first lines) reads straight across the spread and braids the columns together:
+
+    ESG: Seeking to make a difference Healthy pipeline and innovative technology
+    position Amdocs for continued growth and
+    As we work with our customers and We place high value on protecting the operating margin expansion
+    partners to create a better-connected environment and minimizing negative
+    ...
+    While we continue to operate in a We remain confident in our relatively
+
+**Layout pipeline** (`src/layout.py`), blocks in reading order:
+
+| block | column | x0 (pt) | starts with |
+|---|---|---|---|
+| p0001_b001 | 1 | 56 | ESG: Seeking to make a difference (Title) |
+| p0001_b002 | 1 | 52 | As we work with our customers and partners... |
+| p0001_b003 | 1 | 53 | Our achievements have been recognized... |
+| p0001_b004 | 2 | 211 | We place high value on protecting the environment... |
+| p0001_b005 | 2 | 209 | We also place great emphasis on enriching... |
+| p0001_b006 | 3 | 437 | While we continue to operate in a challenging... |
+| p0001_b007 | 3 | 436 | Our cloud-related activities in fiscal 2024... |
+| p0001_b008 | 4 | 595 | We remain confident in our relatively resilient... |
+
+Getting there required three fixes, each verified on this page and checked not to change the Apple filings
+(block counts identical before and after on both filings):
+
+1. **Dark pages are inverted before detection.** Unmodified, the detector returned one Figure box over the whole spread.
+   Page brightness is 0.18 vs 0.87-0.96 for every Apple page checked, so pages below `dark_page_brightness: 0.5` are
+   colour-inverted: 0 -> 7 Text blocks. Records carry `inverted: true`.
+2. **The full mediabox is rendered.** The page has `/Rotate 90` and a cropbox smaller than its mediabox. pdfplumber renders
+   only the cropbox by default (1587x1013 px) but reports text coordinates in the mediabox frame (1650x1275 px expected at
+   150 DPI), so every box was shifted ~16 pt left and ~64 pt up, pulling headings into paragraphs and slicing lines.
+   Rendering with `force_mediabox=True` fixes it; `detect_page` now raises an error if the rendered size ever differs from
+   the expected size.
+3. **Columns are found by clustering block left edges.** The original rule (left vs right half of the page) mixed columns
+   1/2 and 3/4. Left edges are sorted and a new column starts at any jump larger than `column_gap_pt: 50`
+   (gaps on this page are 150+ pt). Single-column Apple pages stay one column.
+
+**Still missed by the detector on this page:** the right page's heading and two paragraphs (columns 3 and 4); logos and
+signatures are unboxed.
+
+## 7. Known limitations
 - Straddling and split boxes garble or fragment some paragraphs; documented, not fixed (a model limitation).
 - A few boxes are offset by more than 8 pt and still clip a letter.
 - Multiple tables under one Table box (10-K p50) can only yield the single best table.
