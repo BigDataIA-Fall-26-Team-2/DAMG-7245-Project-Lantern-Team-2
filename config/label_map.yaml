@@ -1,0 +1,90 @@
+# config/label_map.yaml - curated PDF row label -> XBRL concept map (Part 11, #39)
+#
+# Layer 1 of 3 in the mapping: manual (this file) -> label linkbase -> fuzzy (difflib).
+# Keys are the row_label strings written by src/tables.py ("Section: Line").
+# Matching normalizes both sides first: curly quotes -> straight, lowercase,
+# collapsed whitespace. So labels here use a plain ASCII apostrophe.
+#
+# Fields per line:
+#   pdf      PDF row_label (after normalization)
+#   concept  us-gaap local name (prefix assumed us-gaap)
+#   dims     optional; exact dims string from data/xbrl/facts.csv. Without it,
+#            only non-dimensional face facts (n_dims == 0) are used.
+#   match    optional; "prefix" when the label embeds filing-specific text
+#            (e.g. share counts in the common stock line). Default: exact.
+#
+# Concept names were checked against facts.csv: every concept below has
+# non-dimensional facts in both filings (Intangible assets: 10-Q only).
+# Detailed cash-flow lines are intentionally NOT listed: they are resolved by
+# the label-linkbase and fuzzy layers, so each layer's precision can be measured.
+
+version: 1
+
+lines:
+  income:
+    - {pdf: "Net sales: Products", concept: RevenueFromContractWithCustomerExcludingAssessedTax, dims: "srt:ProductOrServiceAxis=us-gaap:ProductMember"}
+    - {pdf: "Net sales: Services", concept: RevenueFromContractWithCustomerExcludingAssessedTax, dims: "srt:ProductOrServiceAxis=us-gaap:ServiceMember"}
+    - {pdf: "Net sales: Total net sales", concept: RevenueFromContractWithCustomerExcludingAssessedTax}
+    - {pdf: "Cost of sales: Products", concept: CostOfGoodsAndServicesSold, dims: "srt:ProductOrServiceAxis=us-gaap:ProductMember"}
+    - {pdf: "Cost of sales: Services", concept: CostOfGoodsAndServicesSold, dims: "srt:ProductOrServiceAxis=us-gaap:ServiceMember"}
+    - {pdf: "Cost of sales: Total cost of sales", concept: CostOfGoodsAndServicesSold}
+    - {pdf: "Gross margin", concept: GrossProfit}
+    - {pdf: "Operating expenses: Research and development", concept: ResearchAndDevelopmentExpense}
+    - {pdf: "Operating expenses: Selling, general and administrative", concept: SellingGeneralAndAdministrativeExpense}
+    - {pdf: "Operating expenses: Total operating expenses", concept: OperatingExpenses}
+    - {pdf: "Operating income", concept: OperatingIncomeLoss}
+    - {pdf: "Other income/(expense), net", concept: NonoperatingIncomeExpense}
+    - {pdf: "Income before provision for income taxes", concept: IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest}
+    - {pdf: "Provision for income taxes", concept: IncomeTaxExpenseBenefit}
+    - {pdf: "Net income", concept: NetIncomeLoss}
+    - {pdf: "Earnings per share: Basic", concept: EarningsPerShareBasic}
+    - {pdf: "Earnings per share: Diluted", concept: EarningsPerShareDiluted}
+    - {pdf: "Shares used in computing earnings per share: Basic", concept: WeightedAverageNumberOfSharesOutstandingBasic}
+    - {pdf: "Shares used in computing earnings per share: Diluted", concept: WeightedAverageNumberOfDilutedSharesOutstanding}
+
+  balance:
+    - {pdf: "Current assets: Cash and cash equivalents", concept: CashAndCashEquivalentsAtCarryingValue}
+    - {pdf: "Current assets: Marketable securities", concept: MarketableSecuritiesCurrent}
+    - {pdf: "Current assets: Accounts receivable, net", concept: AccountsReceivableNetCurrent}
+    - {pdf: "Current assets: Vendor non-trade receivables", concept: NontradeReceivablesCurrent}
+    - {pdf: "Current assets: Inventories", concept: InventoryNet}
+    - {pdf: "Current assets: Other current assets", concept: OtherAssetsCurrent}
+    - {pdf: "Current assets: Total current assets", concept: AssetsCurrent}
+    - {pdf: "Non-current assets: Marketable securities", concept: MarketableSecuritiesNoncurrent}
+    - {pdf: "Non-current assets: Property, plant and equipment, net", concept: PropertyPlantAndEquipmentNet}
+    - {pdf: "Non-current assets: Intangible assets, net", concept: IntangibleAssetsNetExcludingGoodwill}
+    - {pdf: "Non-current assets: Other non-current assets", concept: OtherAssetsNoncurrent}
+    - {pdf: "Non-current assets: Total non-current assets", concept: AssetsNoncurrent}
+    - {pdf: "Total assets", concept: Assets}
+    - {pdf: "Current liabilities: Accounts payable", concept: AccountsPayableCurrent}
+    - {pdf: "Current liabilities: Other current liabilities", concept: OtherLiabilitiesCurrent}
+    - {pdf: "Current liabilities: Deferred revenue", concept: ContractWithCustomerLiabilityCurrent}
+    - {pdf: "Current liabilities: Commercial paper", concept: CommercialPaper}
+    - {pdf: "Current liabilities: Term debt", concept: LongTermDebtCurrent}
+    - {pdf: "Current liabilities: Total current liabilities", concept: LiabilitiesCurrent}
+    - {pdf: "Non-current liabilities: Term debt", concept: LongTermDebtNoncurrent}
+    - {pdf: "Non-current liabilities: Other non-current liabilities", concept: OtherLiabilitiesNoncurrent}
+    - {pdf: "Non-current liabilities: Total non-current liabilities", concept: LiabilitiesNoncurrent}
+    - {pdf: "Total liabilities", concept: Liabilities}
+    - {pdf: "Shareholders' equity: Common stock and additional paid-in capital", concept: CommonStocksIncludingAdditionalPaidInCapital, match: prefix}
+    - {pdf: "Shareholders' equity: Accumulated deficit", concept: RetainedEarningsAccumulatedDeficit}
+    - {pdf: "Shareholders' equity: Retained earnings/(Accumulated deficit)", concept: RetainedEarningsAccumulatedDeficit}
+    - {pdf: "Shareholders' equity: Accumulated other comprehensive loss", concept: AccumulatedOtherComprehensiveIncomeLossNetOfTax}
+    - {pdf: "Shareholders' equity: Total shareholders' equity", concept: StockholdersEquity}
+    - {pdf: "Total liabilities and shareholders' equity", concept: LiabilitiesAndStockholdersEquity}
+
+  cash_flow:
+    # Totals below carry the previous subsection's prefix: a Part 2 section-tracking
+    # quirk in src/tables.py, mapped as-is here and diagnosed in reports/xbrl.md.
+    - {pdf: "Cash, cash equivalents, and restricted cash and cash equivalents, beginning balances", concept: CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents}
+    - {pdf: "Operating activities: Net income", concept: NetIncomeLoss}
+    - {pdf: "Adjustments to reconcile net income to cash generated by operating activities: Depreciation and amortization", concept: DepreciationDepletionAndAmortization}
+    - {pdf: "Adjustments to reconcile net income to cash generated by operating activities: Share-based compensation expense", concept: ShareBasedCompensation}
+    - {pdf: "Changes in operating assets and liabilities: Cash generated by operating activities", concept: NetCashProvidedByUsedInOperatingActivities}
+    - {pdf: "Investing activities: Payments for acquisition of property, plant and equipment", concept: PaymentsToAcquirePropertyPlantAndEquipment}
+    - {pdf: "Investing activities: Cash generated by/(used in) investing activities", concept: NetCashProvidedByUsedInInvestingActivities}
+    - {pdf: "Financing activities: Payments for dividends and dividend equivalents", concept: PaymentsOfDividends}
+    - {pdf: "Financing activities: Repurchases of common stock", concept: PaymentsForRepurchaseOfCommonStock}
+    - {pdf: "Financing activities: Cash used in financing activities", concept: NetCashProvidedByUsedInFinancingActivities}
+    - {pdf: "Financing activities: Cash, cash equivalents, and restricted cash and cash equivalents, ending balances", concept: CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents}
+    - {pdf: "Supplemental cash flow disclosure: Cash paid for income taxes, net", concept: IncomeTaxesPaidNet}
