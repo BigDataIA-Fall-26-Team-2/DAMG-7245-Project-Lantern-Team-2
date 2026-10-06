@@ -15,12 +15,17 @@ Two quirks are handled here:
   subtracted to get the filing's own dates (fiscal year end 2025-09-27, not 2025-09-28).
 """
 import argparse
+import difflib
+import re
 import shutil
+import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
 FACT_COLUMNS = ["stem", "accession", "form", "concept", "prefix", "label", "value", "unit",
                 "decimals", "period_type", "start", "end", "months", "period_label",
@@ -164,5 +169,230 @@ def main():
     print(f"wrote {out / 'facts.csv'}: {len(facts)} facts from {len(frames)} filings")
 
 
+# ---------------------------------------------------------------------------
+# #39  Compare PDF statement tables with XBRL facts
+# Mapping layers: manual (config/label_map.yaml) -> label linkbase -> fuzzy.
+# Run: python src/xbrl.py compare --path traditional --tables data/tables
+# ---------------------------------------------------------------------------
+
+COMPARE_COLUMNS = ["path", "stem", "statement", "page", "pdf_label", "period_label",
+                   "prefix", "concept", "dims", "mapping", "pdf_raw", "pdf_value",
+                   "xbrl_value", "decimals", "tolerance", "status"]
+SCALE_EXPONENTS = (3, 6, 9)
+
+
+def norm(text):
+    """Normalize a label for matching: straight quotes, lowercase, single spaces."""
+    text = str(text).replace("\u2019", "'").replace("\u2018", "'")
+    text = text.replace("\u201c", '"').replace("\u201d", '"')
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def line_part(label):
+    """'Net sales: Total net sales' -> 'Total net sales' (text after the last prefix)."""
+    return str(label).rsplit(": ", 1)[-1]
+
+
+def tolerance(decimals):
+    """Half a unit of the last reported digit: decimals -6 -> 500,000; INF/blank -> 0.5."""
+    try:
+        d = float(decimals)
+    except (TypeError, ValueError):
+        return 0.5
+    if d != d or d in (float("inf"), float("-inf")):
+        return 0.5
+    return 0.5 * 10 ** (-d)
+
+
+def classify(pdf, xbrl, tol):
+    """Status for one cell: match, sign, scale_x1e{N}, mismatch, pdf_missing, xbrl_missing."""
+    if pdf is None or pd.isna(pdf):
+        return "pdf_missing"
+    if xbrl is None or pd.isna(xbrl):
+        return "xbrl_missing"
+    if abs(pdf - xbrl) <= tol:
+        return "match"
+    if abs(abs(pdf) - abs(xbrl)) <= tol:
+        return "sign"
+    if pdf != 0 and xbrl != 0:
+        for e in SCALE_EXPONENTS:
+            k = 10 ** e
+            if abs(abs(pdf) * k - abs(xbrl)) <= max(tol, 0.5 * k):
+                return f"scale_x1e{e}"
+            if abs(abs(pdf) - abs(xbrl) * k) <= max(tol * k, 0.5 * k):
+                return f"scale_x1e-{e}"
+    return "mismatch"
+
+
+def load_label_map(path):
+    """config/label_map.yaml -> {statement: [entry, ...]}, each entry with a normalized key."""
+    raw = yaml.safe_load(Path(path).read_text())
+    return {st: [dict(e, key=norm(e["pdf"])) for e in entries]
+            for st, entries in raw["lines"].items()}
+
+
+def manual_candidates(entries, label):
+    """Layer 1: exact match on the normalized label, or prefix match if the entry says so."""
+    key = norm(label)
+    for e in entries:
+        if key == e["key"] or (e.get("match") == "prefix" and key.startswith(e["key"])):
+            return [("manual", {"prefix": "us-gaap", "concept": e["concept"],
+                                "dims": e.get("dims") or ""})]
+    return []
+
+
+def linkbase_labels(source_file):
+    """Layer 2 source: {normalized label text: [(prefix, concept), ...]} from the _lab.xml."""
+    found = sorted(Path(source_file).parent.glob("*_lab.xml"))
+    if not found:
+        return {}
+    root = ET.fromstring(unwrap(found[0].read_bytes()))
+    xl = "{http://www.w3.org/1999/xlink}"
+    loc_concept, label_text, arcs = {}, {}, []
+    for el in root.iter():
+        tag = el.tag.rsplit("}", 1)[-1]
+        if tag == "loc":
+            frag = el.get(xl + "href", "").rsplit("#", 1)[-1]
+            prefix, _, local = frag.partition("_")
+            loc_concept[el.get(xl + "label")] = (prefix, local)
+        elif tag == "label":
+            label_text.setdefault(el.get(xl + "label"), []).append(el.text or "")
+        elif tag == "labelArc":
+            arcs.append((el.get(xl + "from"), el.get(xl + "to")))
+    out = {}
+    for frm, to in arcs:
+        if frm not in loc_concept:
+            continue
+        for text in label_text.get(to, []):
+            key = norm(text)
+            if key and loc_concept[frm] not in out.setdefault(key, []):
+                out[key].append(loc_concept[frm])
+    return out
+
+
+def fact_index(facts):
+    """{(stem, prefix, concept, dims or '', period_label): (value, decimals)}."""
+    idx = {}
+    for r in facts.itertuples(index=False):
+        dims = "" if r.n_dims == 0 else str(r.dims)
+        idx[(r.stem, r.prefix, r.concept, dims, r.period_label)] = (r.value, r.decimals)
+    return idx
+
+
+def candidates(label, entries, labels, choices, cutoff):
+    """Try the three mapping layers in order; return [(method, candidate), ...]."""
+    found = manual_candidates(entries, label)
+    if found:
+        return found
+    for text in (norm(label), norm(line_part(label))):
+        if text in labels:
+            return [("label", {"prefix": p, "concept": c, "dims": ""}) for p, c in labels[text]]
+    hit = difflib.get_close_matches(norm(line_part(label)), choices, n=1, cutoff=cutoff)
+    if hit:
+        return [("fuzzy", {"prefix": p, "concept": c, "dims": ""}) for p, c in labels[hit[0]]]
+    return []
+
+
+def resolve(cands, stem, period, pdf_value, idx):
+    """Disambiguate by value: prefer the candidate whose fact matches the PDF number."""
+    best = None
+    for method, c in cands:
+        fact = idx.get((stem, c["prefix"], c["concept"], c["dims"], period))
+        if fact is None:
+            continue
+        if best is None:
+            best = (method, c, fact[0], fact[1])
+        if classify(pdf_value, fact[0], tolerance(fact[1])) == "match":
+            return method, c, fact[0], fact[1]
+    if best:
+        return best
+    if cands:
+        return cands[0][0], cands[0][1], None, None
+    return "none", {"prefix": "", "concept": "", "dims": ""}, None, None
+
+
+def compare_main(argv=None):
+    ap = argparse.ArgumentParser(description="Compare PDF statement tables with XBRL facts (#39)")
+    ap.add_argument("--path", default="traditional", help="extraction path: traditional or docling")
+    ap.add_argument("--tables", default="data/tables", help="folder with {stem}_p{NNNN}_t1.csv")
+    ap.add_argument("--facts", default="data/xbrl/facts.csv")
+    ap.add_argument("--manifest", default="data/rendered/manifest.csv")
+    ap.add_argument("--label-map", default="config/label_map.yaml")
+    ap.add_argument("--params", default="params.yaml")
+    ap.add_argument("--output", default="data/xbrl", help="folder for comparison_{path}.csv")
+    a = ap.parse_args(argv)
+
+    cfg = yaml.safe_load(Path(a.params).read_text())["xbrl"]
+    pages, cutoff = cfg["statement_pages"], float(cfg["fuzzy_cutoff"])
+    facts = pd.read_csv(a.facts)
+    idx = fact_index(facts)
+    face = facts[facts.n_dims == 0]
+    manifest = pd.read_csv(a.manifest).set_index("stem")
+    label_map = load_label_map(a.label_map)
+
+    rows = []
+    for stem, statements in pages.items():
+        labels = linkbase_labels(manifest.loc[stem, "source_file"])
+        have = set(zip(face[face.stem == stem].prefix, face[face.stem == stem].concept))
+        choices = [k for k, v in labels.items() if any(pc in have for pc in v)]
+        for statement, page in statements.items():
+            table = Path(a.tables) / f"{stem}_p{int(page):04d}_t1.csv"
+            if not table.exists():
+                print(f"WARNING: no table for {stem} {statement} p{page}: {table}")
+                continue
+            df = pd.read_csv(table)
+            entries = label_map.get(statement, [])
+            seen = set()
+            for r in df.itertuples(index=False):
+                cands = candidates(r.row_label, entries, labels, choices, cutoff)
+                method, c, xval, dec = resolve(cands, stem, r.col_label, r.value, idx)
+                tol = tolerance(dec)
+                status = "xbrl_missing" if xval is None else classify(r.value, xval, tol)
+                rows.append({"path": a.path, "stem": stem, "statement": statement,
+                             "page": page, "pdf_label": r.row_label,
+                             "period_label": r.col_label, "prefix": c["prefix"],
+                             "concept": c["concept"], "dims": c["dims"], "mapping": method,
+                             "pdf_raw": r.raw, "pdf_value": r.value, "xbrl_value": xval,
+                             "decimals": dec, "tolerance": tol, "status": status})
+                seen.add((c["concept"], c["dims"], r.col_label))
+            # pdf_missing: a curated line has an XBRL fact for this table's periods, no PDF row
+            for e in entries:
+                dims = e.get("dims") or ""
+                for period in df.col_label.unique():
+                    key = (stem, "us-gaap", e["concept"], dims, period)
+                    if key in idx and (e["concept"], dims, period) not in seen:
+                        seen.add((e["concept"], dims, period))
+                        xval, dec = idx[key]
+                        rows.append({"path": a.path, "stem": stem, "statement": statement,
+                                     "page": page, "pdf_label": e["pdf"],
+                                     "period_label": period, "prefix": "us-gaap",
+                                     "concept": e["concept"], "dims": dims,
+                                     "mapping": "manual", "pdf_raw": None, "pdf_value": None,
+                                     "xbrl_value": xval, "decimals": dec,
+                                     "tolerance": tolerance(dec), "status": "pdf_missing"})
+
+    out = pd.DataFrame(rows, columns=COMPARE_COLUMNS)
+    out_dir = Path(a.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target = out_dir / f"comparison_{a.path}.csv"
+    tmp = target.with_suffix(".csv.tmp")
+    out.to_csv(tmp, index=False)
+    tmp.replace(target)
+
+    rates = (out.assign(is_match=out.status.eq("match"))
+                .groupby("statement").is_match.agg(lines="size", matches="sum"))
+    rates["match_rate"] = (rates.matches / rates.lines).round(4)
+    rates.loc["ALL"] = [len(out), int(out.status.eq("match").sum()),
+                        round(out.status.eq("match").mean(), 4) if len(out) else 0.0]
+    rates.to_csv(out_dir / f"match_rates_{a.path}.csv")
+    print(f"wrote {target} ({len(out)} rows)")
+    print(out.status.value_counts().to_string())
+    print(out.mapping.value_counts().to_string())
+    print(rates.to_string())
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "compare":
+        compare_main(sys.argv[2:])
+    else:
+        main()
