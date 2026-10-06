@@ -27,7 +27,7 @@ Emitted per detected layout block: `page, block_id, block_type, bbox, score, mod
 
 ## Shared functions
 
-- `tables.extract_best_df(pdf_path, page)` — returns the best-scoring table DataFrame for a page.
+- `tables.extract_best_df(pdf_path, page, bbox=None)` — returns `(df, info)`. `df` is the best table on the page in the table CSV format above (`row_label, col_label, raw, value, scale`), or `None` if no candidate is accepted. `info` = `{method, score, extractor_version, accepted, skipped_rows}`; use `method` and `extractor_version` for the Part 5 `extractor` fields. `bbox` = `[x0, top, x1, bottom]` in points, top-left origin (converted for Camelot inside).
 - `managed.managed_fallback(page_image, ocr_conf)` — returns managed-OCR output when local OCR confidence is low.
 
 Thresholds (`accept_score`, `ocr_conf` cutoffs, etc.) live in `params.yaml`, not here.

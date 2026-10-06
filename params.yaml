@@ -29,6 +29,8 @@ ocr:
 tables:
   min_rulings: 4
   accept_score: 0.6
+  min_numeric_rows: 3     # fewer data rows than this is not a table (prose pages)
+  visible_max_gray: 0.9   # rulings with mean fill gray >= this are invisible (white cell borders)
 
 # Owner: Dhruvi (Part 11 - XBRL); keys to be filled in once mapping/tolerance approach is set
 xbrl: {}
