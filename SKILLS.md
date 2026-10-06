@@ -32,10 +32,16 @@ No `CLAUDE.md`, `AGENTS.md`, or other tool-specific stub files — this is the o
 ## Evidence over claims
 Every number in a `reports/*.md` file must trace to a CSV row, a JSON field, or a cited price page — never an unmeasured impression ("looks accurate"). This is a direct grading criterion (30% of each Part's score).
 
+## Test scope
+- Add persistent tests only when required by the assignment or explicitly requested by the user. Identify the requirement each added test satisfies; do not add tests merely because an assistant performed a check during implementation.
+- Run one-off verification commands or temporary scripts as needed, but keep them outside the tracked repository. Record actual results and limitations in the AI Engineering Log when appropriate.
+- Run existing relevant tests and retain assignment-required tests, including P9 quality regressions and CI checks. Do not expand the test suite with redundant checks or tests that only mirror the implementation.
+
 ## AI Engineering Log
 When you do substantive work on a PR, draft the AI Engineering Log section of the PR template for the author to review before they submit: tool/model used, what you contributed, how it was verified, at least one failure/limitation you found, and a one-line confidence statement. Only report verification steps that were actually run.
 
 ## Working style
+- Keep changes local for the user's inspection and testing. Do not push commits or create a pull request without the user's explicit approval for that action; prior approval for another change does not authorize future pushes or PRs.
 - Small, reviewable PRs: one Part or one bug per branch. Don't bundle multiple Case Study Parts in one PR.
 - Commit in small, logical increments as you go — not one giant commit per checkpoint/Part. Each commit should be independently understandable (e.g. "add OCR trigger thresholds", "wire OCR log into params.yaml") so review and `git bisect` stay useful.
 - See `CONTRIBUTING.md` for the human workflow and `WORKPLAN.md` for who owns which Part.
