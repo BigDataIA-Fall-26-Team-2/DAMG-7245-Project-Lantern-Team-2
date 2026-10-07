@@ -39,9 +39,17 @@ xbrl: {}
 # Owner: Shravya (Part 3 - layout)
 layout:
   model: "efficientdet"
-  score_threshold: 0.5
+  score_threshold: 0.25  # sweep on 9 pages: 0.25/0.2/0.1 identical; 0.3 drops blocks on 6/9; 0.5 leaves a page empty
+  max_overlap: 0.5  # drop a box if >50% of it lies inside a higher-scoring box
   pad_pt: 2.0
-
+  qa_pages:              # pages that get a box-overlay picture in reports/layout/ (also the 10 audit pages)
+    AAPL_10K_20250927: [1, 10, 20, 22, 32, 34, 50]
+    AAPL_10Q_20260627: [4, 15, 28]
+    multicolumn: [1]
+  text_pad_pt: 8         # sweep: clipped first letters 132->35 (10-K), 51->10 (10-Q); 12 pt gains little and risks the column gap
+  dark_page_brightness: 0.5  # invert pages darker than this before detection (multicolumn fixture: 0 -> 7 text blocks)
+  dark_page_brightness: 0.5  # invert pages darker than this before detection; fixture 0.18 vs Apple pages 0.87-0.96
+  column_gap_pt: 50          # new column when block left edges jump by more than this; multicolumn fixture gaps are 150+ pt
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
 docling:
   do_ocr: false             # Apple PDFs have a text layer (P1: 0 OCR pages); OCR only slows Docling down
