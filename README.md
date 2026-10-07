@@ -108,3 +108,19 @@ successful run,
 stale page-text and word-box files are removed, including those for PDFs no
 longer in the input. Other files are retained. The log covers the current run.
 Multi-column ordering and table structure remain P3/P2 work.
+
+## Refresh filings after the embedded-image fix
+
+The downloader decodes SEC's uuencoded binary attachments, and the renderer opens
+`unpacked/<original filename>` so relative image paths resolve. Rendering fails
+if an HTML image cannot load, rather than saving a broken-image placeholder.
+For existing downloads, rerun in this order:
+
+```bash
+python src/download.py
+python src/render.py
+python src/parse_text.py
+```
+
+Regenerate other downstream artifacts as needed because source PDF hashes change.
+The verified Apple page counts remain 61 (10-K) and 30 (10-Q).
