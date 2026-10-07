@@ -176,3 +176,41 @@ def test_label_layer_then_fuzzy_layer(filing):
 
 def test_negated_label_read_from_enveloped_presentation_linkbase(filing):
     assert xbrl.negated_concepts(filing) == {("us-gaap", "RepaymentsOfLongTermDebt")}
+
+
+# ------------------------------------------------------------ pdf_missing (#57)
+_BEGIN = {"pdf": "Cash, beginning balances", "concept": "Cash", "instant": "opening"}
+_END = {"pdf": "Cash, ending balances", "concept": "Cash", "instant": "end"}
+_CASH = {("S", "us-gaap", "Cash", "", "2026-06-27"): (39_544 * M, -6),
+         ("S", "us-gaap", "Cash", "", "2025-09-27"): (35_934 * M, -6)}
+
+
+def test_missing_opening_balance_is_reported_under_its_own_line(bounds):
+    # Docling's 10-K cash-flow table dropped the beginning-balances row: only the ending row exists
+    seen = {("Cash", "", "2026-06-27", "9M ended 2026-06-27")}
+    found = xbrl.missing_cells([_BEGIN, _END], ["9M ended 2026-06-27"], "S", _CASH, bounds, seen)
+    assert [(e["pdf"], p) for e, _, p, *_ in found] == [("Cash, beginning balances", "2025-09-27")]
+
+
+def test_nothing_missing_when_both_balances_were_extracted(bounds):
+    seen = {("Cash", "", "2026-06-27", "9M ended 2026-06-27"),
+            ("Cash", "", "2025-09-27", "9M ended 2026-06-27")}
+    assert xbrl.missing_cells([_BEGIN, _END], ["9M ended 2026-06-27"], "S", _CASH, bounds, seen) == []
+
+
+def test_opening_balance_that_equals_last_years_ending_is_still_reported():
+    # Real case (Docling, 10-K p36): only the ending rows were extracted. FY2025's opening fact
+    # (2024-09-28) is also FY2024's ending fact, which WAS extracted; it must not hide the gap.
+    facts = pd.DataFrame([
+        {"period_type": "duration", "period_label": "FY ended 2025-09-27", "start": "2024-09-29", "end": "2025-09-27"},
+        {"period_type": "duration", "period_label": "FY ended 2024-09-28", "start": "2023-10-01", "end": "2024-09-28"}])
+    two_years = xbrl.period_bounds(facts)
+    idx = {("S", "us-gaap", "Cash", "", d): (v * M, -6)
+           for d, v in (("2025-09-27", 3), ("2024-09-28", 2), ("2023-09-30", 1))}
+    seen = {("Cash", "", "2025-09-27", "FY ended 2025-09-27"),
+            ("Cash", "", "2024-09-28", "FY ended 2024-09-28")}
+    found = xbrl.missing_cells([_BEGIN, _END], ["FY ended 2025-09-27", "FY ended 2024-09-28"],
+                               "S", idx, two_years, seen)
+    assert [(e["pdf"], col, p) for e, col, p, *_ in found] == [
+        ("Cash, beginning balances", "FY ended 2025-09-27", "2024-09-28"),
+        ("Cash, beginning balances", "FY ended 2024-09-28", "2023-09-30")]
