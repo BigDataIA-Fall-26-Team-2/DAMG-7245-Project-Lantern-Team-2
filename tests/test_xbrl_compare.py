@@ -74,7 +74,8 @@ def entries(tmp_path):
 
 def test_manual_map_ignores_curly_quotes_case_and_spacing(entries):
     found = xbrl.manual_candidates(entries, "Shareholders\u2019  equity: TOTAL shareholders\u2019 equity")
-    assert found == [("manual", {"prefix": "us-gaap", "concept": "StockholdersEquity", "dims": ""})]
+    assert found == [("manual", {"prefix": "us-gaap", "concept": "StockholdersEquity", "dims": "",
+                              "instant": ""})]
 
 
 def test_manual_map_prefix_match_survives_filing_specific_share_counts(entries):
@@ -214,3 +215,33 @@ def test_opening_balance_that_equals_last_years_ending_is_still_reported():
     assert [(e["pdf"], col, p) for e, col, p, *_ in found] == [
         ("Cash, beginning balances", "FY ended 2025-09-27", "2024-09-28"),
         ("Cash, beginning balances", "FY ended 2024-09-28", "2023-09-30")]
+
+
+# ------------------------------------------------------------ review fixes (#98)
+def test_swapped_beginning_and_ending_balances_fail_instead_of_matching(bounds):
+    # Lokesh's case: beginning row holds the ending value (and vice versa)
+    begin = {"prefix": "us-gaap", "concept": "Cash", "dims": "", "instant": "opening"}
+    end = {"prefix": "us-gaap", "concept": "Cash", "dims": "", "instant": "end"}
+    col = "9M ended 2026-06-27"
+    _, _, p_b, v_b, d_b = xbrl.resolve([("manual", begin)], "S", col, 39_544 * M, _CASH, bounds)
+    _, _, p_e, v_e, d_e = xbrl.resolve([("manual", end)], "S", col, 35_934 * M, _CASH, bounds)
+    assert p_b == "2025-09-27" and xbrl.classify(39_544 * M, v_b, xbrl.tolerance(d_b)) == "mismatch"
+    assert p_e == "2026-06-27" and xbrl.classify(35_934 * M, v_e, xbrl.tolerance(d_e)) == "mismatch"
+
+
+def test_balance_instant_comes_from_the_label_when_the_map_has_none():
+    assert xbrl.instant_from_label("Cash, cash equivalents, and restricted cash, beginning balances") == "opening"
+    assert xbrl.instant_from_label("Financing activities: Cash, cash equivalents, ending balances") == "end"
+    assert xbrl.instant_from_label("Net income") == ""
+
+
+def test_compare_stops_when_a_configured_statement_table_is_missing(tmp_path):
+    params = tmp_path / "params.yaml"
+    params.write_text("xbrl:\n  fuzzy_cutoff: 0.85\n  statement_pages:\n"
+                      "    AAPL_10K_20250927: {income: 32, cash_flow: 36}\n")
+    tables = tmp_path / "tables"
+    tables.mkdir()
+    (tables / "AAPL_10K_20250927_p0032_t1.csv").write_text("row_label,col_label,raw,value,scale\n")
+    with pytest.raises(SystemExit) as err:
+        xbrl.compare_main(["--params", str(params), "--tables", str(tables)])
+    assert "AAPL_10K_20250927_p0036_t1.csv" in str(err.value)
