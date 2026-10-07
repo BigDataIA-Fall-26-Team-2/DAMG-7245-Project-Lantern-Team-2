@@ -23,6 +23,7 @@ sys.path = [s for s in sys.path if Path(s or ".").resolve() != _HERE]
 import yaml
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
 import docling_parse as _docling_parse_pkg  # noqa: F401  load Docling's real parser now, so later lazy imports reuse it
@@ -56,6 +57,8 @@ def make_converter(p):
     opts = PdfPipelineOptions(do_ocr=p["do_ocr"], do_table_structure=True)
     opts.table_structure_options.mode = (TableFormerMode.ACCURATE if p["table_mode"] == "accurate"
                                          else TableFormerMode.FAST)
+    # auto picks the Mac GPU (MPS) when present; pin cpu for numbers comparable to a CPU-only VM (Part 10)
+    opts.accelerator_options = AcceleratorOptions(device=AcceleratorDevice(p.get("device", "auto")))
     return DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)})
 
 
