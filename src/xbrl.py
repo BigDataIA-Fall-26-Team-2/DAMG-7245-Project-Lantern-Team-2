@@ -311,6 +311,35 @@ def period_options(period, bounds):
     return options
 
 
+def instant_options(entry, options):
+    """Keep only the instant a balance line refers to: `instant: end` or `instant: opening`."""
+    which = entry.get("instant")
+    if which == "end":
+        return options[1:2]
+    if which == "opening":
+        return options[2:3]
+    return options
+
+
+def missing_cells(entries, periods, stem, idx, bounds, seen):
+    """Curated lines that have an XBRL fact for a table period but no PDF cell.
+    Returns (entry, column period, fact period, value, decimals); seen holds
+    (concept, dims, fact period, table column) of every extracted cell and is updated.
+    The column matters: last year's ending balance is the same fact as this year's opening."""
+    found = []
+    for e in entries:
+        dims = e.get("dims") or ""
+        prefix = e.get("prefix", "us-gaap")
+        for period in periods:
+            for p in instant_options(e, period_options(period, bounds)):
+                key = (stem, prefix, e["concept"], dims, p)
+                if key in idx and (e["concept"], dims, p, period) not in seen:
+                    seen.add((e["concept"], dims, p, period))
+                    found.append((e, period, p) + tuple(idx[key]))
+                    break
+    return found
+
+
 def negated_concepts(source_file):
     """{(prefix, concept)} the filing presents with a negated label, from its _pre.xml."""
     found = sorted(Path(source_file).parent.glob("*_pre.xml"))
@@ -407,23 +436,17 @@ def compare_main(argv=None):
                              "mapping": method, "pdf_raw": r.raw, "pdf_value": r.value,
                              "xbrl_value": xval, "decimals": dec, "tolerance": tol,
                              "status": status, "cause": cause})
-                seen.add((c["concept"], c["dims"], r.col_label))
+                seen.add((c["concept"], c["dims"], xper, r.col_label))
             # pdf_missing: a curated line has an XBRL fact for this table's periods, no PDF row
-            for e in entries:
-                dims = e.get("dims") or ""
-                for period in df.col_label.unique():
-                    key = (stem, e.get("prefix", "us-gaap"), e["concept"], dims, period)
-                    if key in idx and (e["concept"], dims, period) not in seen:
-                        seen.add((e["concept"], dims, period))
-                        xval, dec = idx[key]
-                        rows.append({"path": a.path, "stem": stem, "statement": statement,
-                                     "page": page, "pdf_label": e["pdf"],
-                                     "period_label": period, "xbrl_period": period,
-                                     "prefix": key[1], "concept": e["concept"],
-                                     "dims": dims, "mapping": "manual", "pdf_raw": None,
-                                     "pdf_value": None, "xbrl_value": xval, "decimals": dec,
-                                     "tolerance": tolerance(dec), "status": "pdf_missing",
-                                     "cause": ""})
+            for e, period, p, xval, dec in missing_cells(entries, df.col_label.unique(), stem,
+                                                         idx, bounds, seen):
+                rows.append({"path": a.path, "stem": stem, "statement": statement,
+                             "page": page, "pdf_label": e["pdf"], "period_label": period,
+                             "xbrl_period": p, "prefix": e.get("prefix", "us-gaap"),
+                             "concept": e["concept"], "dims": e.get("dims") or "",
+                             "mapping": "manual", "pdf_raw": None, "pdf_value": None,
+                             "xbrl_value": xval, "decimals": dec, "tolerance": tolerance(dec),
+                             "status": "pdf_missing", "cause": ""})
 
     out = pd.DataFrame(rows, columns=COMPARE_COLUMNS)
     out_dir = Path(a.output)
