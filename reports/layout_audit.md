@@ -100,10 +100,13 @@ Every block now carries `extractor` / `extractor_version` (the table method for 
 - The 10-K balance sheet (p34) is absent because the detector drew no Table box there. Financial statements therefore keep
   Dhruvi's heading-based page extraction as the primary path; layout routing adds the other tables.
 
-**Bug found end to end:** on 10-K p32, Net income comes back as `112010.0` with `scale 1.0` instead of `112010000000`.
-With a bbox, the scale caption "(In millions...)" sits above the table box, so it falls outside the text the extractor reads.
-On 10-Q p4 the caption falls inside and the value is scaled correctly. Reported to the Part 2 owner: the scale lookup
-should use the full page text even when a bbox is passed.
+**Bug found end to end, now fixed:** on 10-K p32, routing a Table box returned an accepted table (score 1.0) with
+Net income `112010.0`, `scale 1.0` and period labels `col1/col2/col3`, because `extract_best_df` read only the text inside
+the box, and the "(In millions...)" note and the period headers sit above it. Fixed in `tables.py` by PR #106: the bbox
+still chooses the table, but `to_long` reads the full page. `tests/test_layout_routing.py` routes a numbers-only box
+below the headers (like the detector's p32 box) through `route_table`: it failed before #106 ("period headers lost")
+and passes after, with Net income 112,010,000,000 and FY period labels. `tests/test_tables_bbox.py` (#106) covers
+`extract_best_df` directly.
 
 ## 6. Layout-aware extraction demo (multi-column)
 
