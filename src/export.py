@@ -3,6 +3,7 @@ import glob
 import json
 import re
 from pathlib import Path
+import yaml
 
 from adapters import (
     block_from_layout_record,
@@ -10,14 +11,20 @@ from adapters import (
     table_from_csv_rows,
 )
 
+PARAMS = yaml.safe_load(open("params.yaml", encoding="utf-8"))
+EXPORT = PARAMS.get("export", {})
+
 MANIFEST = Path("data/rendered/manifest.csv")
-LAYOUT_DIR = Path("data/layout")
-DOCLING_DIR = Path("data/docling")
-TABLES_DIR = Path("data/tables")
-EXPORT_DIR = Path("data/export")
+LAYOUT_DIR = Path(EXPORT.get("layout_dir", "data/layout"))
+DOCLING_DIR = Path(EXPORT.get("docling_dir", "data/docling"))
+TABLES_DIR = Path(EXPORT.get("tables_dir", "data/tables"))
+EXPORT_DIR = Path(EXPORT.get("out_dir", "data/export"))
+
+PARAGRAPH_GAP_PT = float(EXPORT.get("paragraph_gap_pt", 6.0))
+EMIT_DOCLING = bool(EXPORT.get("emit_docling", True))
+COMPANY_BY_TICKER = EXPORT.get("company_by_ticker", {})
 
 ITEM_RE = re.compile(r"^Item\s+\d+[A-Z]?\.?", re.IGNORECASE)
-COMPANY_BY_TICKER = {"AAPL": "Apple Inc."}
 
 
 def load_manifest(path=MANIFEST):
@@ -61,7 +68,7 @@ def layout_blocks(manifest_row, stem):
     table_bbox = {}
     for rec in read_jsonl(path):
         if rec["block_type"] == "Table":
-            table_bbox[rec["page"]] = rec["bbox"]
+            table_bbox.setdefault(rec["page"], []).append(rec["bbox"])
             continue
         section = section_for(rec.get("text"), section)
         b = block_from_layout_record(manifest_row, rec, section)
@@ -72,8 +79,12 @@ def layout_blocks(manifest_row, stem):
 
 def table_blocks(manifest_row, stem, table_bbox):
     blocks = []
-    pattern = str(TABLES_DIR / f"{stem}_p*_t*.csv")
-    for csv_path in sorted(glob.glob(pattern)):
+    paths = sorted(glob.glob(str(TABLES_DIR / f"{stem}_p*_t*.csv")))
+    page_counts = {}
+    for p in paths:
+        pg = int(re.search(r"_p(\d+)_", Path(p).stem).group(1))
+        page_counts[pg] = page_counts.get(pg, 0) + 1
+    for csv_path in paths:
         name = Path(csv_path).stem
         page = int(re.search(r"_p(\d+)_", name).group(1))
         tk = int(re.search(r"_t(\d+)$", name).group(1))
@@ -81,7 +92,19 @@ def table_blocks(manifest_row, stem, table_bbox):
             rows = list(csv.DictReader(f))
         if not rows:
             continue
-        bbox = table_bbox.get(page, [0.0, 0.0, 1.0, 1.0])
+        boxes = table_bbox.get(page, [])
+        page_tables = page_counts.get(page, 0)
+        if len(boxes) == page_tables and tk <= len(boxes):
+            bbox = boxes[tk - 1]
+        elif boxes:
+            bbox = [
+                min(b[0] for b in boxes),
+                min(b[1] for b in boxes),
+                max(b[2] for b in boxes),
+                max(b[3] for b in boxes),
+            ]
+        else:
+            bbox = [0.0, 0.0, 1.0, 1.0]
         block_id = f"p{page:04d}_b{900 + tk:03d}"
         scale = rows[0].get("scale")
         blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox, rows, scale))
@@ -118,8 +141,10 @@ def main():
         trad, table_bbox = layout_blocks(row, stem)
         trad += table_blocks(row, stem, table_bbox)
         write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
-        doc = docling_blocks(row, stem)
-        write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
+        doc = []
+        if EMIT_DOCLING:
+            doc = docling_blocks(row, stem)
+            write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
         print(f"{stem}\ttraditional={len(trad)}\tdocling={len(doc)}")
 
 
