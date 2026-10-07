@@ -1,10 +1,10 @@
 # XBRL validation (Part 11)
 
 Every number on Apple's three primary statements, in both filings, is checked against the filing's own XBRL.
-Issues #38 (fact extraction), #39 (mapping and comparison), #57 (this report), #49 (Docling path, pending).
+Issues #38 (fact extraction), #39 (mapping and comparison), #57 (this report), #49 (Docling path, closed).
 
-**Result (traditional path): 388 table cells, 328 match (84.5%), 60 sign, 0 other. Value agreement 388 / 388.
-Every non-match has a diagnosed cause.** All numbers below come from `notebooks/xbrl_validation.ipynb`
+**Result, both paths: traditional 388 cells, 328 match (84.5%); docling 385 cells, 325 match (84.4%). Both paths: every non-match is the same diagnosed sign cause, 0 other.**
+Every non-match has a diagnosed cause. All numbers below come from `notebooks/xbrl_validation.ipynb`
 (executed outputs) and `data/xbrl/comparison_traditional.csv` unless stated.
 
 ## How it works
@@ -29,7 +29,10 @@ Statement pages (`xbrl.statement_pages` in `params.yaml`): 10-K p32 income, p34 
 | traditional | Balance | 110 | 110 | 0 | 0 | **100.0%** | 100% |
 | traditional | Cash flow | 145 | 85 | 60 | 0 | **58.6%** | 100% |
 | traditional | **All** | **388** | **328** | **60** | **0** | **84.5%** | **100%** |
-| docling | all | — | — | — | — | *pending #49* | — |
+| docling | Income | 133 | 133 | 0 | 0 | **100.0%** | 100% |
+| docling | Balance | 110 | 110 | 0 | 0 | **100.0%** | 100% |
+| docling | Cash flow | 142 | 82 | 60 | 0 | **57.8%** | 100% |
+| docling | **All** | **385** | **325** | **60** | **0** | **84.4%** | **100%** |
 
 Per filing (traditional):
 
