@@ -238,7 +238,8 @@ def manual_candidates(entries, label):
     for e in entries:
         if key == e["key"] or (e.get("match") == "prefix" and key.startswith(e["key"])):
             return [("manual", {"prefix": e.get("prefix", "us-gaap"), "concept": e["concept"],
-                                "dims": e.get("dims") or ""})]
+                                "dims": e.get("dims") or "",
+                                "instant": e.get("instant") or instant_from_label(e["pdf"])})]
     return []
 
 
@@ -287,10 +288,12 @@ def candidates(label, entries, labels, choices, cutoff):
         return found
     for text in (norm(label), norm(line_part(label))):
         if text in labels:
-            return [("label", {"prefix": p, "concept": c, "dims": ""}) for p, c in labels[text]]
+            return [("label", {"prefix": p, "concept": c, "dims": "", "instant": instant_from_label(label)})
+                    for p, c in labels[text]]
     hit = difflib.get_close_matches(norm(line_part(label)), choices, n=1, cutoff=cutoff)
     if hit:
-        return [("fuzzy", {"prefix": p, "concept": c, "dims": ""}) for p, c in labels[hit[0]]]
+        return [("fuzzy", {"prefix": p, "concept": c, "dims": "", "instant": instant_from_label(label)})
+                for p, c in labels[hit[0]]]
     return []
 
 
@@ -311,8 +314,22 @@ def period_options(period, bounds):
     return options
 
 
+def instant_from_label(label):
+    """'... beginning balances' -> 'opening'; '... ending balances' -> 'end'; otherwise ''."""
+    text = norm(label)
+    if re.search(r"\b(beginning|opening)\b", text):
+        return "opening"
+    if re.search(r"\b(ending|closing)\b", text):
+        return "end"
+    return ""
+
+
 def instant_options(entry, options):
-    """Keep only the instant a balance line refers to: `instant: end` or `instant: opening`."""
+    """Keep only the instant a balance line refers to: `instant: end` or `instant: opening`.
+    Decided before any value is compared, so a swapped balance fails instead of matching
+    the other date. A column that is already a single date keeps it."""
+    if len(options) == 1:
+        return options
     which = entry.get("instant")
     if which == "end":
         return options[1:2]
@@ -368,7 +385,7 @@ def resolve(cands, stem, period, pdf_value, idx, bounds):
     empty = {"prefix": "", "concept": "", "dims": ""}
     found = []
     for method, c in cands:
-        for p in period_options(period, bounds):
+        for p in instant_options(c, period_options(period, bounds)):
             fact = idx.get((stem, c["prefix"], c["concept"], c["dims"], p))
             if fact is not None:
                 status = classify(pdf_value, fact[0], tolerance(fact[1]))
@@ -388,6 +405,14 @@ def resolve(cands, stem, period, pdf_value, idx, bounds):
     return "none", empty, period, None, None
 
 
+def missing_tables(pages, tables_dir):
+    """Configured statement tables that do not exist. Any of them makes the comparison
+    invalid: skipping it would drop its cells from the match-rate denominator."""
+    return [Path(tables_dir) / f"{stem}_p{int(page):04d}_t1.csv"
+            for stem, statements in pages.items() for page in statements.values()
+            if not (Path(tables_dir) / f"{stem}_p{int(page):04d}_t1.csv").exists()]
+
+
 def compare_main(argv=None):
     ap = argparse.ArgumentParser(description="Compare PDF statement tables with XBRL facts (#39)")
     ap.add_argument("--path", default="traditional", help="extraction path: traditional or docling")
@@ -401,6 +426,10 @@ def compare_main(argv=None):
 
     cfg = yaml.safe_load(Path(a.params).read_text())["xbrl"]
     pages, cutoff = cfg["statement_pages"], float(cfg["fuzzy_cutoff"])
+    missing = missing_tables(pages, a.tables)
+    if missing:
+        sys.exit("ERROR: configured statement tables are missing, so the match rate would be wrong. "
+                 "Fix the extraction or xbrl.statement_pages: " + ", ".join(str(m) for m in missing))
     facts = pd.read_csv(a.facts)
     idx = fact_index(facts)
     bounds = period_bounds(facts)
