@@ -59,6 +59,25 @@ def make_converter(p):
     return DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)})
 
 
+def clear_outputs(stem, out, html=False):
+    """Delete one filing's outputs from earlier runs before regenerating them.
+
+    Without this, fewer tables, a table that no longer normalizes, or a shorter document would leave stale
+    files that downstream stages (P9, P11) read as current. Only files for this stem are touched."""
+    if html:
+        paths = [out / f"{stem}.html.md", out / f"{stem}.html.json", *out.glob(f"{stem}_html_t*_raw.csv")]
+    else:
+        paths = [out / f"{stem}.md", out / f"{stem}.json", out / f"{stem}.blocks.jsonl",
+                 *out.glob(f"{stem}_p*.md"), *out.glob(f"{stem}_p*_t*_raw.csv"),
+                 *(out / "tables").glob(f"{stem}_p*_t*.csv")]
+    removed = 0
+    for path in paths:
+        if path.exists():
+            path.unlink()
+            removed += 1
+    return removed
+
+
 def export_document(doc, stem, out):
     """Write full Markdown, lossless JSON, and one Markdown file per page. Returns the page count."""
     (out / f"{stem}.md").write_text(doc.export_to_markdown())
@@ -151,6 +170,7 @@ def convert_html(conv, row, out):
 
     HTML has no pages, so there are no page numbers or boxes: only text and tables can be compared."""
     stem = row["stem"]
+    clear_outputs(stem, out, html=True)
     t = time.perf_counter()
     doc = conv.convert(row["source_file"]).document
     md = doc.export_to_markdown()
@@ -171,6 +191,7 @@ def main(params_path, input_dir, output):
         stem = pdf_path.stem
         t = time.perf_counter()
         doc = conv.convert(str(pdf_path)).document
+        clear_outputs(stem, out)
         n_pages = export_document(doc, stem, out)
         counts = export_blocks(doc, stem, manifest.get(stem, {}).get("doc_id", stem), out, crop_offsets(pdf_path))
         written, empty = export_tables(doc, stem, pdf_path, out)
