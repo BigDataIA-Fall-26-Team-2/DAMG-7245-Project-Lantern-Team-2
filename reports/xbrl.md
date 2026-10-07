@@ -3,9 +3,9 @@
 Every number on Apple's three primary statements, in both filings, is checked against the filing's own XBRL.
 Issues #38 (fact extraction), #39 (mapping and comparison), #57 (this report), #49 (Docling path, closed).
 
-**Result, both paths: traditional 388 cells, 328 match (84.5%); docling 385 cells, 325 match (84.4%). Both paths: every non-match is the same diagnosed sign cause, 0 other.**
+**Result, both paths (388 cells each): traditional 328 match (84.5%), 60 sign, 0 other; Docling 325 match (83.8%), 60 sign, 3 pdf_missing (one row Docling did not extract).
 Every non-match has a diagnosed cause. All numbers below come from `notebooks/xbrl_validation.ipynb`
-(executed outputs) and `data/xbrl/comparison_traditional.csv` unless stated.
+(executed outputs) and `data/xbrl/comparison_traditional.csv` / `comparison_docling.csv` unless stated.
 
 ## How it works
 
@@ -31,8 +31,8 @@ Statement pages (`xbrl.statement_pages` in `params.yaml`): 10-K p32 income, p34 
 | traditional | **All** | **388** | **328** | **60** | **0** | **84.5%** | **100%** |
 | docling | Income | 133 | 133 | 0 | 0 | **100.0%** | 100% |
 | docling | Balance | 110 | 110 | 0 | 0 | **100.0%** | 100% |
-| docling | Cash flow | 142 | 82 | 60 | 0 | **57.8%** | 100% |
-| docling | **All** | **385** | **325** | **60** | **0** | **84.4%** | **100%** |
+| docling | Cash flow | 145 | 82 | 60 | 3 | **56.6%** | 97.9% |
+| docling | **All** | **388** | **325** | **60** | **3** | **83.8%** | **99.2%** |
 
 Per filing (traditional):
 
@@ -47,12 +47,14 @@ Per filing (traditional):
 
 The cash-flow sign share is identical in both filings because the same 12 lines are presented negated in every period.
 
-Mapping methods (traditional): 315 cells manual, 73 label linkbase, 0 fuzzy, 0 ambiguous, 0 none. All 73 label-layer
+Docling per filing is identical to the traditional path except the 10-K cash flow: 87 cells, 48 match, 36 sign, 3 pdf_missing (55.2%).
+
+Mapping methods (identical on both paths): 315 cells manual, 73 label linkbase, 0 fuzzy, 0 ambiguous, 0 none. All 73 label-layer
 cells agree with XBRL by value (notebook section 7).
 
 ## Every non-match and its cause
 
-All 60 non-match cells are `sign`: 12 cash-flow lines × 3 periods in the 10-K and 2 in the 10-Q. In each, the PDF prints
+On both paths, 60 non-match cells are `sign`: 12 cash-flow lines × 3 periods in the 10-K and 2 in the 10-Q. In each, the PDF prints
 the amount negated (in parentheses) while XBRL stores it with its natural sign, and the filing's presentation linkbase
 (`_pre.xml`) marks the concept with a negated preferred label. The `cause` column carries this automatically;
 the notebook's acceptance check finds **0 non-match cells without a cause**.
@@ -84,6 +86,22 @@ Key matched lines, for reference:
 | trad. | Cash…, beginning balances (10-Q, 9M ended 2026-06-27) | CashCashEquivalentsRestrictedCash… at 2025-09-27 | 35,934 | 35,934 | match | manual |
 | trad. | Cash…, ending balances (10-Q, 9M ended 2026-06-27) | CashCashEquivalentsRestrictedCash… at 2026-06-27 | 39,544 | 39,544 | match | manual |
 
+### Docling only: one missing row
+
+Docling's 10-K cash-flow table (p36) starts at "Operating activities: Net income": the first data row,
+"Cash, cash equivalents, and restricted cash and cash equivalents, beginning balances", is not extracted.
+The traditional table has it as its first row, with the same three fiscal-year columns.
+
+| Path | PDF label | Concept | Column | XBRL period | XBRL value (USD M) | Status | Cause |
+|---|---|---|---|---|---:|---|---|
+| docling | Cash…, beginning balances | CashCashEquivalentsRestrictedCash… | FY ended 2025-09-27 | 2024-09-28 | 29,943 | pdf_missing | table structure (row dropped by Docling) |
+| docling | Cash…, beginning balances | CashCashEquivalentsRestrictedCash… | FY ended 2024-09-28 | 2023-09-30 | 30,737 | pdf_missing | table structure (row dropped by Docling) |
+| docling | Cash…, beginning balances | CashCashEquivalentsRestrictedCash… | FY ended 2023-09-30 | 2022-09-24 | 24,977 | pdf_missing | table structure (row dropped by Docling) |
+
+Found by counting cells: Docling first gave 385 against 388; grouping both comparisons by concept and XBRL date
+showed exactly these three cells missing. The hand-diagnosed cause is recorded in the notebook's `MANUAL_CAUSES`,
+so its acceptance check still reports 0 non-match cells without a cause.
+
 ## What broke and how it was fixed
 
 The first run covered the 10-K income and balance sheet and all three 10-Q statements: **271 / 301 cells matched**.
@@ -96,6 +114,7 @@ Every one of the 30 non-matches was diagnosed and fixed before the 10-K cash flo
 | 3 | 2 | mismatch | mapping | the generic label "Other" on the operating line matched Apple's investing concept (1,780M vs −2,037M), a silent wrong mapping | the three "Other" lines added to the manual map; `ambiguous` rule so a shared label is never guessed |
 | 4 | 4 | xbrl_missing | period alignment | beginning/ending cash balances are instants printed in "9M ended" columns | a duration column also tries its end date and its opening date (the day before it starts), keeping the one that agrees by value |
 | 5 | 22 | sign | presentation convention | not an error | cause filled automatically from `_pre.xml` |
+| 6 | 3 (Docling) | not reported | table structure, plus a gap in the comparison | Docling drops the first data row of the 10-K cash-flow table (beginning balances). The comparison did not flag it: its `pdf_missing` check only looked facts up by the column's duration period, and the first fix keyed "already seen" by date only, so last year's ending balance (the same XBRL fact) hid this year's missing opening balance; only 1 of the 3 cells was reported | `missing_cells()` also tries the end and opening dates; "seen" keyed by (concept, date, table column); `instant: opening/end` on the two balance lines; 3 regression tests, and a teeth check made 2 of them fail |
 
 After the fixes the same 301 cells gave **277 match + 24 sign**; adding the 10-K cash flow gave the totals above.
 Every fix has a regression test in `tests/test_xbrl_compare.py`, and a teeth check (sign check and opening-instant lookup
@@ -111,7 +130,7 @@ concept each time, and all three cells match (notebook section 7).
 
 ## Limitations
 
-- The Docling path is not compared yet (#49); its row above is pending and the notebook will include it automatically.
+- Docling drops the first data row of the 10-K cash-flow table, so the Docling path has no 10-K beginning cash balances; every other cell it extracted agrees with XBRL.
 - Only the three primary statements are compared; the shareholders' equity statement (10-K p35) and comprehensive income (p33) are not.
 - Cash-flow total rows carry the previous subsection's prefix from Part 2 section tracking (e.g. "Changes in operating
   assets and liabilities: Cash generated by operating activities"); they are mapped as printed and all match.
@@ -124,5 +143,6 @@ concept each time, and all three cells match (notebook section 7).
 ```
 python src/xbrl.py --input data/rendered/manifest.csv --output data/xbrl
 python src/xbrl.py compare --path traditional --tables data/tables
+python src/xbrl.py compare --path docling --tables data/docling/tables
 python -c "import nbformat; from nbclient import NotebookClient; p='notebooks/xbrl_validation.ipynb'; nb=nbformat.read(p, 4); NotebookClient(nb, timeout=180, kernel_name='python3', resources={'metadata': {'path': 'notebooks'}}).execute(); nbformat.write(nb, p)"
 ```
