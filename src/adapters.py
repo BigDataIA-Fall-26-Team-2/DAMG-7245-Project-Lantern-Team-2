@@ -1,0 +1,94 @@
+import json
+from pathlib import Path
+
+from schema import Block, Table, SCHEMA_VERSION
+
+FORBIDDEN = {"inverted", "footer", "table_info", "score", "docling_label",
+             "ocr", "extractor", "extractor_version", "model"}
+
+
+def _base_meta(manifest_row):
+    return {
+        "schema": SCHEMA_VERSION,
+        "doc_id": manifest_row["accession"],
+        "company": manifest_row["company"],
+        "cik": manifest_row["cik"],
+        "ticker": manifest_row["ticker"],
+        "form": manifest_row["form"],
+        "fiscal_year": int(manifest_row["fiscal_year"]),
+        "fiscal_period": manifest_row["fiscal_period"],
+    }
+
+
+def _clean_text(v):
+    if v is None:
+        return None
+    v = " ".join(str(v).split())
+    return v or None
+
+
+def block_from_layout_record(manifest_row, rec, section):
+    text = _clean_text(rec.get("text"))
+    if text is None:
+        return None
+    out = _base_meta(manifest_row)
+    out.update(
+        page=rec["page"],
+        section=section,
+        block_id=rec["block_id"],
+        block_type=rec["block_type"],
+        bbox=[round(float(c), 2) for c in rec["bbox"]],
+        units="pt",
+        origin="top-left",
+        text=text,
+        table=None,
+        extractor="pdfplumber",
+        extractor_version=str(rec.get("model") or "layout"),
+        ocr=bool(rec.get("ocr", False)),
+        ocr_conf=None,
+    )
+    if out["ocr"]:
+        out["ocr_conf"] = 0.0
+    return Block.model_validate(out)
+
+
+def table_from_csv_rows(manifest_row, page, block_id, bbox, csv_rows, scale=None):
+    col_labels, row_labels = [], []
+    for r in csv_rows:
+        if r["col_label"] not in col_labels:
+            col_labels.append(r["col_label"])
+        if r["row_label"] not in row_labels:
+            row_labels.append(r["row_label"])
+    grid_raw = {(r["row_label"], r["col_label"]): r["raw"] for r in csv_rows}
+    grid_val = {(r["row_label"], r["col_label"]): r["value"] for r in csv_rows}
+    columns = [""] + col_labels
+    rows, raw_cells = [], []
+    for rl in row_labels:
+        rows.append([rl] + [grid_val.get((rl, c)) or None for c in col_labels])
+        raw_cells.append([rl] + [grid_raw.get((rl, c)) or None for c in col_labels])
+    table = Table(columns=columns, rows=rows, raw_cells=raw_cells, scale=scale)
+    out = _base_meta(manifest_row)
+    out.update(
+        page=page, section=None, block_id=block_id, block_type="Table",
+        bbox=[round(float(c), 2) for c in bbox], units="pt", origin="top-left",
+        text=None, table=table,
+        extractor="camelot", extractor_version="from-tables-stage",
+        ocr=False, ocr_conf=None,
+    )
+    return Block.model_validate(out)
+
+
+def block_from_docling_record(manifest_row, rec, section):
+    text = _clean_text(rec.get("text"))
+    if text is None:
+        return None
+    out = _base_meta(manifest_row)
+    out.update(
+        page=rec["page"], section=section, block_id=rec["block_id"],
+        block_type=rec["block_type"],
+        bbox=[round(float(c), 2) for c in rec["bbox"]],
+        units="pt", origin="top-left", text=text, table=None,
+        extractor="docling", extractor_version=str(rec.get("model") or "docling"),
+        ocr=False, ocr_conf=None,
+    )
+    return Block.model_validate(out)
