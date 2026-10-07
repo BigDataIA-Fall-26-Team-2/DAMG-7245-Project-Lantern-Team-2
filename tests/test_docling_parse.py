@@ -66,3 +66,22 @@ def test_table_that_no_longer_normalizes_leaves_no_csv(tmp_path):
     written, empty = regenerate([fake_table([NOT_ON_PAGE])], tmp_path)
     assert (written, empty) == (0, 1)
     assert not (tmp_path / "tables" / "statement_p0001_t1.csv").exists()
+
+
+SCANNED = ROOT / "tests" / "fixtures" / "scanned.pdf"   # image-only; page 2 is 10-K p32 as a picture
+CAPTION = "(In millions, except number of shares, which are reflected in thousands, and per-share amounts)"
+
+
+def test_ocr_table_on_image_only_page_is_kept(tmp_path):
+    """No PDF text layer: to_long must use what Docling read (caption + rows) instead of dropping the table."""
+    table = fake_table([NET_INCOME], page=2)
+    caption = SimpleNamespace(prov=[SimpleNamespace(page_no=2)], text=CAPTION)
+    doc = SimpleNamespace(tables=[table], iterate_items=lambda: iter([(caption, 0), (table, 0)]))
+
+    written, empty = dp.export_tables(doc, "scanned", SCANNED, tmp_path)
+    assert (written, empty) == (1, 0)
+
+    rows = pd.read_csv(tmp_path / "tables" / "scanned_p0002_t1.csv")
+    net = rows[rows["row_label"] == "Net income"]
+    assert len(net) == 3
+    assert net["value"].iloc[0] == 112010000000.0      # scaled: the caption came from Docling's text

@@ -137,6 +137,25 @@ def export_blocks(doc, stem, doc_id, out, offsets):
     return counts
 
 
+def docling_page_text(doc, page_no):
+    """Fallback page text built from what Docling read (paragraphs + table rows as lines).
+
+    Used only when the PDF has no text layer on that page (image-only pages read with OCR), so
+    tables.to_long can still match rows and find the scale caption instead of dropping the table."""
+    lines = []
+    for item, _level in doc.iterate_items():
+        prov = getattr(item, "prov", None)
+        if not prov or prov[0].page_no != page_no:
+            continue
+        if hasattr(item, "export_to_dataframe"):            # a table: header + rows as text lines
+            df = item.export_to_dataframe(doc=doc)
+            lines.append(" ".join(str(c) for c in df.columns))
+            lines += [" ".join(str(c) for c in row) for row in df.astype(str).values.tolist()]
+        elif getattr(item, "text", None):
+            lines.append(item.text)
+    return "\n".join(lines)
+
+
 def export_tables(doc, stem, pdf_path, out):
     """Every Docling table as (a) its raw Docling CSV and (b) team-format rows via the P2 normalizer.
 
@@ -156,6 +175,8 @@ def export_tables(doc, stem, pdf_path, out):
         df.to_csv(out / f"{stem}_p{n:04d}_t{k}_raw.csv", index=False)
         grid = pd.DataFrame([[str(c) for c in df.columns]] + df.astype(str).values.tolist())
         text, words = tbl.page_text_and_words(str(pdf_path), n)
+        if not (text or "").strip():   # no PDF text layer (image-only page): use what Docling read
+            text, words = docling_page_text(doc, n), None
         rows, _skipped = tbl.to_long(grid, text, words)
         if not rows:
             empty += 1
