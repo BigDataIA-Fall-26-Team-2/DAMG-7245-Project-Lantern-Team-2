@@ -223,3 +223,8 @@ __marimo__/
 # Data (DVC-managed; pull with `dvc pull`, not git)
 data/*
 !data/.gitkeep
+
+# DVC local state
+/.dvc/cache/
+/.dvc/tmp/
+/.dvc/config.local

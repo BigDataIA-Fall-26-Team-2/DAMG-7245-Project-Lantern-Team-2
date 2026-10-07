@@ -22,6 +22,7 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 | img2pdf | P0: image-only scanned fixtures | requirements.txt |
 | DVC + dvc-s3 | P8: pipeline and S3 remote support | requirements.txt |
 | pytest | P8: smoke and regression checks | requirements.txt |
+| GitHub Actions (checkout/setup-python) | P8: fixture-only PR smoke workflow | Commit SHAs in .github/workflows/smoke.yml |
 | Camelot (camelot-py) + OpenCV (opencv-python-headless) | P2: table bake-off (lattice/stream/network/hybrid) and hybrid extractor | requirements.txt |
 | pandas | P2/P11: table CSVs and XBRL value comparison | requirements.txt |
 | Arelle (arelle-release) | P11: iXBRL fact extraction | requirements.txt |
@@ -42,7 +43,6 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m playwright install chromium
-python -m pip check
 python -c "import sec_edgar_downloader, yaml, pypdf, pdfplumber, pytesseract, pdf2image, img2pdf, dvc, dvc_s3, pytest; from playwright.sync_api import sync_playwright; print('Imports OK')"
 python -c "import camelot, cv2, pandas, streamlit, difflib; from camelot.parsers import Lattice, Stream, Network, Hybrid; from arelle import Cntlr; print('Table, XBRL and app imports OK')"
 tesseract --version
@@ -108,3 +108,33 @@ successful run,
 stale page-text and word-box files are removed, including those for PDFs no
 longer in the input. Other files are retained. The log covers the current run.
 Multi-column ordering and table structure remain P3/P2 work.
+
+## P8: GitHub Actions smoke checks (issue #36)
+
+`.github/workflows/smoke.yml` runs on every pull request, as required by
+Case Study 1, Part 8 requirement 4 (page 11). The Ubuntu 24.04 job uses Python 3.11, Tesseract (English), and
+Poppler. It extracts text and tables from `tests/fixtures/`, then runs the existing
+pytest suite.
+Outputs go to the runner's temporary directory.
+
+`requirements-ci.txt` selects only the packages needed for these checks and uses
+`requirements.txt` as a constraints file, keeping version pins in one place.
+The download/render packages are included for existing mocked tests; CI does
+not download filings, render HTML, access the DVC remote, or call cloud document
+services. No project credentials or repository secrets are required. GitHub
+uses its automatic read-only token to check out this private repository.
+
+To run the same extraction and test commands locally, use an environment with
+Tesseract and Poppler installed:
+
+```bash
+python -m pip install -r requirements-ci.txt
+python src/parse_text.py --params params.yaml --input tests/fixtures --output /tmp/lantern-smoke/parsed
+python src/tables.py --params params.yaml --input tests/fixtures --output /tmp/lantern-smoke/tables
+python -m pytest -q
+```
+
+The PR check is named `Fixture smoke tests / smoke`. A green check reports the
+smoke job's result; making it a mandatory merge condition depends on repository
+protection settings and the organization's GitHub plan. A successful local run
+does not establish the issue's required green GitHub Actions run.
