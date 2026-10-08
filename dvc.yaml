@@ -10,7 +10,7 @@ stages:
       - data/raw
 
   render:
-    cmd: python src/render.py --params params.yaml --input data/raw --output data/rendered
+    cmd: python -m playwright install chromium && python src/render.py --params params.yaml --input data/raw --output data/rendered
     deps:
       - src/render.py
       - src/contracts.py
@@ -89,3 +89,21 @@ stages:
       - export
     outs:
       - ${export.out_dir}
+
+  xbrl:
+    cmd: >-
+      python src/xbrl.py --input data/rendered/manifest.csv --output data/xbrl &&
+      python src/xbrl.py compare --path traditional --tables data/tables &&
+      python src/xbrl.py compare --path docling --tables data/docling/tables
+    deps:
+      - src/xbrl.py
+      - requirements.txt
+      - config/label_map.yaml
+      - data/rendered/manifest.csv
+      - data/raw
+      - data/tables
+      - data/docling
+    params:
+      - xbrl
+    outs:
+      - data/xbrl
