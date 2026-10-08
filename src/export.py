@@ -67,7 +67,15 @@ def layout_blocks(manifest_row, stem):
     path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
     blocks, section = [], None
     table_bbox = {}
+    page_extent = {}
     for rec in read_jsonl(path):
+        bb = rec.get("bbox")
+        if bb:
+            cur = page_extent.get(rec["page"])
+            page_extent[rec["page"]] = bb if cur is None else [
+                min(cur[0], bb[0]), min(cur[1], bb[1]),
+                max(cur[2], bb[2]), max(cur[3], bb[3]),
+            ]
         if rec["block_type"] == "Table":
             table_bbox.setdefault(rec["page"], []).append(rec["bbox"])
             continue
@@ -75,10 +83,10 @@ def layout_blocks(manifest_row, stem):
         b = block_from_layout_record(manifest_row, rec, section)
         if b is not None:
             blocks.append(b)
-    return blocks, table_bbox
+    return blocks, table_bbox, page_extent
 
 
-def table_blocks(manifest_row, stem, table_bbox):
+def table_blocks(manifest_row, stem, table_bbox, page_extent):
     blocks = []
     methods = table_methods()
     paths = sorted(glob.glob(str(TABLES_DIR / f"{stem}_p*_t*.csv")))
@@ -106,7 +114,7 @@ def table_blocks(manifest_row, stem, table_bbox):
                 max(b[3] for b in boxes),
             ]
         else:
-            bbox = [0.0, 0.0, 1.0, 1.0]
+            bbox = page_extent.get(page) or [0.0, 0.0, 1.0, 1.0]
         block_id = f"p{page:04d}_b{900 + tk:03d}"
         method = methods.get((stem, page))
         blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox, rows, method))
@@ -200,8 +208,8 @@ def main():
     for stem, row in manifest.items():
         layout_path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
         if layout_path.exists():
-            trad, table_bbox = layout_blocks(row, stem)
-            trad += table_blocks(row, stem, table_bbox)
+            trad, table_bbox, page_extent = layout_blocks(row, stem)
+            trad += table_blocks(row, stem, table_bbox, page_extent)
             write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
             write_markdown(trad, EXPORT_DIR / f"{stem}.md", row)
         else:
