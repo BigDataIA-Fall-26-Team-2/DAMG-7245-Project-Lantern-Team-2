@@ -29,7 +29,7 @@ import yaml
 COLUMNS = ["row_label", "col_label", "raw", "value", "scale"]
 LOG_FIELDS = ["stem", "page", "table", "accepted", "method", "score", "label_ratio", "coverage",
               "numeric_rows", "skipped_rows", "v_rulings", "lattice_tried", "candidates",
-              "runner_up", "runner_up_score", "errors"]
+              "runner_up", "runner_up_score", "errors", "fallback"]
 PRIORITY = {"camelot-lattice": 0, "camelot-stream": 1, "pdfplumber-text": 2, "camelot-network": 3}
 NUMBER = re.compile(r"^\(?-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?\)?$")
 DASHES = {"-", "\u2014", "\u2013", "\u2212"}
@@ -524,6 +524,36 @@ def write_table_csv(rows, path):
         Path(path).unlink(missing_ok=True)
         raise
 
+# ---------- Part 7: managed fallback ----------
+def managed_fallback(pdf_path, page_no, log, out, params):
+    """Ask the managed service (Part 7) about a page whose table was found but scored low.
+
+    Returns "" when no check was needed, "used" when the managed answer was used,
+    "miss" when nothing is cached and managed.enabled is false, and "error" when
+    the check could not run. It never raises, so this stage never fails because of it.
+    """
+    cfg = params.get("managed", {}) or {}
+    min_score = float((cfg.get("trigger", {}) or {}).get("min_table_score", 0.5))
+    min_rows = int((params.get("tables", {}) or {}).get("min_numeric_rows", 3))
+    if not log.get("method") or int(log.get("numeric_rows") or 0) < min_rows:
+        return ""  # no real table on this page, nothing for a managed service to fix
+    if float(log.get("score") or 0) >= min_score:
+        return ""
+    try:
+        from managed import textract
+        row = textract.load_manifest().get(pdf_path.stem)
+        if row is None:
+            return "error"
+        blocks = textract.fallback_blocks(row, pdf_path, page_no, reason="low table score")
+    except Exception:
+        return "error"
+    if not blocks:
+        return "miss"
+    dest = Path(out) / "managed" / f"{pdf_path.stem}_p{page_no:04d}.blocks.jsonl"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("".join(b.to_jsonl() + "\n" for b in blocks), encoding="utf-8")
+    return "used"
+
 
 def main():
     ap = argparse.ArgumentParser(description="Part 2 hybrid table extraction + normalization")
@@ -533,7 +563,8 @@ def main():
     ap.add_argument("--pages", default="", help="optional comma list stem:page (default: every page)")
     args = ap.parse_args()
 
-    tp = load_params(args.params)["tables"]
+    params = load_params(args.params)
+    tp = params["tables"]
     out = Path(args.output)
     (out / "log").mkdir(parents=True, exist_ok=True)
     wanted = {}
@@ -561,6 +592,7 @@ def main():
                     log.update(table=1, skipped_rows=skipped)
                 else:
                     log["accepted"] = False
+            log["fallback"] = managed_fallback(pdf_path, page_no, log, out, params)
             logs.append(log)
 
     pd.DataFrame(logs, columns=LOG_FIELDS).to_csv(out / "log" / "tables_log.csv", index=False)
