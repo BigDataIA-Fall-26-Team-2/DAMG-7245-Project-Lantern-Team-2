@@ -1,0 +1,4 @@
+AAPL_10K_20250927 p32 income: trad 57, docling 57, matched 57, same 57, different 0, only trad 0, only docling 0
+AAPL_10K_20250927 p34 balance: trad 54, docling 54, matched 54, same 54, different 0, only trad 0, only docling 0
+AAPL_10Q_20260627 p4 income: trad 76, docling 76, matched 76, same 76, different 0, only trad 0, only docling 0
+AAPL_10Q_20260627 p6 balance: trad 56, docling 56, matched 56, same 56, different 0, only trad 0, only docling 0

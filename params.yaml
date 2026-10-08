@@ -55,7 +55,11 @@ layout:
   dark_page_brightness: 0.5  # invert pages darker than this before detection; fixture 0.18 vs Apple pages 0.87-0.96
   column_gap_pt: 50          # new column when block left edges jump by more than this; multicolumn fixture gaps are 150+ pt
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
-docling: {}
+docling:
+  do_ocr: false             # Apple PDFs have a text layer (P1: 0 OCR pages); OCR only slows Docling down
+  table_mode: "accurate"    # TableFormer mode: "accurate" or "fast"
+  device: "auto"            # auto | cpu | mps (Mac GPU); auto uses MPS when available
+  html_stem: "AAPL_10K_20250927"   # the filing whose original iXBRL HTML is also converted (Part 4 task 2)
 
 # Owner: Guna (Part 5 - export)
 export:

@@ -27,6 +27,8 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 | Arelle (arelle-release) | P11: iXBRL fact extraction | requirements.txt |
 | difflib | P11: fuzzy label-to-concept matching | Python standard library |
 | Streamlit | App: team UI (frontend/) | requirements.txt |
+| Docling | P4: alternative parsing path (layout, reading order, tables in one pass) | requirements.txt |
+| docling-ibm-models (TableFormer) | P4: Docling's layout and table-structure models | requirements.txt |
 | LayoutParser | P3: page layout detection (Text/Title/List/Table/Figure blocks) | requirements.txt |
 | effdet (EfficientDet) | P3: PubLayNet detection backend for LayoutParser | requirements.txt |
 | PyTorch + torchvision | P3: deep-learning runtime for the layout model | requirements.txt |
