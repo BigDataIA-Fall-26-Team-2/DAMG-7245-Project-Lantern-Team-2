@@ -33,8 +33,12 @@ tables:
   min_numeric_rows: 3     # fewer data rows than this is not a table (prose pages)
   visible_max_gray: 0.9   # rulings with mean fill gray >= this are invisible (white cell borders)
 
-# Owner: Dhruvi (Part 11 - XBRL); keys to be filled in once mapping/tolerance approach is set
-xbrl: {}
+# Owner: Dhruvi (Part 11 - XBRL). Comparison tolerance comes from each XBRL fact decimals, not from here.
+xbrl:
+  fuzzy_cutoff: 0.85
+  statement_pages:
+    AAPL_10K_20250927: {income: 32, balance: 34, cash_flow: 36}
+    AAPL_10Q_20260627: {income: 4, balance: 6, cash_flow: 9}
 
 # Owner: Shravya (Part 3 - layout)
 layout:
@@ -52,6 +56,17 @@ layout:
   column_gap_pt: 50          # new column when block left edges jump by more than this; multicolumn fixture gaps are 150+ pt
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
 docling: {}
+
+# Owner: Guna (Part 5 - export)
+export:
+  out_dir: "data/export"
+  layout_dir: "data/layout"
+  docling_dir: "data/docling"
+  tables_dir: "data/tables"
+  paragraph_gap_pt: 6.0
+  emit_docling: true
+  company_by_ticker:
+    AAPL: "Apple Inc."
 
 # Owner: Shravya (Part 10 - benchmarking); keys to be filled in during that part
 bench: {}
