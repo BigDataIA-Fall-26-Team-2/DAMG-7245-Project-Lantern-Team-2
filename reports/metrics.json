@@ -143,6 +143,22 @@
           "ref_tokens": 63,
           "hyp_tokens": 0
         }
+      },
+      "managed": {
+        "wer": 0.0476,
+        "cer": 0.0284,
+        "ref_words": 168,
+        "hyp_words": 176,
+        "numeric": {
+          "precision": 0.9692,
+          "recall": 1.0,
+          "f1": 0.9844,
+          "tp": 63,
+          "ref_n": 63,
+          "hyp_n": 65,
+          "ref_tokens": 63,
+          "hyp_tokens": 66
+        }
       }
     },
     "AAPL_10K_20250927_p34": {
@@ -395,6 +411,22 @@
           "ref_tokens": 64,
           "hyp_tokens": 0
         }
+      },
+      "managed": {
+        "wer": 0.0423,
+        "cer": 0.021,
+        "ref_words": 213,
+        "hyp_words": 222,
+        "numeric": {
+          "precision": 0.9683,
+          "recall": 1.0,
+          "f1": 0.9839,
+          "tp": 61,
+          "ref_n": 61,
+          "hyp_n": 63,
+          "ref_tokens": 64,
+          "hyp_tokens": 68
+        }
       }
     },
     "AAPL_10Q_20260627_p9": {
@@ -583,7 +615,23 @@
     },
     "scanned_p1": {
       "stratum": "scanned",
-      "page": 1
+      "page": 1,
+      "managed": {
+        "wer": 0.0188,
+        "cer": 0.0101,
+        "ref_words": 533,
+        "hyp_words": 541,
+        "numeric": {
+          "precision": 0.9231,
+          "recall": 1.0,
+          "f1": 0.96,
+          "tp": 12,
+          "ref_n": 12,
+          "hyp_n": 13,
+          "ref_tokens": 21,
+          "hyp_tokens": 24
+        }
+      }
     }
   },
   "tables": {
@@ -594,6 +642,66 @@
         "September 28, 2024",
         "September 30, 2023"
       ],
+      "traditional": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "FY ended 2025-09-27",
+            "FY ended 2024-09-28",
+            "FY ended 2023-09-30"
+          ]
+        ],
+        "extractor": [
+          "camelot-stream"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        },
+        "cell": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        },
+        "value": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        }
+      },
+      "managed": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "col1",
+            "col2",
+            "col3"
+          ]
+        ],
+        "extractor": [
+          "aws-textract"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        }
+      },
       "cell": {
         "precision": 1.0,
         "recall": 1.0,
@@ -609,16 +717,7 @@
         "tp": 57,
         "ref_n": 57,
         "hyp_n": 57
-      },
-      "parser_tables_found": 1,
-      "parser_columns": [
-        [
-          "",
-          "FY ended 2025-09-27",
-          "FY ended 2024-09-28",
-          "FY ended 2023-09-30"
-        ]
-      ]
+      }
     },
     "AAPL_10Q_20260627_p6_t1": {
       "page": 6,
@@ -626,6 +725,64 @@
         "June 27, 2026",
         "September 27, 2025"
       ],
+      "traditional": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "2026-06-27",
+            "2025-09-27"
+          ]
+        ],
+        "extractor": [
+          "pdfplumber-text"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 0.9643,
+          "f1": 0.9818,
+          "tp": 54,
+          "ref_n": 56,
+          "hyp_n": 54
+        },
+        "cell": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
+          "ref_n": 56,
+          "hyp_n": 56
+        },
+        "value": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 54,
+          "ref_n": 54,
+          "hyp_n": 54
+        }
+      },
+      "managed": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "col1",
+            "col2"
+          ]
+        ],
+        "extractor": [
+          "aws-textract"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
+          "ref_n": 56,
+          "hyp_n": 56
+        }
+      },
       "cell": {
         "precision": 1.0,
         "recall": 1.0,
@@ -641,15 +798,7 @@
         "tp": 54,
         "ref_n": 54,
         "hyp_n": 54
-      },
-      "parser_tables_found": 1,
-      "parser_columns": [
-        [
-          "",
-          "2026-06-27",
-          "2025-09-27"
-        ]
-      ]
+      }
     }
   },
   "by_stratum": {
@@ -720,6 +869,24 @@
         "numeric_f1_mean": 0.2363,
         "numeric_f1_min": 0.0847
       }
+    },
+    "managed": {
+      "statement": {
+        "n_pages": 2,
+        "wer_mean": 0.045,
+        "wer_max": 0.0476,
+        "cer_mean": 0.0247,
+        "numeric_f1_mean": 0.9842,
+        "numeric_f1_min": 0.9839
+      },
+      "scanned": {
+        "n_pages": 1,
+        "wer_mean": 0.0188,
+        "wer_max": 0.0188,
+        "cer_mean": 0.0101,
+        "numeric_f1_mean": 0.96,
+        "numeric_f1_min": 0.96
+      }
     }
   },
   "by_path": {
@@ -734,6 +901,78 @@
       "wer_mean": 0.5314,
       "cer_mean": 0.5157,
       "numeric_f1_mean": 0.3453
+    },
+    "managed": {
+      "n_pages": 3,
+      "wer_mean": 0.0362,
+      "cer_mean": 0.0198,
+      "numeric_f1_mean": 0.9761
+    }
+  },
+  "side_by_side": {
+    "AAPL_10K_20250927_p32": {
+      "stratum": "statement",
+      "traditional": {
+        "wer": 0.7262,
+        "cer": 0.6753,
+        "numeric_f1": 0.95
+      },
+      "docling": {
+        "wer": 0.8393,
+        "cer": 0.8234,
+        "numeric_f1": 0.0
+      },
+      "managed": {
+        "wer": 0.0476,
+        "cer": 0.0284,
+        "numeric_f1": 0.9844
+      }
+    },
+    "AAPL_10Q_20260627_p6": {
+      "stratum": "statement",
+      "traditional": {
+        "wer": 0.8216,
+        "cer": 0.8014,
+        "numeric_f1": 0.9412
+      },
+      "docling": {
+        "wer": 0.8638,
+        "cer": 0.8686,
+        "numeric_f1": 0.0
+      },
+      "managed": {
+        "wer": 0.0423,
+        "cer": 0.021,
+        "numeric_f1": 0.9839
+      }
+    },
+    "scanned_p1": {
+      "stratum": "scanned",
+      "managed": {
+        "wer": 0.0188,
+        "cer": 0.0101,
+        "numeric_f1": 0.96
+      }
+    },
+    "AAPL_10K_20250927_p32_t1": {
+      "traditional": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      },
+      "managed": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      }
+    },
+    "AAPL_10Q_20260627_p6_t1": {
+      "traditional": {
+        "cell_raw_f1": 0.9818,
+        "tables_found": 1
+      },
+      "managed": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      }
     }
   },
   "drift": {

@@ -48,6 +48,8 @@ _TRANSFORM = jiwer.Compose([
 
 _NUM_RE = re.compile(r"\(?-?\$?\d[\d,]*(?:\.\d+)?\)?%?")
 
+PATHS = ("traditional", "docling", "managed")
+
 BREAK_MODES = ("none", "no-scale", "drop-parens", "no-ocr", "strip-prefix")
 
 
@@ -205,20 +207,69 @@ def page_text(records):
     return "\n".join(p[2] for p in parts)
 
 
+def gt_section_headings(rows):
+    """Normalised labels of bare section-heading rows in a ground-truth table.
+
+    A heading is a row whose label ends in a colon and whose cells hold no
+    value, for example "Net sales:". Used to strip a section prefix from row
+    labels on both sides at scoring time.
+    """
+    by_label = {}
+    for r in rows:
+        lab = normalise(r["row_label"])
+        has_value = to_number(r.get("value") or r.get("raw")) is not None
+        by_label[lab] = by_label.get(lab, False) or has_value
+    return {lab for lab, has_value in by_label.items()
+            if lab.endswith(":") and not has_value}
+
+
+def strip_section(label, headings):
+    """Remove a known section prefix, so prefix scope is not scored.
+
+    Two transcribers, the traditional parser and Textract apply the section
+    prefix differently: to every row in a section, only to labels that repeat,
+    or not at all. That is a representation choice, not a reading error, so it
+    is neutralised on both sides the same way the conventions neutralise em
+    dashes and quotes. Only a prefix equal to one of the table's own heading
+    rows is removed, so a colon that is part of a label (for example "par
+    value: 50,400,000 shares") is left alone. Repeated labels such as
+    "Products" are still told apart, by their value.
+    """
+    for h in sorted(headings, key=len, reverse=True):
+        if label.startswith(h + " "):
+            return label[len(h) + 1:]
+    return label
+
+
 def load_gt_table(path):
+    """gt csv -> cells keyed for scoring.
+
+    Returns a dict with:
+      cells      {(label, col, scaled value)}  scale applied, as in "value"
+      cells_raw  {(label, col, printed figure)} unscaled, from "raw"
+      values     {scaled value}
+      cols       column labels in order
+      headings   section-heading labels, for prefix stripping
+    """
     rows = list(csv.DictReader(open(path, encoding="utf-8-sig", newline="")))
     cols = []
     for r in rows:
         if r["col_label"] not in cols:
             cols.append(r["col_label"])
-    cells, values = set(), set()
+    headings = gt_section_headings(rows)
+    cells, cells_raw, values = set(), set(), set()
     for r in rows:
+        label = strip_section(normalise(r["row_label"]), headings)
+        ci = cols.index(r["col_label"])
         v = to_number(r.get("value") or r.get("raw"))
-        if v is None:
-            continue
-        cells.add((normalise(r["row_label"]), cols.index(r["col_label"]), v))
-        values.add(v)
-    return cells, values, cols
+        if v is not None:
+            cells.add((label, ci, v))
+            values.add(v)
+        raw_v = to_number(r.get("raw"))
+        if raw_v is not None:
+            cells_raw.add((label, ci, raw_v))
+    return {"cells": cells, "cells_raw": cells_raw, "values": values,
+            "cols": cols, "headings": headings}
 
 
 def table_records(records):
@@ -226,32 +277,39 @@ def table_records(records):
             if r.get("block_type") == "Table" and r.get("table")]
 
 
-def parser_table_cells(rec):
-    """Export Table record -> (cells, values).
+def parser_table_cells(rec, headings=frozenset()):
+    """Export Table record -> (cells, cells_raw, values).
 
-    Column index is positional, because the extractor does not reliably
-    recover real column headers: on 10-K page 22 the columns came back as
-    col1, col2, col3. Keying on the header string would score every cell zero
-    on those tables even where the figure was read correctly.
+    Column index is positional, because extractors do not reliably recover
+    real column headers: on 10-K page 22 Camelot's came back as col1, col2,
+    col3. Keying on the header string would score every cell zero on those
+    tables even where the figure was read correctly.
+
+    cells uses the scaled "rows"; cells_raw uses the printed "raw_cells"
+    unscaled, so that a path which does not normalise scale (Textract) is
+    scored on reading rather than on a normalisation step it never attempts.
     """
     t = rec["table"]
     rows = t.get("rows") or []
     raws = t.get("raw_cells") or rows
-    cells, values = set(), set()
+    cells, cells_raw, values = set(), set(), set()
     for ri, row in enumerate(rows):
         if not row:
             continue
-        label = normalise(str(row[0] or ""))
+        label = strip_section(normalise(str(row[0] or "")), headings)
         raw_row = raws[ri] if ri < len(raws) else row
         for ci in range(1, len(row)):
             v = to_number(row[ci])
             if v is None and ci < len(raw_row):
                 v = to_number(raw_row[ci])
-            if v is None:
-                continue
-            cells.add((label, ci - 1, v))
-            values.add(v)
-    return cells, values
+            if v is not None:
+                cells.add((label, ci - 1, v))
+                values.add(v)
+            if ci < len(raw_row):
+                rv = to_number(raw_row[ci])
+                if rv is not None:
+                    cells_raw.add((label, ci - 1, rv))
+    return cells, cells_raw, values
 
 
 # --- drift ----------------------------------------------------------------
@@ -340,12 +398,21 @@ def main():
     results = {"break_mode": args.break_mode, "pages": {}, "tables": {},
                "by_stratum": {}, "by_path": {}}
 
+    managed_cfg = (yaml.safe_load(open(args.params, encoding="utf-8"))
+                   .get("managed", {}) or {})
+    managed_dir = Path(managed_cfg.get("cache_dir", "data/managed"))
+    fixture_stems = list((managed_cfg.get("fixture_pages") or {}).keys())
+
     exports = {}
-    for stem in cfg["stems"]:
+    for stem in list(cfg["stems"]) + fixture_stems:
         exports[stem] = {
             "traditional": load_export(export_dir / f"{stem}.jsonl",
                                        args.break_mode),
             "docling": load_export(export_dir / f"{stem}.docling.jsonl",
+                                   args.break_mode),
+            # Part 7: AWS Textract via src/managed/textract.py. Read from the
+            # cache only; evaluation never calls the service.
+            "managed": load_export(managed_dir / f"{stem}.blocks.jsonl",
                                    args.break_mode),
         }
 
@@ -360,7 +427,7 @@ def main():
         except ValueError:
             continue
         entry = {"stratum": stratum, "page": page}
-        for path_name in ("traditional", "docling"):
+        for path_name in PATHS:
             by_page = exports.get(stem, {}).get(path_name)
             if not by_page or page not in by_page:
                 continue
@@ -374,24 +441,40 @@ def main():
         base, _, _ = key.rpartition("_t")
         stem, _, page_s = base.rpartition("_p")
         page = int(page_s)
-        ref_cells, ref_values, cols = load_gt_table(gt_file)
-        by_page = exports.get(stem, {}).get("traditional", {})
-        found = table_records(by_page.get(page, []))
-        hyp_cells, hyp_values = set(), set()
-        for rec in found:
-            c, v = parser_table_cells(rec)
-            hyp_cells |= c
-            hyp_values |= v
-        results["tables"][key] = {
-            "page": page,
-            "gt_columns": cols,
-            "cell": prf(ref_cells, hyp_cells),
-            "value": prf(ref_values, hyp_values),
-            "parser_tables_found": len(found),
-            "parser_columns": [r["table"].get("columns") for r in found],
-        }
+        gt = load_gt_table(gt_file)
+        entry = {"page": page, "gt_columns": gt["cols"]}
+        for path_name in ("traditional", "managed"):
+            by_page = exports.get(stem, {}).get(path_name, {})
+            found = table_records(by_page.get(page, []))
+            if not found:
+                continue
+            hc, hcr, hv = set(), set(), set()
+            for rec in found:
+                c, cr, v = parser_table_cells(rec, gt["headings"])
+                hc |= c
+                hcr |= cr
+                hv |= v
+            res = {
+                "tables_found": len(found),
+                "columns": [r["table"].get("columns") for r in found],
+                "extractor": sorted({r.get("extractor") for r in found}),
+                # printed figures, unscaled: measures reading, comparable
+                # across every path
+                "cell_raw": prf(gt["cells_raw"], hcr),
+            }
+            if path_name == "traditional":
+                # scale applied: also tests Part 2's normalisation. Textract
+                # does no scale normalisation, so it is not scored on this.
+                res["cell"] = prf(gt["cells"], hc)
+                res["value"] = prf(gt["values"], hv)
+            entry[path_name] = res
+        # keep the old top-level keys so the quality gates still read them
+        if "traditional" in entry:
+            entry["cell"] = entry["traditional"]["cell"]
+            entry["value"] = entry["traditional"]["value"]
+        results["tables"][key] = entry
 
-    for path_name in ("traditional", "docling"):
+    for path_name in PATHS:
         buckets = defaultdict(list)
         for entry in results["pages"].values():
             if path_name in entry:
@@ -419,10 +502,35 @@ def main():
                     sum(m["numeric"]["f1"] for m in allm) / len(allm), 4),
             }
 
+    # Part 7 side-by-side: only pages the managed path covers, so the three
+    # paths are compared on identical inputs rather than on different samples
+    side = {}
+    for key, entry in results["pages"].items():
+        if "managed" not in entry:
+            continue
+        side[key] = {"stratum": entry["stratum"]}
+        for path_name in PATHS:
+            m = entry.get(path_name)
+            if m:
+                side[key][path_name] = {
+                    "wer": m["wer"], "cer": m["cer"],
+                    "numeric_f1": m["numeric"]["f1"],
+                }
+    for key, t in results["tables"].items():
+        if "managed" in t:
+            side[key] = {
+                p: {"cell_raw_f1": t[p]["cell_raw"]["f1"],
+                    "tables_found": t[p]["tables_found"]}
+                for p in ("traditional", "managed") if p in t
+            }
+    results["side_by_side"] = side
+
     ocr_pages = {}
     for stem, paths in exports.items():
         by_page = paths["traditional"]
         total = len(by_page)
+        if not total:
+            continue
         ocr = sum(1 for recs in by_page.values() if any(r.get("ocr") for r in recs))
         ocr_pages[stem] = {
             "pages": total,
@@ -447,9 +555,10 @@ def main():
 
     print(json.dumps({"break_mode": args.break_mode,
                       "by_path": results["by_path"]}, indent=2))
-    print(json.dumps({k: v["cell"]["f1"] for k, v in results["tables"].items()},
-                     indent=2))
+    print(json.dumps({k: v.get("cell", {}).get("f1")
+                      for k, v in results["tables"].items()}, indent=2))
     print(json.dumps(results["by_stratum"]["traditional"], indent=2))
+    print(json.dumps(results["side_by_side"], indent=2))
 
 
 if __name__ == "__main__":
