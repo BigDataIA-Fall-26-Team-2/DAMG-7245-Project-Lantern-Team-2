@@ -253,16 +253,33 @@ pytest tests/test_quality.py -q
 These came out of the measurement rather than from inspection, which is the
 point of Part 9.
 
-**1. Placeholder table bounding boxes (fixed).** 10-Q pages 6 and 9 carried
-`bbox [0.0, 0.0, 1.0, 1.0]`, a one-point square at the page origin, because the
-tables stage found a table on a page where the layout stage detected no Table
-region and the export fell through to a constant. The records were schema
-valid and the provenance claim was false, which is precisely the gap a schema
-cannot close. Fixed in `src/export.py` to use the bounding box of all layout
-blocks on the page: deliberately wider rather than confidently wrong.
-Regression test added. Two of the 23 tables in the 10-Q have no corresponding
-layout Table detection at all, which is a cross-stage gap raised with Parts 2
-and 3.
+**1. Placeholder table bounding boxes (fixed, after a second review).**
+10-Q pages 6 and 9 carried `bbox [0.0, 0.0, 1.0, 1.0]`, a one-point square at
+the page origin: the tables stage found a table on a page where the layout
+stage detected no Table region, and the export fell through to a constant. The
+records were schema valid and the provenance claim was false, which is exactly
+the gap a schema cannot close.
+
+The first fix replaced the constant with the union of every layout block on the
+page. Peer review showed that was also wrong: on a page whose only detection is
+a heading, the union is the heading's box, so the table was exported pointing at
+the heading in a narrow, precise-looking rectangle. The union is honest only
+when every box in it is a real Table detection.
+
+The export now classifies every table bbox as `detected` (paired one-to-one
+with a layout Table region), `union` (several Table regions and a count
+mismatch with the table CSVs; every box in the union is a table) or `page` (no
+Table region at all, so the box is the full page, read from the rendered PDF's
+dimensions). Every approximate box is written to
+`reports/export_bbox_fallback.csv`. Across both filings **11 of 55 table
+records carry an approximate box: 8 unions and 3 full pages.** The three
+full-page cases are 10-Q pages 6, 9 and 28; an earlier diagnostic that looked
+only at sampled pages had found two of them. `tests/test_export_bbox.py` covers
+all three branches, including the heading-only page from review.
+
+Re-running the evaluation after the change moved no metric, because on 10-Q p6
+the table sorts to the top of the page under both boxes. The fix corrects the
+provenance claim, not the scores.
 
 **2. Under-extraction on stacked-table pages.** 10-Q p11 and p16 each yield a
 single table block of four rows. p16 carries four stacked seven-column segment

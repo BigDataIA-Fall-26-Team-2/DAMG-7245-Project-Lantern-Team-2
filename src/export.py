@@ -16,16 +16,21 @@ PARAMS = yaml.safe_load(open("params.yaml", encoding="utf-8"))
 EXPORT = PARAMS.get("export", {})
 
 MANIFEST = Path("data/rendered/manifest.csv")
+RENDERED_DIR = Path("data/rendered")
 LAYOUT_DIR = Path(EXPORT.get("layout_dir", "data/layout"))
 DOCLING_DIR = Path(EXPORT.get("docling_dir", "data/docling"))
 TABLES_DIR = Path(EXPORT.get("tables_dir", "data/tables"))
 EXPORT_DIR = Path(EXPORT.get("out_dir", "data/export"))
+FALLBACK_LOG = Path(EXPORT.get("bbox_fallback_log",
+                               "reports/export_bbox_fallback.csv"))
 
 PARAGRAPH_GAP_PT = float(EXPORT.get("paragraph_gap_pt", 6.0))
 EMIT_DOCLING = bool(EXPORT.get("emit_docling", True))
 COMPANY_BY_TICKER = EXPORT.get("company_by_ticker", {})
 
 ITEM_RE = re.compile(r"^Item\s+\d+[A-Z]?\.?", re.IGNORECASE)
+
+DEFAULT_PAGE_PT = (612.0, 792.0)  # US Letter, only if the PDF is unavailable
 
 
 def load_manifest(path=MANIFEST):
@@ -63,19 +68,31 @@ def section_for(text, current):
     return current
 
 
+def page_sizes(stem, rendered_dir=RENDERED_DIR):
+    """Page width and height in points, read from the rendered PDF.
+
+    Used only for the table bbox fallback below. The page box is a truthful
+    statement that the table is somewhere on this page; it is deliberately not
+    derived from other detected blocks, because those blocks are not the table
+    and their union can be an arbitrarily small rectangle in the wrong place.
+    """
+    pdf = Path(rendered_dir) / f"{stem}.pdf"
+    if not pdf.exists():
+        return {}
+    try:
+        import pdfplumber
+    except ImportError:
+        return {}
+    with pdfplumber.open(pdf) as doc:
+        return {i + 1: (round(float(p.width), 2), round(float(p.height), 2))
+                for i, p in enumerate(doc.pages)}
+
+
 def layout_blocks(manifest_row, stem):
     path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
     blocks, section = [], None
     table_bbox = {}
-    page_extent = {}
     for rec in read_jsonl(path):
-        bb = rec.get("bbox")
-        if bb:
-            cur = page_extent.get(rec["page"])
-            page_extent[rec["page"]] = bb if cur is None else [
-                min(cur[0], bb[0]), min(cur[1], bb[1]),
-                max(cur[2], bb[2]), max(cur[3], bb[3]),
-            ]
         if rec["block_type"] == "Table":
             table_bbox.setdefault(rec["page"], []).append(rec["bbox"])
             continue
@@ -83,11 +100,42 @@ def layout_blocks(manifest_row, stem):
         b = block_from_layout_record(manifest_row, rec, section)
         if b is not None:
             blocks.append(b)
-    return blocks, table_bbox, page_extent
+    return blocks, table_bbox
 
 
-def table_blocks(manifest_row, stem, table_bbox, page_extent):
-    blocks = []
+def table_bbox_for(page, tk, boxes, page_tables, sizes):
+    """Choose a bbox for one table CSV, and say how precise the choice is.
+
+    Returns (bbox, precision, note) where precision is one of:
+      "detected" - paired one-to-one with a layout Table detection
+      "union"    - several layout Table detections on the page, count disagrees
+                   with the number of CSVs, so the box spans all of them; every
+                   box in the union is a real table region
+      "page"     - no layout Table detection on this page at all, so the box is
+                   the whole page. Approximate, and logged.
+
+    The "page" case must not be derived from the other detected blocks on the
+    page: those are headings and paragraphs, not the table, and their union is
+    a narrow rectangle pointing at the wrong region while looking precise.
+    """
+    if len(boxes) == page_tables and tk <= len(boxes):
+        return boxes[tk - 1], "detected", ""
+    if boxes:
+        return [
+            min(b[0] for b in boxes),
+            min(b[1] for b in boxes),
+            max(b[2] for b in boxes),
+            max(b[3] for b in boxes),
+        ], "union", f"{len(boxes)} layout Table regions, {page_tables} table CSVs"
+    w, h = sizes.get(page, DEFAULT_PAGE_PT)
+    note = "no layout Table region on this page; bbox is the full page"
+    if page not in sizes:
+        note += " (rendered PDF unavailable, assumed US Letter)"
+    return [0.0, 0.0, float(w), float(h)], "page", note
+
+
+def table_blocks(manifest_row, stem, table_bbox, sizes):
+    blocks, fallbacks = [], []
     methods = table_methods()
     paths = sorted(glob.glob(str(TABLES_DIR / f"{stem}_p*_t*.csv")))
     page_counts = {}
@@ -102,23 +150,18 @@ def table_blocks(manifest_row, stem, table_bbox, page_extent):
             rows = list(csv.DictReader(f))
         if not rows:
             continue
-        boxes = table_bbox.get(page, [])
-        page_tables = page_counts.get(page, 0)
-        if len(boxes) == page_tables and tk <= len(boxes):
-            bbox = boxes[tk - 1]
-        elif boxes:
-            bbox = [
-                min(b[0] for b in boxes),
-                min(b[1] for b in boxes),
-                max(b[2] for b in boxes),
-                max(b[3] for b in boxes),
-            ]
-        else:
-            bbox = page_extent.get(page) or [0.0, 0.0, 1.0, 1.0]
+        bbox, precision, note = table_bbox_for(
+            page, tk, table_bbox.get(page, []), page_counts.get(page, 0), sizes)
         block_id = f"p{page:04d}_b{900 + tk:03d}"
+        if precision != "detected":
+            fallbacks.append({
+                "stem": stem, "page": page, "block_id": block_id,
+                "precision": precision, "bbox": json.dumps(bbox), "note": note,
+            })
         method = methods.get((stem, page))
-        blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox, rows, method))
-    return blocks
+        blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox,
+                                          rows, method))
+    return blocks, fallbacks
 
 
 def docling_blocks(manifest_row, stem):
@@ -143,6 +186,22 @@ def write_jsonl(blocks, path):
     with open(path, "w", encoding="utf-8") as f:
         for b in reading_order(blocks):
             f.write(b.to_jsonl() + "\n")
+
+
+def write_fallback_log(rows, path=FALLBACK_LOG):
+    """Every approximated table bbox, so the imprecision is visible.
+
+    A wrong bbox is still a schema-valid bbox, so nothing downstream can
+    detect this. It has to be recorded at the point the approximation is made.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["stem", "page", "block_id", "precision", "bbox", "note"]
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+
 
 def table_to_markdown(t):
     lines = ["| " + " | ".join(str(c) for c in t.columns) + " |"]
@@ -187,34 +246,37 @@ def block_to_markdown(b):
 def write_markdown(blocks, path, manifest_row):
     path.parent.mkdir(parents=True, exist_ok=True)
     ordered = reading_order(blocks)
-    head = [
+    parts = [
         f"# {manifest_row['company']} {manifest_row['form']} "
         f"{manifest_row['fiscal_year']} {manifest_row['fiscal_period']}",
         "",
-        provenance_comment(ordered[0]) if ordered else "",
     ]
-    parts = [head[0], head[1]]
     current_page = None
     for b in ordered:
         if b.page != current_page:
             current_page = b.page
             parts.append(f"\n<!-- page {b.page} -->")
         parts.append(block_to_markdown(b))
-    path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")    
+    path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")
 
 
 def main():
     manifest = load_manifest()
+    all_fallbacks = []
     for stem, row in manifest.items():
         layout_path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
         if layout_path.exists():
-            trad, table_bbox, page_extent = layout_blocks(row, stem)
-            trad += table_blocks(row, stem, table_bbox, page_extent)
+            trad, table_bbox = layout_blocks(row, stem)
+            sizes = page_sizes(stem)
+            tbl, fallbacks = table_blocks(row, stem, table_bbox, sizes)
+            trad += tbl
+            all_fallbacks += fallbacks
             write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
             write_markdown(trad, EXPORT_DIR / f"{stem}.md", row)
         else:
             trad = []
-            print(f"{stem}\tSKIPPED traditional: missing {layout_path} (run the layout stage, Part 3)")
+            print(f"{stem}\tSKIPPED traditional: missing {layout_path} "
+                  f"(run the layout stage, Part 3)")
 
         doc = []
         if EMIT_DOCLING:
@@ -223,9 +285,16 @@ def main():
                 doc = docling_blocks(row, stem)
                 write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
             else:
-                print(f"{stem}\tSKIPPED docling: missing {docling_path} (run the docling stage, Part 4)")
+                print(f"{stem}\tSKIPPED docling: missing {docling_path} "
+                      f"(run the docling stage, Part 4)")
 
         print(f"{stem}\ttraditional={len(trad)}\tdocling={len(doc)}")
+
+    write_fallback_log(all_fallbacks)
+    by_precision = {}
+    for r in all_fallbacks:
+        by_precision[r["precision"]] = by_precision.get(r["precision"], 0) + 1
+    print(f"{FALLBACK_LOG}\t{by_precision}")
 
 
 if __name__ == "__main__":
