@@ -37,7 +37,7 @@ stages:
       size: 17581141
       nfiles: 156
   render:
-    cmd: python src/render.py --params params.yaml --input data/raw --output
+    cmd: python src/render.py --params params.yaml --input data/raw --output 
       data/rendered
     deps:
     - path: data/raw
@@ -76,7 +76,7 @@ stages:
       size: 1076361
       nfiles: 3
   parse_pdfplumber:
-    cmd: python src/parse_text.py --params params.yaml --input data/rendered
+    cmd: python src/parse_text.py --params params.yaml --input data/rendered 
       --output data/parsed
     deps:
     - path: data/rendered
@@ -106,24 +106,54 @@ stages:
       size: 8288515
       nfiles: 94
   tables:
-    cmd: python src/tables.py --params params.yaml --input data/rendered
+    cmd: python src/tables.py --params params.yaml --input data/rendered 
       --output data/tables
     deps:
+    - path: data/managed
+      hash: md5
+      md5: 1d6b381b5f89bf1ca7689c6c117f46fb.dir
+      size: 910483
+      nfiles: 6
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: fb8b8f38b62d24672824b884b07ddffb.dir
+      size: 866131
       nfiles: 3
     - path: requirements.txt
       hash: md5
-      md5: 9a30d9fbc6ecfc115e6b4323f456b355
-      size: 4649
+      md5: 76ed4cfb309f8e05c86c1a6fce804803
+      size: 4930
+    - path: src/managed
+      hash: md5
+      md5: 4bcfa82d6836e148f9b30769f87cc569.dir
+      size: 35295
+      nfiles: 4
     - path: src/tables.py
       hash: md5
-      md5: 57864510dc245f765c603dc27195a4c8
-      size: 25680
+      md5: a64c84070f1ad1eb57d6ac0278beba36
+      size: 27864
     params:
       params.yaml:
+        managed:
+          provider: aws_textract
+          enabled: false
+          region: us-east-1
+          features:
+          - TABLES
+          - LAYOUT
+          cache_dir: data/managed
+          dpi: 150
+          pages:
+            AAPL_10K_20250927:
+            - 32
+            AAPL_10Q_20260627:
+            - 6
+          fixture_pages:
+            scanned:
+            - 1
+          trigger:
+            min_ocr_conf: 0.75
+            min_table_score: 0.5
         tables:
           min_rulings: 4
           accept_score: 0.6
@@ -132,11 +162,11 @@ stages:
     outs:
     - path: data/tables
       hash: md5
-      md5: bdbe0d97e356f7cb70609dc64b3a61f0.dir
-      size: 144644
+      md5: 6d7ac67f783d3878cea215835e614813.dir
+      size: 146247
       nfiles: 33
   layout:
-    cmd: python src/layout.py --params params.yaml --input data/rendered
+    cmd: python src/layout.py --params params.yaml --input data/rendered 
       --output data/layout --figures data/figures --qa reports/layout
     deps:
     - path: data/rendered
@@ -199,7 +229,7 @@ stages:
       size: 773248
       nfiles: 4
   parse_docling:
-    cmd: python src/docling_parse.py --params params.yaml --input data/rendered
+    cmd: python src/docling_parse.py --params params.yaml --input data/rendered 
       --output data/docling
     deps:
     - path: data/raw
