@@ -12,6 +12,7 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
 import time
 import traceback
 from pathlib import Path
@@ -55,9 +56,17 @@ def make_runner(stage, params, params_path):
     """Set up a stage once (cold start) and return open_pdf(pdf_path) -> run(page_no) -> output count."""
     if stage == "parse_pdfplumber":
         import parse_text
+        scratch = Path(tempfile.mkdtemp(prefix="bench_text_"))       # outputs go here, not data/
         def open_pdf(pdf):
             gen = parse_text.extract_page_text(pdf, params["ocr"])   # yields one page at a time, in order
-            return lambda n: len(next(gen)["text"].strip())
+            stem = Path(pdf).stem
+            def run(n):   # same per-page work as parse_pdfplumber: extract + write text and word boxes
+                rec = next(gen)
+                (scratch / f"{stem}_p{n:04d}.txt").write_text(rec["text"])
+                with open(scratch / f"{stem}.words.jsonl", "a") as f:
+                    f.write(json.dumps({"page": n, "words": rec["words"]}) + "\n")
+                return len(rec["text"].strip())
+            return run
         return open_pdf, "cpu"
 
     if stage == "tables":
@@ -91,9 +100,14 @@ def make_runner(stage, params, params_path):
         device = stage.rsplit("_", 1)[1]
         dp = load_docling_parse()
         conv = dp.make_converter({**params["docling"], "device": device})
+        scratch = Path(tempfile.mkdtemp(prefix="bench_docling_"))    # outputs go here, not data/docling
         def open_pdf(pdf):
-            def run(n):
-                doc = conv.convert(pdf, page_range=(n, n)).document
+            stem, offsets = Path(pdf).stem, dp.crop_offsets(pdf)
+            def run(n):   # same per-page work as parse_docling: convert + every export + table normalization
+                doc = conv.convert(pdf, page_range=(n, n)).document   # keeps the real page number
+                dp.export_document(doc, stem, scratch)
+                dp.export_blocks(doc, stem, stem, scratch, offsets)
+                dp.export_tables(doc, stem, pdf, scratch)              # includes tables.to_long normalization
                 return sum(1 for _ in doc.iterate_items())
             return run
         return open_pdf, device
