@@ -1,0 +1,51 @@
+stem,page,class,correct,missed,wrong_type,bad_box,notes
+AAPL_10K_20250927,1,Text,6,10,0,0,cover is a form: short labels/fields mostly unboxed
+AAPL_10K_20250927,1,Title,0,2,0,1,FORM 10-K and Apple Inc. missed; SEC header box cuts COMMISSION
+AAPL_10K_20250927,1,List,0,0,0,0,
+AAPL_10K_20250927,1,Table,0,1,1,0,securities table missed; Nasdaq column boxed as Text
+AAPL_10K_20250927,1,Figure,0,0,0,0,
+AAPL_10K_20250927,10,Text,5,0,0,2,straddling box merges end of para 4 + start of para 5; para 5 last 3 lines unboxed
+AAPL_10K_20250927,10,Title,0,1,0,0,bold italic risk-factor heading missed
+AAPL_10K_20250927,10,List,0,0,0,0,
+AAPL_10K_20250927,10,Table,0,0,0,0,
+AAPL_10K_20250927,10,Figure,0,0,0,0,
+AAPL_10K_20250927,20,Text,2,0,1,4,None. labeled Title; cybersecurity paragraphs mis-cut and merged
+AAPL_10K_20250927,20,Title,5,0,0,0,Item headings and italic risk heading all found
+AAPL_10K_20250927,20,List,0,0,0,0,
+AAPL_10K_20250927,20,Table,0,0,0,0,
+AAPL_10K_20250927,20,Figure,0,0,0,0,
+AAPL_10K_20250927,22,Text,2,1,0,1,repurchase intro cut off; 'common stock is traded' missed
+AAPL_10K_20250927,22,Title,2,1,1,0,Item 5 labeled Text; 'Purchases of Equity...' missed
+AAPL_10K_20250927,22,List,0,0,0,0,
+AAPL_10K_20250927,22,Table,0,0,1,2,repurchase table labeled Figure; header boxed as Text; Table box over empty space
+AAPL_10K_20250927,22,Figure,0,0,0,0,
+AAPL_10K_20250927,32,Text,1,1,0,0,scale caption '(In millions...)' missed
+AAPL_10K_20250927,32,Title,1,1,0,0,statement title missed
+AAPL_10K_20250927,32,List,0,0,0,0,
+AAPL_10K_20250927,32,Table,0,0,6,1,table box covers numbers only; row labels split into 6 Text boxes
+AAPL_10K_20250927,32,Figure,0,0,0,0,
+AAPL_10K_20250927,34,Text,0,2,0,0,scale caption and 'See accompanying Notes' missed
+AAPL_10K_20250927,34,Title,1,3,0,0,statement title and liabilities heading missed
+AAPL_10K_20250927,34,List,0,0,0,0,
+AAPL_10K_20250927,34,Table,0,1,3,0,balance sheet not detected; 3 label groups as Text; bottom half unboxed
+AAPL_10K_20250927,34,Figure,0,0,0,0,
+AAPL_10K_20250927,50,Text,1,1,0,3,sliver box; last line cut; '(in millions)' line cut
+AAPL_10K_20250927,50,Title,0,0,0,1,note heading cuts off 'Data'
+AAPL_10K_20250927,50,List,0,0,0,0,
+AAPL_10K_20250927,50,Table,0,0,3,1,"one box merges 3 tables, numbers only; labels as 3 Text boxes"
+AAPL_10K_20250927,50,Figure,0,0,0,0,
+AAPL_10Q_20260627,4,Text,0,0,0,0,
+AAPL_10Q_20260627,4,Title,1,2,0,1,statement title merged with caption in one Text box; PART I and Item 1 missed
+AAPL_10Q_20260627,4,List,0,0,0,0,
+AAPL_10Q_20260627,4,Table,1,0,0,0,full statement incl. row labels
+AAPL_10Q_20260627,4,Figure,0,0,0,0,
+AAPL_10Q_20260627,15,Text,4,0,0,3,sliver box; line cut; heading + paragraph merged
+AAPL_10Q_20260627,15,Title,3,1,1,0,Note 8 labeled Text; 'Restricted Stock Units' missed
+AAPL_10Q_20260627,15,List,0,0,0,0,
+AAPL_10Q_20260627,15,Table,0,2,6,1,RSU table numbers only; 2 small tables undetected; rows as Text/Title
+AAPL_10Q_20260627,15,Figure,0,0,0,0,
+AAPL_10Q_20260627,28,Text,0,3,1,1,None. labeled Title; footnotes and 'Not applicable.' missed
+AAPL_10Q_20260627,28,Title,0,2,2,0,Item 3/4 labeled Text; Item 2 and section heading missed
+AAPL_10Q_20260627,28,List,0,0,0,0,
+AAPL_10Q_20260627,28,Table,0,0,1,1,repurchase table labeled Figure; header boxed separately
+AAPL_10Q_20260627,28,Figure,0,0,0,0,
