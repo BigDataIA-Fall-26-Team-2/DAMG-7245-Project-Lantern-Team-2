@@ -79,3 +79,10 @@
 - **Verification:** `dvc dag` successfully resolved the seven-stage graph. Existing `pytest -q`: 91 passed, 1 skipped. No new recurring tests or dependencies added.
 - **Failure/limitation:** DVC initially could not open its database in the sandbox; approved local access resolved it. Full reproduction and dvc.lock generation are deferred to the evening run at the user's request. #47 cannot be completed until Guna supplies the managed module and its return/cache contract; no speculative adapter was added.
 - **Confidence:** Graph structure and existing regressions checked; end-to-end completion remains unverified until the scheduled reproduction.
+
+### Full local reproduction verified before push
+
+- Activated the project virtual environment and installed the existing pinned requirements. An initial run used the shell's unrelated Python and stopped at missing pdfplumber; the activated environment initially lacked model packages. Neither failure required source changes.
+- Completed all seven stages through export on the 61-page 10-K and 30-page 10-Q. Traditional table extraction wrote 32 tables. Layout reported no missed nonblank pages. A second `dvc repro` skipped all seven stages; `dvc status` reported up to date.
+- Validated every JSONL: traditional 497/248 records and Docling 603/263 records for 10-K/10-Q, respectively; 1,611 total with zero validation errors. Nonempty JSONL, Markdown and TXT exist for each filing. Full existing suite now passes all 92 tests, including the formerly skipped export integration test.
+- Committed generated dvc.lock. Regenerated QA images were backed up under /tmp/lantern-p8-layout-qa and excluded from the integration diff. Generated artifacts remain in the local DVC cache; no remote artifact push or EC2 reproduction is claimed. Schema validity does not establish extraction accuracy. #47 remains pending the managed module.
