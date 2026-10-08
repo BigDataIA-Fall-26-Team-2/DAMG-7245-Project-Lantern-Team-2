@@ -58,7 +58,9 @@ docling:
   html_stem: "AAPL_10K_20250927"   # the filing whose original iXBRL HTML is also converted (Part 4 task 2)
 
 # Owner: Shravya (Part 10 - benchmarking); keys to be filled in during that part
-bench: {}
+bench:
+  extra_pdfs: ["tests/fixtures/scanned.pdf"]   # image-only pages, so OCR's cost is measured (Apple pages never need OCR)
+  docling_devices: ["cpu", "mps"]              # cpu = comparable to a CPU-only VM; mps = the Mac's GPU
 
 # Owner: Guna (Part 7 - managed document AI)
 managed:
