@@ -31,7 +31,8 @@ def extractor_version(method):
         return f"{pkg} {version(pkg)}"
     except PackageNotFoundError:
         return pkg
-
+    
+PACKAGE.setdefault("docling", "docling")
 
 def _base_meta(manifest_row):
     return {

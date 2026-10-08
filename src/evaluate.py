@@ -443,7 +443,7 @@ def main():
         page = int(page_s)
         gt = load_gt_table(gt_file)
         entry = {"page": page, "gt_columns": gt["cols"]}
-        for path_name in ("traditional", "managed"):
+        for path_name in ("traditional", "docling", "managed"):
             by_page = exports.get(stem, {}).get(path_name, {})
             found = table_records(by_page.get(page, []))
             if not found:
@@ -462,7 +462,7 @@ def main():
                 # across every path
                 "cell_raw": prf(gt["cells_raw"], hcr),
             }
-            if path_name == "traditional":
+            if path_name in ("traditional", "docling"):
                 # scale applied: also tests Part 2's normalisation. Textract
                 # does no scale normalisation, so it is not scored on this.
                 res["cell"] = prf(gt["cells"], hc)
@@ -521,7 +521,7 @@ def main():
             side[key] = {
                 p: {"cell_raw_f1": t[p]["cell_raw"]["f1"],
                     "tables_found": t[p]["tables_found"]}
-                for p in ("traditional", "managed") if p in t
+                for p in ("traditional", "docling", "managed") if p in t
             }
     results["side_by_side"] = side
 

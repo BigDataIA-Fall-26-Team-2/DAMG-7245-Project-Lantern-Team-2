@@ -21,6 +21,7 @@ RENDERED_DIR = Path("data/rendered")
 LAYOUT_DIR = Path(EXPORT.get("layout_dir", "data/layout"))
 DOCLING_DIR = Path(EXPORT.get("docling_dir", "data/docling"))
 TABLES_DIR = Path(EXPORT.get("tables_dir", "data/tables"))
+DOCLING_TABLES_DIR = Path(EXPORT.get("docling_tables_dir", str(DOCLING_DIR / "tables")))
 EXPORT_DIR = Path(EXPORT.get("out_dir", "data/export"))
 FALLBACK_LOG = Path(EXPORT.get("bbox_fallback_log",
                                "reports/export_bbox_fallback.csv"))
@@ -135,10 +136,17 @@ def table_bbox_for(page, tk, boxes, page_tables, sizes):
     return [0.0, 0.0, float(w), float(h)], "page", note
 
 
-def table_blocks(manifest_row, stem, table_bbox, sizes):
+def table_blocks(manifest_row, stem, table_bbox, sizes, tables_dir=TABLES_DIR,
+                 method=None, log_stem=None):
+    """Contract-format table CSVs -> schema Table blocks, for either path.
+
+    Part 2's data/tables looks the method up per page in the tables log;
+    Part 4's data/docling/tables passes method="docling". Same reader for both,
+    so both paths reach the schema by the same route.
+    """
     blocks, fallbacks = [], []
-    methods = table_methods()
-    paths = sorted(glob.glob(str(TABLES_DIR / f"{stem}_p*_t*.csv")))
+    methods = table_methods() if method is None else {}
+    paths = sorted(glob.glob(str(Path(tables_dir) / f"{stem}_p*_t*.csv")))
     page_counts = {}
     for p in paths:
         pg = int(re.search(r"_p(\d+)_", Path(p).stem).group(1))
@@ -156,13 +164,22 @@ def table_blocks(manifest_row, stem, table_bbox, sizes):
         block_id = f"p{page:04d}_b{900 + tk:03d}"
         if precision != "detected":
             fallbacks.append({
-                "stem": stem, "page": page, "block_id": block_id,
+                "stem": log_stem or stem, "page": page, "block_id": block_id,
                 "precision": precision, "bbox": json.dumps(bbox), "note": note,
             })
-        method = methods.get((stem, page))
+        m = method or methods.get((stem, page))
         blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox,
-                                          rows, method))
+                                          rows, m))
     return blocks, fallbacks
+
+
+def docling_table_boxes(stem):
+    """Page -> Docling's own Table boxes, used to place the Docling table CSVs."""
+    boxes = {}
+    for rec in read_jsonl(DOCLING_DIR / f"{stem}.blocks.jsonl"):
+        if rec["block_type"] == "Table" and rec.get("bbox"):
+            boxes.setdefault(rec["page"], []).append(rec["bbox"])
+    return boxes
 
 
 def docling_blocks(manifest_row, stem):
@@ -284,6 +301,13 @@ def main():
             docling_path = DOCLING_DIR / f"{stem}.blocks.jsonl"
             if docling_path.exists():
                 doc = docling_blocks(row, stem)
+                dtbl, dfall = table_blocks(row, stem, docling_table_boxes(stem),
+                                           page_sizes(stem),
+                                           tables_dir=DOCLING_TABLES_DIR,
+                                           method="docling",
+                                           log_stem=f"{stem}.docling")
+                doc += dtbl
+                all_fallbacks += dfall
                 write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
             else:
                 print(f"{stem}\tSKIPPED docling: missing {docling_path} "
