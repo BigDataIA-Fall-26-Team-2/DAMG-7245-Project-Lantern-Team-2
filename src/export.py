@@ -9,6 +9,7 @@ from adapters import (
     block_from_layout_record,
     block_from_docling_record,
     table_from_csv_rows,
+    table_methods,
 )
 
 PARAMS = yaml.safe_load(open("params.yaml", encoding="utf-8"))
@@ -79,6 +80,7 @@ def layout_blocks(manifest_row, stem):
 
 def table_blocks(manifest_row, stem, table_bbox):
     blocks = []
+    methods = table_methods()
     paths = sorted(glob.glob(str(TABLES_DIR / f"{stem}_p*_t*.csv")))
     page_counts = {}
     for p in paths:
@@ -106,8 +108,8 @@ def table_blocks(manifest_row, stem, table_bbox):
         else:
             bbox = [0.0, 0.0, 1.0, 1.0]
         block_id = f"p{page:04d}_b{900 + tk:03d}"
-        scale = rows[0].get("scale")
-        blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox, rows, scale))
+        method = methods.get((stem, page))
+        blocks.append(table_from_csv_rows(manifest_row, page, block_id, bbox, rows, method))
     return blocks
 
 
@@ -196,14 +198,25 @@ def write_markdown(blocks, path, manifest_row):
 def main():
     manifest = load_manifest()
     for stem, row in manifest.items():
-        trad, table_bbox = layout_blocks(row, stem)
-        trad += table_blocks(row, stem, table_bbox)
-        write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
-        write_markdown(trad, EXPORT_DIR / f"{stem}.md", row)
+        layout_path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
+        if layout_path.exists():
+            trad, table_bbox = layout_blocks(row, stem)
+            trad += table_blocks(row, stem, table_bbox)
+            write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
+            write_markdown(trad, EXPORT_DIR / f"{stem}.md", row)
+        else:
+            trad = []
+            print(f"{stem}\tSKIPPED traditional: missing {layout_path} (run the layout stage, Part 3)")
+
         doc = []
         if EMIT_DOCLING:
-            doc = docling_blocks(row, stem)
-            write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
+            docling_path = DOCLING_DIR / f"{stem}.blocks.jsonl"
+            if docling_path.exists():
+                doc = docling_blocks(row, stem)
+                write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
+            else:
+                print(f"{stem}\tSKIPPED docling: missing {docling_path} (run the docling stage, Part 4)")
+
         print(f"{stem}\ttraditional={len(trad)}\tdocling={len(doc)}")
 
 
