@@ -118,7 +118,7 @@ removing it turns (1,234) into 1234 and hides a sign error.
 - raw is the cell exactly as printed, for example "(1,234)" or "112,010".
 - value is the number in full units after applying the scale.
   **(added during transcription)** The scale is per row, not per page. 10-K p32
-  mixes three: dollar rows are thousands of millions (112,010 becomes
+  mixes three: dollar rows are millions (112,010 becomes
   112010000000), share-count rows are thousands (14,948,500 becomes
   14948500000) and per-share rows are unit scale (7.49 stays 7.49). 10-Q p6 is
   uniform millions. A single page-level scale would have been wrong on p32.
