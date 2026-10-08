@@ -34,7 +34,7 @@ def load_manifest(input_dir):
     path = Path(input_dir) / "manifest.csv"
     if not path.exists():
         return {}
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf-8") as f:
         return {r["stem"]: r for r in csv.DictReader(f)}
 
 
@@ -82,10 +82,10 @@ def clear_outputs(stem, out, html=False):
 
 def export_document(doc, stem, out):
     """Write full Markdown, lossless JSON, and one Markdown file per page. Returns the page count."""
-    (out / f"{stem}.md").write_text(doc.export_to_markdown())
+    (out / f"{stem}.md").write_text(doc.export_to_markdown(), encoding="utf-8")
     doc.save_as_json(out / f"{stem}.json")
     for n in sorted(doc.pages):
-        (out / f"{stem}_p{n:04d}.md").write_text(doc.export_to_markdown(page_no=n))
+        (out / f"{stem}_p{n:04d}.md").write_text(doc.export_to_markdown(page_no=n), encoding="utf-8")
     return len(doc.pages)
 
 
@@ -117,7 +117,7 @@ def crop_offsets(pdf_path):
 def export_blocks(doc, stem, doc_id, out, offsets):
     """One JSONL record per Docling item, in Docling's reading order, with bbox converted to top-left origin."""
     per_page, counts = {}, {}
-    with open(out / f"{stem}.blocks.jsonl", "w") as f:
+    with open(out / f"{stem}.blocks.jsonl", "w", encoding="utf-8") as f:
         for item, _level in doc.iterate_items():
             if not getattr(item, "prov", None):
                 continue                                   # groups and other items without a page location
@@ -218,7 +218,7 @@ def convert_html(convert, row, out):
     t = time.perf_counter()
     doc = convert(row["source_file"])
     md = doc.export_to_markdown()
-    (out / f"{stem}.html.md").write_text(md)
+    (out / f"{stem}.html.md").write_text(md, encoding="utf-8")
     doc.save_as_json(out / f"{stem}.html.json")
     for k, table in enumerate(doc.tables, start=1):
         table.export_to_dataframe(doc=doc).to_csv(out / f"{stem}_html_t{k}_raw.csv", index=False)
