@@ -222,6 +222,7 @@ data/*
 !data/.gitkeep
 !/data/ground_truth/
 !/data/ground_truth/**
+/data/ground_truth/pages/
 
 # DVC local state
 /.dvc/cache/
