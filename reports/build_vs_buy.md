@@ -53,29 +53,34 @@ the data, because they are not reading errors:
 | Page | Path | WER | CER | Numeric F1 | Raw cell F1 |
 |---|---|---|---|---|---|
 | 10-K p32 | Traditional | 0.7262 | 0.6753 | 0.9500 | 1.0000 |
-| | Docling | 0.8393 | 0.8234 | 0.0000 | n/a |
+| | Docling | 0.2083 | 0.1947 | 0.9500 | 1.0000 |
 | | Textract | 0.0476 | 0.0284 | 0.9844 | 1.0000 |
 | 10-Q p6 | Traditional | 0.8216 | 0.8014 | 0.9412 | 0.9818 |
-| | Docling | 0.8638 | 0.8686 | 0.0000 | n/a |
+| | Docling | 0.2535 | 0.3035 | 0.9748 | 1.0000 |
 | | Textract | 0.0423 | 0.0210 | 0.9839 | 1.0000 |
 | Scanned p1 | Textract | 0.0188 | 0.0101 | 0.9600 | n/a |
 
-Docling has no table cells because its export is text-only (finding 3 in
-`reports/eval.md`).
+Docling's figures include its tables. An earlier version of this table showed
+Docling at 0.0 numeric F1, because the export dropped Docling's tables; that
+was fixed in #111 (`reports/eval.md`, finding 3), and Docling now scores 1.0
+raw and scaled cell F1 on both statement tables.
 
 ### How to read this table
 
-**Do not read the WER column as "Textract is fifteen times more accurate".** Most
-of that gap is representation. The traditional path emits a 29-row table as one
-block in table order and prefixes repeated labels, so its word sequence cannot
-line up with a human reading-order transcription even when every word is right.
-Textract prints bare labels and its table sits in reading order, which happens
-to match how the ground truth was typed. WER on these pages measures agreement
-about layout, not reading.
+**Do not read the WER column as "Textract is fifteen times more accurate".**
+Most of the traditional path's WER on these pages is a layout effect, not
+misreading: its layout Table box covers only the figure columns, so the row
+labels are exported a second time as text and the statement title is lost
+(`reports/eval.md`, finding 6). Docling is the control. Its table rows are
+identical to the traditional path's, and its WER on p32 is 0.208 against 0.726.
+Part of the remaining gap to Textract (0.208 against 0.048) is likely the
+section prefix on repeated row labels (`Net sales: Products`), which both
+open-source paths carry and Textract does not; that split was not measured.
 
-The reading metrics tell the real story: numeric F1 is 0.95 against 0.98 on p32
-and 0.94 against 0.98 on p6, a gap of three to four points, and raw cell F1 is
-perfect for both paths on p32.
+The reading metrics tell the real story. Numeric F1 on p32 is 0.950 for both
+open-source paths against 0.984 for Textract; on p6 it is 0.941 traditional,
+0.975 Docling and 0.984 Textract. That is a gap of about one to four points, and raw
+cell F1 is perfect for all three paths on p32.
 
 ### Errors Textract fixes
 
@@ -84,9 +89,11 @@ perfect for both paths on p32.
   hangs just past the rightmost column, was cut off by the extraction box.
   Part 2's normaliser still produced the correct negative values, so the scaled
   metric scored 1.0 and hid it; the raw metric caught it (0.9818). Textract
-  read both cells intact. The defect is extractor-specific: p32's `(565)` sits in
-  the same position, went through Camelot instead of pdfplumber-text, and
-  survived. Raised with Part 2.
+  read both cells intact, **and so did Docling** (raw cell F1 1.0), so this is
+  not an error that needs a paid service: an open-source path in the same
+  pipeline already avoids it. The defect is extractor-specific: p32's `(565)`
+  sits in the same position, went through Camelot instead of pdfplumber-text,
+  and survived. Raised with Part 2.
 - **Literal column headers.** On p32 Textract returned the header exactly as
   printed, `September 27, 2025`. The traditional path's headers on that page are
   normalised (`FY ended 2025-09-27`), and on irregular tables such as 10-K p22
@@ -107,12 +114,12 @@ perfect for both paths on p32.
 ### The scanned page
 
 Textract reads the scanned fixture almost perfectly: 0.019 WER, 0.010 CER, 0.96
-numeric F1. **The open-source comparison on this page is not yet measured**,
-because the scanned fixture has not been run through Part 1's Tesseract stage.
-This is the comparison that matters most for the decision, since a scan is
-exactly where a managed service is supposed to be worth its price.
-
-> TO FILL: Tesseract WER / CER / numeric F1 on scanned p1, same ground truth.
+numeric F1. **The open-source comparison on this page was not measured**: the
+scanned fixture was not run through Part 1's Tesseract stage before the
+deadline. It is the comparison that matters most for the decision, since a scan
+is exactly where a managed service is supposed to be worth its price, and it is
+the first thing to run next. The brief's acceptance (one page and one table
+side by side) is met by the two statement pages above.
 
 ## 4. Fallback design
 
@@ -167,9 +174,18 @@ and a check that fails.
 The OCR-confidence side of the trigger, inside Part 1's parsing stage, is not
 wired. On these two filings only the table side is exercised.
 
-> TO FILL: `data/managed.dvc` (cache tracked with `dvc add data/managed`) and
-> `data/managed` plus `src/managed` listed as dependencies of the `tables`
-> stage in `dvc.yaml`.
+The cache is tracked with `dvc add data/managed` (`data/managed.dvc`).
+`src/managed`, `data/managed` and the `managed` params are dependencies of the
+`tables` stage, and `data/managed` of the `evaluate` stage, so a change to the
+cache, the code or the switch reruns what reads them. `dvc repro -s tables`
+with `managed.enabled: false` completes and writes the same 32 tables.
+
+The team's S3 remote (`lantern-s3`) now exists, but `dvc push
+data/managed.dvc` from this account returns 403 Forbidden: the bucket is in a
+different AWS account from the one used for Textract. Until the cache is
+pushed, a fresh clone cannot `dvc pull` it, and because `tables` depends on
+`data/managed`, `dvc repro` there stops at that stage. Pushing it is pending
+with the Part 8 owner.
 
 One known false trigger to fix before wiring the OCR side: 10-Q p7 is blank and
 wrongly routes to OCR in Part 1. An OCR-confidence trigger built on that routing
@@ -301,14 +317,16 @@ trigger. That is where it measurably outperforms, and where the open-source
 path has no text layer to read.
 
 **Where it does not:** born-digital filings, which is nearly all of FinTrust's
-volume. There the text layer is exact, the traditional path reads statement
-figures within three to four points of Textract, and Textract adds OCR errors
-the text layer never had.
+volume. There the text layer is exact, the open-source paths read statement
+figures within about one to four points of Textract (Docling within one point
+on p6, and it reads the clipped parentheses that the traditional path loses),
+and Textract adds OCR errors the text layer never had.
 
 **Lina's question, "Why not just use Textract for everything?", in five
-sentences.** On accuracy, the gap on digital statement pages is three to four
-points of numeric F1, and Textract introduces errors there by OCRing text the
-PDF already holds exactly. On cost, Textract on every page is about $7,500 a
+sentences.** On accuracy, the gap on digital statement pages is about one to
+four points of numeric F1, Docling already fixes the one reading error Textract
+fixed, and Textract introduces errors there by OCRing text the PDF already
+holds exactly. On cost, Textract on every page is about $7,500 a
 year at FinTrust's volume against under $100 of compute, so it only wins if
 maintaining our parsers costs more than about 74 engineer-hours a year. On
 lock-in, its output is a provider-specific block graph that still needs mapping,
@@ -325,7 +343,8 @@ otherwise.
 - Three pages, two of them from one company's unusually clean filings. The
   statement-page comparison is strong evidence for clean digital tables and
   weak evidence for anything else.
-- The scanned-page comparison against Tesseract is not yet measured (section 3).
+- The scanned-page comparison against Tesseract was not measured (section 3).
+- The cache is not yet in the team's DVC remote (section 4).
 - One provider only; Google Document AI and Azure were not run (stretch goal).
 - The measured table trigger rate of 0 of 91 comes from one company's clean
   filings. The 5% and 1% fallback rates are scenarios for harder documents, not
