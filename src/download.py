@@ -3,6 +3,7 @@
 Stage: download. Reads params.yaml:download. Writes to data/raw/.
 """
 import argparse
+import binascii
 import json
 import re
 from pathlib import Path
@@ -53,7 +54,29 @@ def unpack_submission(submission_path: Path) -> dict:
         seen_filenames.add(filename)
         text_start = doc.index("<TEXT>") + len("<TEXT>")
         text_end = doc.rindex("</TEXT>")  # rindex: content before the real closing tag may itself contain "</TEXT>"
-        (unpacked_dir / filename).write_text(doc[text_start:text_end].strip() + "\n")
+        payload = doc[text_start:text_end].strip()
+        target = unpacked_dir / filename
+        if payload.startswith("begin "):
+            lines = payload.splitlines()
+            if not re.fullmatch(r"begin [0-7]{3} .+", lines[0]) or lines[-1] != "end":
+                raise ValueError(f"{submission_path}: invalid uuencoded document '{filename}'")
+            try:
+                decoded = []
+                for line in lines[1:-1]:
+                    if not line:
+                        continue
+                    encoded = line.encode("ascii")
+                    try:
+                        decoded.append(binascii.a2b_uu(encoded))
+                    except binascii.Error:
+                        # Match Python's uu decoder for SEC's non-zero final-line padding.
+                        needed = (((encoded[0] - 32) & 63) * 4 + 5) // 3
+                        decoded.append(binascii.a2b_uu(encoded[:needed]))
+                target.write_bytes(b"".join(decoded))
+            except (binascii.Error, UnicodeEncodeError) as exc:
+                raise ValueError(f"{submission_path}: cannot decode '{filename}'") from exc
+        else:
+            target.write_text(payload + "\n")
 
     if not any(p.suffix == ".xsd" for p in unpacked_dir.iterdir()):
         raise ValueError(f"{submission_path}: no .xsd schema found among unpacked documents")
