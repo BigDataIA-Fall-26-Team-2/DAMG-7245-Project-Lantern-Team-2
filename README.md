@@ -193,3 +193,12 @@ the data and lock file together.
 The S3 remote (#48), fixture-only GitHub Actions (#36), and remaining stages
 (#46/#54) are separate work. Until a remote is configured and populated, a fresh
 clone must generate these outputs locally; `dvc pull` cannot fetch them yet.
+
+### Optional: Docling as a service (docling-serve)
+
+`parse_docling` can call a running docling-serve over HTTP instead of loading Docling as a library (stretch goal, #83):
+
+    docker run -d --name docling-serve -p 5001:5001 quay.io/docling-project/docling-serve-cpu@sha256:225c8586e20d5d0fc6811a9e0e044fa602bcc4393f00389009bad42d6787b58f
+    curl -s http://localhost:5001/health      # wait for {"status":"ok"}
+
+Then set `docling.serve_url: "http://localhost:5001"` in `params.yaml` and run the stage as usual. Leave it empty (the default) to use the library. Outputs are identical either way (`reports/docling_comparison.md` section 5).

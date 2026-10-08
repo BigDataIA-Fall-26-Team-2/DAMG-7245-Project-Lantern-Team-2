@@ -61,7 +61,20 @@ Keep the traditional path where control matters: its steps can be tuned and insp
 text layer, and it is the fallback when Docling garbles decorative text (scrambled signer names on the fixture). Final
 choice to be confirmed against WER, cell F1 and XBRL match rate for both paths.
 
-## 5. Limitations
+## 5. Docling as a service (docling-serve over HTTP, stretch goal, #83)
+
+Setting `docling.serve_url` (e.g. `http://localhost:5001`) makes the `parse_docling` stage send each file to a running
+docling-serve (`POST /v1/convert/file`, same OCR and TableFormer settings) and rebuild the DoclingDocument from the
+response; the exports are unchanged. Empty `serve_url` keeps Docling as a library, the default. The server runs as a
+pinned container (`quay.io/docling-project/docling-serve-cpu@sha256:225c8586...`), so no packages were added to
+`requirements.txt`.
+
+Both filings through the server give the same results as the library: same table counts (48 / 30), same blocks, the
+same HTML conversion, and all 54 team-format table CSVs identical (`diff -rq`), despite the server running Docling
+2.132.0 vs the library's 2.134.0 (same 4.0.3 models). It was ~1.8x slower here (10-K 104 s vs 56 s) because Docker on
+macOS runs a Linux VM on CPU only. Evidence: `prototyping/shravya/docling_serve_check.txt`.
+
+## 6. Limitations
 - Statement agreement partly reflects the shared `to_long` post-processing (labels, periods, scale), not Docling's own label reading.
 - Reading-order evidence is one fixture page; Apple's pages are single-column.
 - Throughput numbers are single wall-clock runs, not benchmarks (Part 10).
