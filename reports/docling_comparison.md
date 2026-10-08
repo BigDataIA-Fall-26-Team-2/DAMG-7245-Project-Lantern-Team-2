@@ -15,7 +15,7 @@ cropbox offset. Docling measures from the cropbox, pdfplumber from the mediabox;
 |---|---|---|---|
 | Text accuracy (WER / CER) | TBD (P9) | TBD (P9) | Guna's eval on the same ground-truth pages |
 | Table cell F1 | TBD (P9) | TBD (P9) | Guna's eval |
-| XBRL match rate | TBD (P11) | TBD (P11) | Dhruvi's xbrl.py on both table paths |
+| XBRL match rate (388 statement cells: income, balance, cash flow, both filings) | 84.5% (328/388); value agreement 100% | 83.8% (325/388); value agreement 99.2% | `reports/xbrl.md` (#99); `data/xbrl/comparison_traditional.csv`, `comparison_docling.csv` |
 | Statement tables (4 pages, 243 cells) | 243 cells | 243 cells, **0 differ** | `prototyping/shravya/income_diff.txt` |
 | Usable tables found | 10-K 17, 10-Q 12 (layout-routed) | 10-K **31**, 10-Q **23** | P3 `layout_audit.md` s5; Docling run |
 | 10-K balance sheet (p34) | no layout Table box; reached only via P2 page-level extraction | found directly; totals balance (359,241 / 364,980) | `data/docling/tables/AAPL_10K_20250927_p0034_t1.csv` |
@@ -31,8 +31,7 @@ cropbox offset. Docling measures from the cropbox, pdfplumber from the mediabox;
 On the four main statements (10-K and 10-Q income statement and balance sheet), both paths produce **identical** team-format
 tables: 57 + 54 + 76 + 56 = 243 cells, 0 different values, 0 missing on either side. Part of this is by design: both table
 paths go through the same P2 `tables.to_long` with the full page text, so labels, period labels and scaling are shared; what
-agrees is the cell structure and numbers each extractor found. Expect the XBRL match rate on these statements to be the
-same for both paths; differences, if any, will come from other tables.
+agrees is the cell structure and numbers each extractor found. Measured against XBRL (Dhruvi, P11, `reports/xbrl.md`): income statements 133/133 and balance sheets 110/110 match on **both** paths (100%). Cash flow is 85/145 (traditional) vs 82/145 (Docling). The 60 sign mismatches are the same 12 cash-flow lines on both paths, which Apple presents negated (`negatedLabel` in `_pre.xml`), so they are presentation, not extraction errors. The only real difference: on the 10-K cash flow statement (p36), Docling drops the first data row, "...beginning balances" (3 cells, XBRL 29,943 / 30,737 / 24,977 million), which the traditional path keeps. Value agreement (match + sign): traditional 100%, Docling 99.2%.
 
 ## 3. HTML vs rendered PDF (Part 4 task 2)
 
@@ -57,7 +56,7 @@ Use **Docling as the primary parser** and keep the **traditional path as the fal
 twice as many usable tables (54 vs 29), recovered the balance sheet the layout detector missed, read a dark four-column
 spread correctly without any of the three fixes the traditional path needed, labels footers and footnotes natively, and
 converts a filing in about a minute with page-level provenance built in. On the four financial statements the two paths
-agree cell for cell, so running both on statement pages costs little and gives an independent check before XBRL validation.
+agree cell for cell, so running both on statement pages costs little and gives an independent check before XBRL validation. That check already caught one Docling miss: the dropped "beginning balances" row on the 10-K cash flow statement, the only XBRL difference between the paths.
 Keep the traditional path where control matters: its steps can be tuned and inspected individually, pdfplumber reads the exact
 text layer, and it is the fallback when Docling garbles decorative text (scrambled signer names on the fixture). Final
 choice to be confirmed against WER, cell F1 and XBRL match rate for both paths.
