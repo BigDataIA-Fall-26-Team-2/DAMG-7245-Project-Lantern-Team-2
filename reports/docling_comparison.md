@@ -13,8 +13,8 @@ cropbox offset. Docling measures from the cropbox, pdfplumber from the mediabox;
 
 | Dimension | Traditional | Docling | Evidence |
 |---|---|---|---|
-| Text accuracy (WER / CER) | TBD (P9) | TBD (P9) | Guna's eval on the same ground-truth pages |
-| Table cell F1 | TBD (P9) | TBD (P9) | Guna's eval |
+| Text accuracy, mean over 16 ground-truth pages (WER / CER / numeric-token F1) | 0.485 / 0.458 / 0.750 | **0.215 / 0.210 / 0.863** | `reports/eval.md` (P9, #111) |
+| Table cell F1 (10-K p32 / 10-Q p6, hand-keyed ground truth) | 1.000 / 1.000 | 1.000 / 1.000 | `reports/eval.md` (P9, #111) |
 | XBRL match rate (388 statement cells: income, balance, cash flow, both filings) | 84.5% (328/388); value agreement 100% | 83.8% (325/388); value agreement 99.2% | `reports/xbrl.md` (#99); `data/xbrl/comparison_traditional.csv`, `comparison_docling.csv` |
 | Statement tables (4 pages, 243 cells) | 243 cells | 243 cells, **0 differ** | `prototyping/shravya/income_diff.txt` |
 | Usable tables found | 10-K 17, 10-Q 12 (layout-routed) | 10-K **31**, 10-Q **23** | P3 `layout_audit.md` s5; Docling run |
@@ -50,7 +50,9 @@ Rendering changed **table structure, not content**. HTML tables carry spacer row
 and colspan cells that Docling duplicates across every spanned column. The rendered PDF gives cleaner tables and is the only
 version with page + bbox provenance, which Lina's traceability requirement needs.
 
-## 4. Recommendation to Lina (provisional until the P9/P11 metrics are in)
+## 4. Recommendation to Lina
+
+The P9 and P11 metrics support it: both paths score cell F1 1.0 on both ground-truth statements and match XBRL 100% on income statements and balance sheets, while Docling's text is closer to the ground truth (mean WER 0.215 vs 0.485, numeric-token F1 0.863 vs 0.750). WER is order-sensitive, so much of that gap is reading order, the same advantage seen on the 4-column fixture.
 
 Use **Docling as the primary parser** and keep the **traditional path as the fallback and cross-check**. Docling found nearly
 twice as many usable tables (54 vs 29), recovered the balance sheet the layout detector missed, read a dark four-column
