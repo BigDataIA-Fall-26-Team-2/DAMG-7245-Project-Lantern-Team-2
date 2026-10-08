@@ -86,3 +86,14 @@
 - Completed all seven stages through export on the 61-page 10-K and 30-page 10-Q. Traditional table extraction wrote 32 tables. Layout reported no missed nonblank pages. A second `dvc repro` skipped all seven stages; `dvc status` reported up to date.
 - Validated every JSONL: traditional 497/248 records and Docling 603/263 records for 10-K/10-Q, respectively; 1,611 total with zero validation errors. Nonempty JSONL, Markdown and TXT exist for each filing. Full existing suite now passes all 92 tests, including the formerly skipped export integration test.
 - Committed generated dvc.lock. Regenerated QA images were backed up under /tmp/lantern-p8-layout-qa and excluded from the integration diff. Generated artifacts remain in the local DVC cache; no remote artifact push or EC2 reproduction is claimed. Schema validity does not establish extraction accuracy. #47 remains pending the managed module.
+
+## EC2 reproduction and S3 DVC remote
+
+- Environment: Ubuntu 24.04.4 LTS, x86_64, m7i-flex.large, Python 3.11, PyTorch 2.14.1+cpu; Chromium launch verified.
+- Configured lantern-s3 at s3://lantern-team2-dvc-fall-2026/dvc in us-east-1. Authentication uses the attached LanternEC2Role, without stored AWS access keys.
+- All seven DVC stages completed across the 61-page 10-K and 30-page 10-Q. Second reproduction skipped every stage; DVC reported up to date.
+- Existing tests: 94 passed in 3.54 seconds.
+- Upload: 593 files pushed; DVC confirmed the local cache and S3 remote are synchronized.
+- Failures resolved: pinned Playwright could not install on Ubuntu 26.04, so the instance was replaced with Ubuntu 24.04. CUDA dependency downloads hit a storage limit; CPU-only PyTorch and a disk-backed temporary directory resolved installation.
+- Limitations: Linux output hashes differ from the earlier Mac run. Grader access and retrieval from an empty cache remain unverified.
+- AI assistance: OpenAI Codex guided setup and troubleshooting; commands were run manually on EC2.

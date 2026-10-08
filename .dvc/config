@@ -1,0 +1,5 @@
+[core]
+    remote = lantern-s3
+['remote "lantern-s3"']
+    url = s3://lantern-team2-dvc-fall-2026/dvc
+    region = us-east-1
