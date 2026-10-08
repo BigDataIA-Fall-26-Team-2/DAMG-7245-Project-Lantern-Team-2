@@ -31,3 +31,12 @@ Emitted per detected layout block: `page, block_id, block_type, bbox, score, mod
 - `managed.managed_fallback(page_image, ocr_conf)` — returns managed-OCR output when local OCR confidence is low.
 
 Thresholds (`accept_score`, `ocr_conf` cutoffs, etc.) live in `params.yaml`, not here.
+
+## XBRL facts and comparison (Part 11)
+
+- `python src/xbrl.py --input data/rendered/manifest.csv --output data/xbrl` -> `data/xbrl/facts.csv`, one row per numeric XBRL fact: `stem, accession, form, concept, prefix, label, value, unit, decimals, period_type, start, end, months, period_label, n_dims, dims, n_copies`. `value` is in full units. `period_label` uses the same text as the table CSV `col_label` ("FY ended 2025-09-27", "9M ended 2026-06-27", instants "2025-09-27"), so the two join on `(stem, period_label)`. `n_dims == 0` means a face (statement) fact.
+- `python src/xbrl.py compare --path traditional --tables data/tables` -> `data/xbrl/comparison_{path}.csv` (one row per table cell on the pages in `params.yaml` `xbrl.statement_pages`) and `data/xbrl/match_rates_{path}.csv` (per statement and ALL). Columns: `path, stem, statement, page, pdf_label, period_label, xbrl_period, prefix, concept, dims, mapping, pdf_raw, pdf_value, xbrl_value, decimals, tolerance, status, cause`.
+- Any extraction path (e.g. `--path docling --tables <folder>`) must write tables in the Table CSV format above, named `{stem}_p{NNNN}_t1.csv`.
+- `status`: `match` (abs(pdf - xbrl) <= tolerance), `sign` (same magnitude, opposite sign), `scale_x1e{N}` / `scale_x1e-{N}` (xbrl = pdf x 10^N), `mismatch`, `pdf_missing`, `xbrl_missing`. `tolerance` = 0.5 x 10^(-decimals); 0.5 when decimals is INF.
+- `mapping`: `manual` (`config/label_map.yaml`), `label` (the filing's `_lab.xml`), `fuzzy` (difflib, cutoff `xbrl.fuzzy_cutoff`), `ambiguous` (several concepts, none agrees by value), `none`.
+- `cause` is filled automatically for `sign` rows whose concept has a negated preferredLabel in the filing's `_pre.xml`. Other causes are diagnosed in `reports/xbrl.md`.

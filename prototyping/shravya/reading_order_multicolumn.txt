@@ -1,0 +1,28 @@
+=== DOCLING reading order, tests/fixtures/multicolumn.pdf ===
+p0001_b001 Title   x0=  54 | ESG: Seeking to make a difference
+p0001_b002 Text    x0=  54 | As we work with our customers and partners to create a bette
+p0001_b003 Text    x0=  54 | Our achievements have been recognized by independent organiz
+p0001_b004 Figure  x0=  55 | 
+p0001_b005 Text    x0= 212 | We place high value on protecting the environment and minimi
+p0001_b006 Text    x0= 212 | We also place great emphasis on enriching the lives of our e
+p0001_b007 Title   x0= 438 | Healthy pipeline and innovative technology position Amdocs f
+p0001_b008 Text    x0= 438 | While we continue to operate in a challenging industry deman
+p0001_b009 Text    x0= 438 | Our cloud-related activities in fiscal 2024 were around 25% 
+p0001_b010 Text    x0= 438 | We remain laser-focused on continued operational excellence 
+p0001_b011 Text    x0= 596 | We remain confident in our relatively resilient business mod
+p0001_b012 Text    x0= 596 | We want to conclude this letter by thanking our shareholders
+p0001_b013 Figure  x0= 591 | 
+p0001_b014 Text    x0= 596 | u h S y k e h S e f f r President and Chief Executive Office
+p0001_b015 Figure  x0= 669 | 
+p0001_b016 Text    x0= 671 | i l E e G a m l n Chairman of the Board
+
+=== P3 LAYOUT reading order, tests/fixtures/multicolumn.pdf ===
+p0001_b001 Title   x0=  56 | ESG: Seeking to make a difference
+p0001_b002 Text    x0=  52 | As we work with our customers and partners to create a bette
+p0001_b003 Text    x0=  53 | Our achievements have been recognized by independent organiz
+p0001_b004 Text    x0= 211 | We place high value on protecting the environment and minimi
+p0001_b005 Text    x0= 209 | We also place great emphasis on enriching the lives of our e
+p0001_b006 Text    x0= 437 | While we continue to operate in a challenging industry deman
+p0001_b007 Text    x0= 436 | Our cloud-related activities in fiscal 2024 were around 25% 
+p0001_b008 Text    x0= 595 | We remain confident in our relatively resilient business mod
+

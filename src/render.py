@@ -57,13 +57,21 @@ def main(params_path: str, input_dir: str, output: str) -> None:
             if (meta["accession"] != pinned["accession"] or meta["period"] != pinned["period"]
                     or meta["form"] != filing_dir.parent.name or meta["ticker"] != config["download"]["ticker"]):
                 raise ValueError(f"{filing_dir}: metadata does not match pinned filing")
-            primary_docs = list(filing_dir.glob("primary-document.*"))
-            if len(primary_docs) != 1:
-                raise RuntimeError(f"{filing_dir}: expected one primary-document file, found {len(primary_docs)}")
+            source_file = filing_dir / "unpacked" / meta["source_file"]
+            if not source_file.is_file():
+                raise RuntimeError(f"{source_file}: missing unpacked primary document; rerun download")
 
             stem = stem_for(meta)
             pdf_path = out_dir / f"{stem}.pdf"
-            page.goto(primary_docs[0].resolve().as_uri())
+            page.goto(source_file.resolve().as_uri())
+            broken_images = page.evaluate("""async () => {
+                const images = Array.from(document.images);
+                await Promise.allSettled(images.map(image => image.decode()));
+                return images.filter(image => !image.complete || image.naturalWidth === 0)
+                             .map(image => image.getAttribute('src'));
+            }""")
+            if broken_images:
+                raise RuntimeError(f"{source_file}: failed to load images {broken_images}; rerun download")
             page.pdf(path=str(pdf_path), format=page_format)
 
             # Read the page size back from the PDF itself — a filing's own CSS can override
@@ -74,7 +82,7 @@ def main(params_path: str, input_dir: str, output: str) -> None:
                 "doc_id": meta["accession"],
                 "accession": meta["accession"],
                 "cik": meta["cik"],
-                "source_file": str(filing_dir / "unpacked" / meta["source_file"]),
+                "source_file": str(source_file),
                 "ticker": meta["ticker"],
                 "form": meta["form"],
                 "period": meta["period"],
