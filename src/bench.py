@@ -172,19 +172,33 @@ def summarize(out_dir, stages):
 
 
 def cost_table(out_dir, params):
-    """Cost per 1,000 pages and per year for each option, from measured s/page (summary.csv) and cited prices.
+    """Cost per 1,000 pages and per year, from measured s/page (summary.csv) and cited prices.
 
-    VM hours = s/page x pages / 3600 / workers. The GPU row uses the Mac GPU (MPS) timing as a stand-in for the
-    cloud GPU, and workers_per_vm is an assumption; both are stated in benchmarks.md."""
+    Only builds rows whose stages are in summary.csv (subset runs and CPU-only Docling are fine);
+    skipped rows are printed with the stage they need. VM hours = s/page x pages / 3600 / workers.
+    The GPU rows use the Mac GPU (MPS) timing as a stand-in for the cloud GPU, and workers_per_vm is an
+    assumption; both are stated in benchmarks.md."""
     b = params["bench"]
     mean = {r["stage"]: float(r["s_per_page_mean"]) for r in csv.DictReader(open(out_dir / "summary.csv"))}
-    trad = mean["parse_pdfplumber"] + mean["tables"] + mean["layout"]
-    opts = [("traditional (P1+P2+P3)", "laptop M3 Pro", trad, 1, 0.0),
-            ("docling", "laptop M3 Pro (MPS)", mean["parse_docling_mps"], 1, 0.0),
-            ("traditional (P1+P2+P3)", b["vm_cpu"]["name"], trad, b["workers_per_vm"], b["vm_cpu"]["usd_per_hour"]),
-            ("docling", b["vm_cpu"]["name"], mean["parse_docling_cpu"], b["workers_per_vm"], b["vm_cpu"]["usd_per_hour"]),
-            ("docling", b["vm_gpu"]["name"] + " (MPS timing as proxy)", mean["parse_docling_mps"], 1,
-             b["vm_gpu"]["usd_per_hour"])]
+    trad_stages = ["parse_pdfplumber", "tables", "layout"]
+    opts, skipped = [], []
+    if all(s in mean for s in trad_stages):
+        trad = sum(mean[s] for s in trad_stages)
+        opts += [("traditional (P1+P2+P3)", "laptop M3 Pro", trad, 1, 0.0),
+                 ("traditional (P1+P2+P3)", b["vm_cpu"]["name"], trad, b["workers_per_vm"], b["vm_cpu"]["usd_per_hour"])]
+    else:
+        skipped.append("traditional (needs " + ", ".join(s for s in trad_stages if s not in mean) + ")")
+    if "parse_docling_cpu" in mean:
+        opts.append(("docling", b["vm_cpu"]["name"], mean["parse_docling_cpu"], b["workers_per_vm"],
+                     b["vm_cpu"]["usd_per_hour"]))
+    else:
+        skipped.append("docling on CPU VM (needs parse_docling_cpu)")
+    if "parse_docling_mps" in mean:
+        opts += [("docling", "laptop M3 Pro (MPS)", mean["parse_docling_mps"], 1, 0.0),
+                 ("docling", b["vm_gpu"]["name"] + " (MPS timing as proxy)", mean["parse_docling_mps"], 1,
+                  b["vm_gpu"]["usd_per_hour"])]
+    else:
+        skipped.append("docling on GPU (needs parse_docling_mps)")
     rows = []
     for path, hw, s, workers, usd_h in opts:
         hours_1k = s * 1000 / 3600 / workers
@@ -204,6 +218,8 @@ def cost_table(out_dir, params):
         w.writerows(rows)
     for r in rows:
         print(r)
+    if skipped:
+        print("cost rows skipped (stages not in summary.csv):", "; ".join(skipped))
 
 
 def main(params_path, input_dir, output, stages, limit):
@@ -216,7 +232,7 @@ def main(params_path, input_dir, output, stages, limit):
         cmd = [sys.executable, __file__, "--child", stage, "--params", params_path,
                "--input", input_dir, "--output", output] + (["--limit", str(limit)] if limit else [])
         subprocess.run(cmd, check=True)
-    summarize(out_dir, stages)
+    summarize(out_dir, stages_for(params))   # every stage with results, not only this run's
     cost_table(out_dir, params)
 
 
