@@ -228,3 +228,4 @@ data/*
 /.dvc/cache/
 /.dvc/tmp/
 /.dvc/config.local
+models/
