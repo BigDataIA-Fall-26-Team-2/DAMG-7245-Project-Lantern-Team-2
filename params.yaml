@@ -61,6 +61,11 @@ docling:
 bench:
   extra_pdfs: ["tests/fixtures/scanned.pdf"]   # image-only pages, so OCR's cost is measured (Apple pages never need OCR)
   docling_devices: ["cpu", "mps"]              # cpu = comparable to a CPU-only VM; mps = the Mac's GPU
+  pages_per_year: 500000          # 5,000 filings x ~100 pages (Tutorial Exercise 10)
+  workers_per_vm: 4               # assumption: parallel page workers on 8 vCPU / 16 GiB (layout peaks at ~2 GB)
+  vm_cpu: {name: "c7i.2xlarge", usd_per_hour: 0.357}   # on-demand us-east-1, doit.com/compute/spot/us-east-1/c7i.2xlarge
+  vm_gpu: {name: "g4dn.2xlarge", usd_per_hour: 0.752}  # on-demand us-east-1, devzero.io/instances/aws/g4dn.2xlarge
+  textract_usd_per_page: {ocr: 0.0015, tables: 0.015}  # first 1M pages/month, aws.amazon.com/textract/pricing
 
 # Owner: Guna (Part 7 - managed document AI)
 managed:

@@ -171,6 +171,41 @@ def summarize(out_dir, stages):
         print(r)
 
 
+def cost_table(out_dir, params):
+    """Cost per 1,000 pages and per year for each option, from measured s/page (summary.csv) and cited prices.
+
+    VM hours = s/page x pages / 3600 / workers. The GPU row uses the Mac GPU (MPS) timing as a stand-in for the
+    cloud GPU, and workers_per_vm is an assumption; both are stated in benchmarks.md."""
+    b = params["bench"]
+    mean = {r["stage"]: float(r["s_per_page_mean"]) for r in csv.DictReader(open(out_dir / "summary.csv"))}
+    trad = mean["parse_pdfplumber"] + mean["tables"] + mean["layout"]
+    opts = [("traditional (P1+P2+P3)", "laptop M3 Pro", trad, 1, 0.0),
+            ("docling", "laptop M3 Pro (MPS)", mean["parse_docling_mps"], 1, 0.0),
+            ("traditional (P1+P2+P3)", b["vm_cpu"]["name"], trad, b["workers_per_vm"], b["vm_cpu"]["usd_per_hour"]),
+            ("docling", b["vm_cpu"]["name"], mean["parse_docling_cpu"], b["workers_per_vm"], b["vm_cpu"]["usd_per_hour"]),
+            ("docling", b["vm_gpu"]["name"] + " (MPS timing as proxy)", mean["parse_docling_mps"], 1,
+             b["vm_gpu"]["usd_per_hour"])]
+    rows = []
+    for path, hw, s, workers, usd_h in opts:
+        hours_1k = s * 1000 / 3600 / workers
+        rows.append({"option": path, "hardware": hw, "s_per_page": round(s, 3), "workers": workers,
+                     "hours_per_1000_pages": round(hours_1k, 3),
+                     "usd_per_1000_pages": round(hours_1k * usd_h, 4),
+                     "hours_per_year": round(hours_1k * b["pages_per_year"] / 1000, 1),
+                     "usd_per_year": round(hours_1k * usd_h * b["pages_per_year"] / 1000, 2)})
+    for kind in ("ocr", "tables"):
+        usd_page = b["textract_usd_per_page"][kind]
+        rows.append({"option": f"textract {kind}", "hardware": "managed API", "s_per_page": "", "workers": "",
+                     "hours_per_1000_pages": "", "usd_per_1000_pages": round(usd_page * 1000, 2),
+                     "hours_per_year": "", "usd_per_year": round(usd_page * b["pages_per_year"], 2)})
+    with open(out_dir / "cost.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    for r in rows:
+        print(r)
+
+
 def main(params_path, input_dir, output, stages, limit):
     out_dir = Path(output)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -182,6 +217,7 @@ def main(params_path, input_dir, output, stages, limit):
                "--input", input_dir, "--output", output] + (["--limit", str(limit)] if limit else [])
         subprocess.run(cmd, check=True)
     summarize(out_dir, stages)
+    cost_table(out_dir, params)
 
 
 if __name__ == "__main__":
@@ -192,8 +228,11 @@ if __name__ == "__main__":
     ap.add_argument("--stages", nargs="*", help="subset of stages (default: all)")
     ap.add_argument("--limit", type=int, help="only the first N pages of each PDF (quick test)")
     ap.add_argument("--child", help=argparse.SUPPRESS)
+    ap.add_argument("--cost-only", action="store_true", help="recompute cost.csv from summary.csv")
     a = ap.parse_args()
-    if a.child:
+    if a.cost_only:
+        cost_table(Path(a.output), load_params(a.params))
+    elif a.child:
         run_stage(a.child, a.params, a.input, Path(a.output), a.limit)
     else:
         main(a.params, a.input, a.output, a.stages, a.limit)
