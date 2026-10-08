@@ -4,6 +4,7 @@ import json
 import re
 from pathlib import Path
 import yaml
+from export_txt import main as export_txt
 
 from adapters import (
     block_from_layout_record,
@@ -295,6 +296,7 @@ def main():
     for r in all_fallbacks:
         by_precision[r["precision"]] = by_precision.get(r["precision"], 0) + 1
     print(f"{FALLBACK_LOG}\t{by_precision}")
+    export_txt(["--input", str(MANIFEST.parent), "--output", str(EXPORT_DIR)])
 
 
 if __name__ == "__main__":

@@ -38,3 +38,11 @@
 - Changes: added the "bad box" category, since box-extent errors were the most common failure and leaving them out would overstate quality. Excluded page footers from the counts and reported them separately.
 - Limitation: counts are one person's judgement; block boundaries (e.g. grouping cover-page fields) involve calls another reviewer might make differently.
 - Confidence: high that the failure patterns are real (tables boxed as numbers only, repurchase tables labeled Figure); moderate on exact counts. I can explain, modify, test and defend every part of this work.
+
+## P10 Benchmarks and cost
+
+- Tool: Claude (Anthropic), claude.ai chat. Drafted `src/bench.py` (one subprocess per stage, per-page timing, RSS and status, summary and cost tables), the `docling.device` setting, and `reports/benchmarks.md`; looked up Textract and EC2 prices.
+- Verification: quick runs on 1-2 pages per PDF before the full 94-page run; 0 errors in every stage. Checked which pages were empty in the stage CSVs instead of assuming, and confirmed the blank 10-Q p7 is empty in all three stages. Confirmed Docling works on both devices (statement page, warm: CPU 2.75 s, MPS 2.10 s) and the full suite still passes (53). Textract prices taken from AWS's own pricing page; EC2 prices from price trackers, flagged in the report to confirm in the AWS Pricing Calculator.
+- Changes: measured on my own machine (Apple M3 Pro, 11 cores, 18 GB). Each stage runs in its own process so one stage's models don't inflate another's peak memory. Added the scanned fixture to the batch so OCR cost is measured, since Apple pages never need OCR. Added `docling.device` (auto/cpu/mps) so Docling's CPU and GPU timings are measured separately rather than mixed.
+- Limitation: AI claims I corrected: it first said my Mac had no GPU for these models (MPS is available and Docling uses it on `auto`), and it guessed Docling's 3 empty pages were the 3 scanned pages (actually the blank 10-Q p7 plus scanned p1 and p3; scanned p2 had layout regions). Worker count per VM and the Mac-GPU-as-T4 proxy are stated assumptions, not measurements; one run per stage, no variance.
+- Confidence: high for the measured per-stage timings and memory on this machine; moderate for the cloud cost estimates, which depend on the stated assumptions. I can explain, modify, rerun and defend every part of this work.

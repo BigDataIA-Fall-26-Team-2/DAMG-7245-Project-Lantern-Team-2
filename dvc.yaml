@@ -33,3 +33,59 @@ stages:
       - ocr
     outs:
       - data/parsed
+
+  tables:
+    cmd: python src/tables.py --params params.yaml --input data/rendered --output data/tables
+    deps:
+      - src/tables.py
+      - requirements.txt
+      - data/rendered
+    params:
+      - tables
+    outs:
+      - data/tables
+
+  layout:
+    cmd: python src/layout.py --params params.yaml --input data/rendered --output data/layout --figures data/figures --qa reports/layout
+    deps:
+      - src/layout.py
+      - src/tables.py
+      - requirements.txt
+      - data/rendered
+    params:
+      - layout
+      - tables
+      - ocr.dpi
+    outs:
+      - data/layout
+      - data/figures
+
+  parse_docling:
+    cmd: python src/docling_parse.py --params params.yaml --input data/rendered --output data/docling
+    deps:
+      - src/docling_parse.py
+      - src/tables.py
+      - requirements.txt
+      - data/rendered
+      - data/raw
+    params:
+      - docling
+    outs:
+      - data/docling
+
+  export:
+    cmd: python src/export.py
+    deps:
+      - src/export.py
+      - src/export_txt.py
+      - src/adapters.py
+      - src/schema.py
+      - requirements.txt
+      - data/rendered
+      - ${export.layout_dir}
+      - ${export.tables_dir}
+      - ${export.docling_dir}
+    params:
+      - export
+    outs:
+      - ${export.out_dir}
