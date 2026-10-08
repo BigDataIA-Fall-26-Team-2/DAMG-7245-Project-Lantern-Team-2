@@ -140,8 +140,8 @@ evaluate:
   thresholds:
     min_gt_pages: 16            # 18 transcribed; 16 scoreable (2 fixtures have no export)
     min_gt_tables: 2            # Lab 9 minimum
-    max_wer_prose: 0.25         # baseline worst prose page 0.153
-    max_cer_prose: 0.20         # baseline prose mean 0.079
+    max_wer_prose: 0.20        # baseline worst prose page 0.153
+    max_cer_prose: 0.12        # baseline prose mean 0.079
     min_numeric_f1: 0.65        # baseline 0.7497 all pages, traditional
     min_table_cell_f1: 0.90     # baseline 1.0 on both hand-keyed tables
     min_table_value_recall: 0.90  # baseline 1.0

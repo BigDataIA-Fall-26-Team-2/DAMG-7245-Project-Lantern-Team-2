@@ -8,9 +8,9 @@ Net sales: Products,"September 30, 2023","$ 298,085",298085000000
 Net sales: Services,"September 27, 2025","109,158",109158000000
 Net sales: Services,"September 28, 2024","96,169",96169000000
 Net sales: Services,"September 30, 2023","85,200",85200000000
-Net sales: Total net sales,"September 27, 2025","416,161",416161000000
-Net sales: Total net sales,"September 28, 2024","391,035",391035000000
-Net sales: Total net sales,"September 30, 2023","383,285",383285000000
+Total net sales,"September 27, 2025","416,161",416161000000
+Total net sales,"September 28, 2024","391,035",391035000000
+Total net sales,"September 30, 2023","383,285",383285000000
 Cost of sales:,"September 27, 2025",,
 Cost of sales:,"September 28, 2024",,
 Cost of sales:,"September 30, 2023",,
@@ -20,24 +20,24 @@ Cost of sales: Products,"September 30, 2023","189,282",189282000000
 Cost of sales: Services,"September 27, 2025","26,844",26844000000
 Cost of sales: Services,"September 28, 2024","25,119",25119000000
 Cost of sales: Services,"September 30, 2023","24,855",24855000000
-Cost of sales: Total cost of sales,"September 27, 2025","220,960",220960000000
-Cost of sales: Total cost of sales,"September 28, 2024","210,352",210352000000
-Cost of sales: Total cost of sales,"September 30, 2023","214,137",214137000000
+Total cost of sales,"September 27, 2025","220,960",220960000000
+Total cost of sales,"September 28, 2024","210,352",210352000000
+Total cost of sales,"September 30, 2023","214,137",214137000000
 Gross margin,"September 27, 2025","195,201",195201000000
 Gross margin,"September 28, 2024","180,683",180683000000
 Gross margin,"September 30, 2023","169,148",169148000000
 Operating expenses:,"September 27, 2025",,
 Operating expenses:,"September 28, 2024",,
 Operating expenses:,"September 30, 2023",,
-Operating expenses: Research and development,"September 27, 2025","34,550",34550000000
-Operating expenses: Research and development,"September 28, 2024","31,370",31370000000
-Operating expenses: Research and development,"September 30, 2023","29,915",29915000000
-"Operating expenses: Selling, general and administrative","September 27, 2025","27,601",27601000000
-"Operating expenses: Selling, general and administrative","September 28, 2024","26,097",26097000000
-"Operating expenses: Selling, general and administrative","September 30, 2023","24,932",24932000000
-Operating expenses: Total operating expenses,"September 27, 2025","62,151",62151000000
-Operating expenses: Total operating expenses,"September 28, 2024","57,467",57467000000
-Operating expenses: Total operating expenses,"September 30, 2023","54,847",54847000000
+Research and development,"September 27, 2025","34,550",34550000000
+Research and development,"September 28, 2024","31,370",31370000000
+Research and development,"September 30, 2023","29,915",29915000000
+"Selling, general and administrative","September 27, 2025","27,601",27601000000
+"Selling, general and administrative","September 28, 2024","26,097",26097000000
+"Selling, general and administrative","September 30, 2023","24,932",24932000000
+Total operating expenses,"September 27, 2025","62,151",62151000000
+Total operating expenses,"September 28, 2024","57,467",57467000000
+Total operating expenses,"September 30, 2023","54,847",54847000000
 Operating income,"September 27, 2025","133,050",133050000000
 Operating income,"September 28, 2024","123,216",123216000000
 Operating income,"September 30, 2023","114,301",114301000000

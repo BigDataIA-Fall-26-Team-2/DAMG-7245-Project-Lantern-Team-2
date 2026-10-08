@@ -92,3 +92,18 @@ stages:
       - export
     outs:
       - ${export.out_dir}
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - data/ground_truth
+      - data/export
+    params:
+      - evaluate
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    plots:
+      - reports/plots/drift.png:
+          cache: false
