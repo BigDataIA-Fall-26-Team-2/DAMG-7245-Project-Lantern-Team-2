@@ -18,7 +18,6 @@ import traceback
 from pathlib import Path
 
 import numpy as np
-import psutil
 import yaml
 
 SRC = Path(__file__).resolve().parent
@@ -117,6 +116,7 @@ def make_runner(stage, params, params_path):
 
 def run_stage(stage, params_path, input_dir, out_dir, limit):
     """Child process: run one stage over every page, one CSV row per page."""
+    import psutil   # only the benchmark itself needs it; keeps tests importable in CI
     params = load_params(params_path)
     proc = psutil.Process(os.getpid())
     t0 = time.perf_counter()
@@ -145,6 +145,7 @@ def run_stage(stage, params_path, input_dir, out_dir, limit):
 
 
 def machine_info():
+    import psutil
     info = {"platform": platform.platform(), "python": platform.python_version(),
             "logical_cpus": psutil.cpu_count(), "ram_gb": round(psutil.virtual_memory().total / 2**30, 1)}
     if sys.platform == "darwin":
