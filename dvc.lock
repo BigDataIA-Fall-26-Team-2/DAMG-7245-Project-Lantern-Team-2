@@ -5,8 +5,8 @@ stages:
     deps:
     - path: requirements.txt
       hash: md5
-      md5: 7277ed3ee991b82fc4b746c8a8ae2fec
-      size: 2849
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
     - path: src/download.py
       hash: md5
       md5: e74a74029cb362aca2e1344179786a89
@@ -33,8 +33,8 @@ stages:
     outs:
     - path: data/raw
       hash: md5
-      md5: ef7c4353f349c34dc82e254fb47b1ec0.dir
-      size: 17581159
+      md5: c7118084da6ba36c33e74dd768d743ef.dir
+      size: 17581141
       nfiles: 156
   render:
     cmd: python src/render.py --params params.yaml --input data/raw --output
@@ -42,13 +42,13 @@ stages:
     deps:
     - path: data/raw
       hash: md5
-      md5: ef7c4353f349c34dc82e254fb47b1ec0.dir
-      size: 17581159
+      md5: c7118084da6ba36c33e74dd768d743ef.dir
+      size: 17581141
       nfiles: 156
     - path: requirements.txt
       hash: md5
-      md5: 7277ed3ee991b82fc4b746c8a8ae2fec
-      size: 2849
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
     - path: src/contracts.py
       hash: md5
       md5: 5fefdf0935682846dd5b469f5829f46f
@@ -72,7 +72,7 @@ stages:
     outs:
     - path: data/rendered
       hash: md5
-      md5: e74cb8756b7a497deabcbd319b3a815f.dir
+      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
       size: 1076361
       nfiles: 3
   parse_pdfplumber:
@@ -81,13 +81,13 @@ stages:
     deps:
     - path: data/rendered
       hash: md5
-      md5: e74cb8756b7a497deabcbd319b3a815f.dir
+      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
       size: 1076361
       nfiles: 3
     - path: requirements.txt
       hash: md5
-      md5: 7277ed3ee991b82fc4b746c8a8ae2fec
-      size: 2849
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
     - path: src/parse_text.py
       hash: md5
       md5: 5df1ab5d9929c012350047f1f400b537
@@ -105,3 +105,195 @@ stages:
       md5: e344d1ebaad76490038211f2daa5542b.dir
       size: 8288515
       nfiles: 94
+  tables:
+    cmd: python src/tables.py --params params.yaml --input data/rendered
+      --output data/tables
+    deps:
+    - path: data/rendered
+      hash: md5
+      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
+      size: 1076361
+      nfiles: 3
+    - path: requirements.txt
+      hash: md5
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
+    - path: src/tables.py
+      hash: md5
+      md5: 57864510dc245f765c603dc27195a4c8
+      size: 25680
+    params:
+      params.yaml:
+        tables:
+          min_rulings: 4
+          accept_score: 0.6
+          min_numeric_rows: 3
+          visible_max_gray: 0.9
+    outs:
+    - path: data/tables
+      hash: md5
+      md5: bdbe0d97e356f7cb70609dc64b3a61f0.dir
+      size: 144644
+      nfiles: 33
+  layout:
+    cmd: python src/layout.py --params params.yaml --input data/rendered
+      --output data/layout --figures data/figures --qa reports/layout
+    deps:
+    - path: data/rendered
+      hash: md5
+      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
+      size: 1076361
+      nfiles: 3
+    - path: requirements.txt
+      hash: md5
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
+    - path: src/layout.py
+      hash: md5
+      md5: e64dd3f69a7a6a169dcd4b725c43b8f0
+      size: 12132
+    - path: src/tables.py
+      hash: md5
+      md5: 57864510dc245f765c603dc27195a4c8
+      size: 25680
+    params:
+      params.yaml:
+        layout:
+          model: efficientdet
+          score_threshold: 0.25
+          max_overlap: 0.5
+          pad_pt: 2.0
+          qa_pages:
+            AAPL_10K_20250927:
+            - 1
+            - 10
+            - 20
+            - 22
+            - 32
+            - 34
+            - 50
+            AAPL_10Q_20260627:
+            - 4
+            - 15
+            - 28
+            multicolumn:
+            - 1
+          text_pad_pt: 8
+          dark_page_brightness: 0.5
+          column_gap_pt: 50
+        ocr.dpi: 300
+        tables:
+          min_rulings: 4
+          accept_score: 0.6
+          min_numeric_rows: 3
+          visible_max_gray: 0.9
+    outs:
+    - path: data/figures
+      hash: md5
+      md5: 2a9d235ef4e8f3d78bd64cca688aa5c2.dir
+      size: 43451
+      nfiles: 5
+    - path: data/layout
+      hash: md5
+      md5: 694cf1d730f814aa8ee3286c1b2342e4.dir
+      size: 773248
+      nfiles: 4
+  parse_docling:
+    cmd: python src/docling_parse.py --params params.yaml --input data/rendered
+      --output data/docling
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: c7118084da6ba36c33e74dd768d743ef.dir
+      size: 17581141
+      nfiles: 156
+    - path: data/rendered
+      hash: md5
+      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
+      size: 1076361
+      nfiles: 3
+    - path: requirements.txt
+      hash: md5
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
+    - path: src/docling_parse.py
+      hash: md5
+      md5: ce85b4da995e84bed6cd86082340a5c8
+      size: 11022
+    - path: src/tables.py
+      hash: md5
+      md5: 57864510dc245f765c603dc27195a4c8
+      size: 25680
+    params:
+      params.yaml:
+        docling:
+          do_ocr: false
+          table_mode: accurate
+          device: auto
+          html_stem: AAPL_10K_20250927
+    outs:
+    - path: data/docling
+      hash: md5
+      md5: 06e5b15f59ed501bc58a1926533e13c3.dir
+      size: 17284521
+      nfiles: 293
+  export:
+    cmd: python src/export.py
+    deps:
+    - path: data/docling
+      hash: md5
+      md5: 06e5b15f59ed501bc58a1926533e13c3.dir
+      size: 17284521
+      nfiles: 293
+    - path: data/layout
+      hash: md5
+      md5: 694cf1d730f814aa8ee3286c1b2342e4.dir
+      size: 773248
+      nfiles: 4
+    - path: data/rendered
+      hash: md5
+      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
+      size: 1076361
+      nfiles: 3
+    - path: data/tables
+      hash: md5
+      md5: bdbe0d97e356f7cb70609dc64b3a61f0.dir
+      size: 144644
+      nfiles: 33
+    - path: requirements.txt
+      hash: md5
+      md5: 9a30d9fbc6ecfc115e6b4323f456b355
+      size: 4649
+    - path: src/adapters.py
+      hash: md5
+      md5: 80a914537f28d1e6d4e28a6777ae509e
+      size: 4276
+    - path: src/export.py
+      hash: md5
+      md5: 22b74d4448ff24d086febe434aed8a6c
+      size: 7564
+    - path: src/export_txt.py
+      hash: md5
+      md5: ac1a6f35c78860ed87049e397b833cd5
+      size: 1463
+    - path: src/schema.py
+      hash: md5
+      md5: a6463bd87962bf4101cbc13e6f2a8cb0
+      size: 4339
+    params:
+      params.yaml:
+        export:
+          out_dir: data/export
+          layout_dir: data/layout
+          docling_dir: data/docling
+          tables_dir: data/tables
+          paragraph_gap_pt: 6.0
+          emit_docling: true
+          company_by_ticker:
+            AAPL: Apple Inc.
+    outs:
+    - path: data/export
+      hash: md5
+      md5: 745eb6dbce0a8f364f5dc77bd5570c4a.dir
+      size: 2058636
+      nfiles: 8

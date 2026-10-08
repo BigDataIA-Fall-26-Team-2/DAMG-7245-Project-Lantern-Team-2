@@ -4,6 +4,7 @@ import json
 import re
 from pathlib import Path
 import yaml
+from export_txt import main as export_txt
 
 from adapters import (
     block_from_layout_record,
@@ -218,6 +219,8 @@ def main():
                 print(f"{stem}\tSKIPPED docling: missing {docling_path} (run the docling stage, Part 4)")
 
         print(f"{stem}\ttraditional={len(trad)}\tdocling={len(doc)}")
+
+    export_txt(["--input", str(MANIFEST.parent), "--output", str(EXPORT_DIR)])
 
 
 if __name__ == "__main__":
