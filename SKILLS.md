@@ -42,6 +42,7 @@ Every number in a `reports/*.md` file must trace to a CSV row, a JSON field, or 
 When you do substantive work on a PR, draft the AI Engineering Log section of the PR template for the author to review before they submit: tool/model used, what you contributed, how it was verified, at least one failure/limitation you found, and a one-line confidence statement. Only report verification steps that were actually run.
 
 ## Working style
+- For Lokesh's work, always use the `lokesh/` branch prefix, never `codex/`. Follow `CONTRIBUTING.md`: `lokesh/pN-shortdesc` for Part work and `lokesh/shortdesc` for other tasks.
 - Keep changes local for the user's inspection and testing. Do not push commits or create a pull request without the user's explicit approval for that action; prior approval for another change does not authorize future pushes or PRs.
 - Small, reviewable PRs: one Part or one bug per branch. Don't bundle multiple Case Study Parts in one PR.
 - Commit in small, logical increments as you go — not one giant commit per checkpoint/Part. Each commit should be independently understandable (e.g. "add OCR trigger thresholds", "wire OCR log into params.yaml") so review and `git bisect` stay useful.

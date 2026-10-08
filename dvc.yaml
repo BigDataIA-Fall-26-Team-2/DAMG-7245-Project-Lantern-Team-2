@@ -1,0 +1,35 @@
+stages:
+  download:
+    cmd: python src/download.py --params params.yaml --output data/raw
+    deps:
+      - src/download.py
+      - requirements.txt
+    params:
+      - download
+    outs:
+      - data/raw
+
+  render:
+    cmd: python src/render.py --params params.yaml --input data/raw --output data/rendered
+    deps:
+      - src/render.py
+      - src/contracts.py
+      - requirements.txt
+      - data/raw
+    params:
+      - render
+      - download.ticker
+      - download.filings
+    outs:
+      - data/rendered
+
+  parse_pdfplumber:
+    cmd: python src/parse_text.py --params params.yaml --input data/rendered --output data/parsed
+    deps:
+      - src/parse_text.py
+      - requirements.txt
+      - data/rendered
+    params:
+      - ocr
+    outs:
+      - data/parsed

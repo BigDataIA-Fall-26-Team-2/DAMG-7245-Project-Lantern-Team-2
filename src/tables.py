@@ -212,7 +212,9 @@ def extract_best_df(pdf_path, page, bbox=None, params_path="params.yaml"):
             "accepted": best is not None, "skipped_rows": 0}
     if best is None:
         return None, info
-    text, words = page_text_and_words(pdf_path, page, bbox)
+    # Full page on purpose: the scale note and period headers sit above the table bbox;
+    # bbox only chooses the table (choose_table above), as in the full-filing path.
+    text, words = page_text_and_words(pdf_path, page)
     rows, info["skipped_rows"] = to_long(best["df"], text, words)
     if not rows:
         info["accepted"] = False
