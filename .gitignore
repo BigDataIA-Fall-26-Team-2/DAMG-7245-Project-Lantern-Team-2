@@ -223,6 +223,7 @@ data/*
 !/data/ground_truth/
 !/data/ground_truth/**
 /data/ground_truth/pages/
+!/data/*.dvc
 
 # DVC local state
 /.dvc/cache/

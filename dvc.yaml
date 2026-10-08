@@ -38,10 +38,13 @@ stages:
     cmd: python src/tables.py --params params.yaml --input data/rendered --output data/tables
     deps:
       - src/tables.py
+      - src/managed
       - requirements.txt
       - data/rendered
+      - data/managed
     params:
       - tables
+      - managed
     outs:
       - data/tables
 
