@@ -1,0 +1,16 @@
+# Install only smoke-test dependencies; shared requirements supply every version.
+-c requirements.txt
+camelot-py
+pdfplumber
+pdf2image
+pytesseract
+PyYAML
+pytest
+pandas
+pypdf
+# Existing offline download/render tests import these packages (no browser needed).
+sec-edgar-downloader
+playwright
+
+# Schema validation used by the existing export tests.
+pydantic

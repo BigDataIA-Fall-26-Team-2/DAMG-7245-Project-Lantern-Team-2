@@ -33,6 +33,7 @@ No `CLAUDE.md`, `AGENTS.md`, or other tool-specific stub files — this is the o
 Every number in a `reports/*.md` file must trace to a CSV row, a JSON field, or a cited price page — never an unmeasured impression ("looks accurate"). This is a direct grading criterion (30% of each Part's score).
 
 ## Test scope
+- Keep recurring CI checks limited to explicit case-study requirements unless the user requests more. Do not turn one-off assistant verification into recurring workflow steps; cite the assignment requirement for any added check.
 - Add persistent tests only when required by the assignment or explicitly requested by the user. Identify the requirement each added test satisfies; do not add tests merely because an assistant performed a check during implementation.
 - Run one-off verification commands or temporary scripts as needed, but keep them outside the tracked repository. Record actual results and limitations in the AI Engineering Log when appropriate.
 - Run existing relevant tests and retain assignment-required tests, including P9 quality regressions and CI checks. Do not expand the test suite with redundant checks or tests that only mirror the implementation.
