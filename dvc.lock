@@ -1,0 +1,107 @@
+schema: '2.0'
+stages:
+  download:
+    cmd: python src/download.py --params params.yaml --output data/raw
+    deps:
+    - path: requirements.txt
+      hash: md5
+      md5: 7277ed3ee991b82fc4b746c8a8ae2fec
+      size: 2849
+    - path: src/download.py
+      hash: md5
+      md5: e74a74029cb362aca2e1344179786a89
+      size: 6381
+    params:
+      params.yaml:
+        download:
+          ticker: AAPL
+          forms:
+          - 10-K
+          - 10-Q
+          limit: 1
+          filings:
+            10-K:
+              accession: 0000320193-25-000079
+              period: '20250927'
+            10-Q:
+              accession: 0000320193-26-000020
+              period: '20260627'
+          after: '2024-01-01'
+          before: '2026-08-01'
+          user_agent_name: LANTERN Team 2
+          user_agent_email: nandavarapu.s@northeastern.edu
+    outs:
+    - path: data/raw
+      hash: md5
+      md5: ef7c4353f349c34dc82e254fb47b1ec0.dir
+      size: 17581159
+      nfiles: 156
+  render:
+    cmd: python src/render.py --params params.yaml --input data/raw --output
+      data/rendered
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: ef7c4353f349c34dc82e254fb47b1ec0.dir
+      size: 17581159
+      nfiles: 156
+    - path: requirements.txt
+      hash: md5
+      md5: 7277ed3ee991b82fc4b746c8a8ae2fec
+      size: 2849
+    - path: src/contracts.py
+      hash: md5
+      md5: 5fefdf0935682846dd5b469f5829f46f
+      size: 286
+    - path: src/render.py
+      hash: md5
+      md5: 68ed8b475a86749832ca5fa87eecd27b
+      size: 4721
+    params:
+      params.yaml:
+        download.filings:
+          10-K:
+            accession: 0000320193-25-000079
+            period: '20250927'
+          10-Q:
+            accession: 0000320193-26-000020
+            period: '20260627'
+        download.ticker: AAPL
+        render:
+          page_format: Letter
+    outs:
+    - path: data/rendered
+      hash: md5
+      md5: e74cb8756b7a497deabcbd319b3a815f.dir
+      size: 1076361
+      nfiles: 3
+  parse_pdfplumber:
+    cmd: python src/parse_text.py --params params.yaml --input data/rendered
+      --output data/parsed
+    deps:
+    - path: data/rendered
+      hash: md5
+      md5: e74cb8756b7a497deabcbd319b3a815f.dir
+      size: 1076361
+      nfiles: 3
+    - path: requirements.txt
+      hash: md5
+      md5: 7277ed3ee991b82fc4b746c8a8ae2fec
+      size: 2849
+    - path: src/parse_text.py
+      hash: md5
+      md5: 5df1ab5d9929c012350047f1f400b537
+      size: 6303
+    params:
+      params.yaml:
+        ocr:
+          min_chars: 20
+          junk_ratio: 0.3
+          dpi: 300
+          language: eng
+    outs:
+    - path: data/parsed
+      hash: md5
+      md5: e344d1ebaad76490038211f2daa5542b.dir
+      size: 8288515
+      nfiles: 94

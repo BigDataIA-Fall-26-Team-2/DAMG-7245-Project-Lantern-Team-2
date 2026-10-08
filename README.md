@@ -69,10 +69,10 @@ Chromium -> PDF -> pdfplumber -> Poppler -> Tesseract -> img2pdf smoke check.
 The synthetic text `LANTERN 12345` survived both text extraction and OCR.
 DVC 3.67.1 and pytest 9.1.1 start successfully.
 
-This verifies the local prerequisite only. Linux reproduction, the DVC pipeline,
-S3 access, and project regression tests remain separate work; those stages and
-tests do not yet exist on main. The download/render implementation remains in
-PR #88 and is not included in this environment branch.
+Those checks verified the local prerequisite environment. The repository now
+includes download/render scripts, text/OCR extraction, and regression tests.
+The initial DVC pipeline is described below; S3 access and clean Linux
+reproduction remain separate work.
 
 Table, XBRL and app tools (issue #12): `camelot-py`, `opencv-python-headless`,
 `pandas`, `arelle-release` and `streamlit` were added to the root
@@ -130,3 +130,35 @@ python src/parse_text.py
 
 Regenerate other downstream artifacts as needed because source PDF hashes change.
 The verified Apple page counts remain 61 (10-K) and 30 (10-Q).
+
+## P8: initial DVC pipeline (issue #35)
+
+Activate the Python environment and install the Python/system dependencies
+described above, including Playwright Chromium, Poppler, and Tesseract. From the
+repository root:
+
+```bash
+source .venv/bin/activate
+dvc repro
+dvc repro
+dvc status
+dvc dag
+```
+
+The pipeline is `download -> render -> parse_pdfplumber`, producing `data/raw/`,
+`data/rendered/`, and `data/parsed/`. The first run needs SEC network access when
+raw data is absent from the local DVC cache. With unchanged inputs and outputs,
+the second run skips all three stages. DVC tracks each stage's script, shared
+requirements, relevant parameter keys, and upstream data. Changing only `ocr`
+parameters invalidates text extraction; changing download inputs can propagate
+through the pipeline.
+
+Commit `dvc.yaml`, the generated `dvc.lock`, and DVC initialization files to Git.
+Generated data and `.dvc/cache/` stay out of Git. Back up any existing untracked
+outputs before the first run: DVC may replace a stage's output directory when
+rerunning it. After changing a script or parameters, use `dvc repro` to refresh
+the data and lock file together.
+
+The S3 remote (#48), fixture-only GitHub Actions (#36), and remaining stages
+(#46/#54) are separate work. Until a remote is configured and populated, a fresh
+clone must generate these outputs locally; `dvc pull` cannot fetch them yet.
