@@ -45,6 +45,17 @@ layout:
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
 docling: {}
 
+# Owner: Guna (Part 5 - export)
+export:
+  out_dir: "data/export"
+  layout_dir: "data/layout"
+  docling_dir: "data/docling"
+  tables_dir: "data/tables"
+  paragraph_gap_pt: 6.0
+  emit_docling: true
+  company_by_ticker:
+    AAPL: "Apple Inc."
+
 # Owner: Shravya (Part 10 - benchmarking); keys to be filled in during that part
 bench: {}
 
