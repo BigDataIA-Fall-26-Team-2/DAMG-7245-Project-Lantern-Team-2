@@ -114,3 +114,28 @@
 - Changes: The pdf_missing check now uses the same end/opening dates as the main lookup, and "already seen" is keyed by (concept, date, table column). The two balance lines say explicitly which instant they mean, so a missing beginning row is never reported under the ending label. The hand-diagnosed cause is visible in the notebook instead of being typed only into the report.
 - Failure/limitation: Two slips before the right answer. First, the earlier session reported Docling as 325 / 385 = 84.4% and "every non-match diagnosed" without asking why it had 3 fewer cells than the traditional path; the comparison had silently skipped the 3 cells because its pdf_missing check only looked facts up by the column's duration period. Second, Claude's first fix reported only 1 of the 3 cells: it keyed "seen" by concept and date only, and last year's ending cash balance is the same XBRL fact as this year's beginning balance, so the extracted FY2024 ending row hid the missing FY2025 beginning row. The unit tests passed because they used a single column; the real data exposed it, and a two-column test now covers it. Limitation: the Docling path has no 10-K beginning cash balances.
 - Confidence: High that both paths now account for all 388 cells and that every non-match has a verified cause. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issue #56 — P8 reproducibility rehearsal (prototyping/dhruvi/rehearsal.sh, rehearsal_log.md)
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide. I ran every command myself on my MacBook.
+- What it contributed: Wrote `rehearsal.sh`, which runs the brief's Section 7 commands on a fresh clone and records each exit code and duration; read the logs with me after each run; proposed the duplicate-key check and the empty-browser-folder test; drafted #109, the comments on #56 and #112, and `rehearsal_log.md`.
+- How verified: Three runs on fresh clones (main 9ece344, 8737af8, d7fcffd). Run 2 failed at `dvc repro` after 0 s; a strict YAML check found one duplicate key in `params.yaml` (lines 54-55), and after the one-line fix (#109) `dvc repro --dry` read the file and 91 tests passed; run 3 then ran download, render and parse_pdfplumber in 42 s. For render, pointing `PLAYWRIGHT_BROWSERS_PATH` at an empty folder made it exit 1, and installing Chromium into that folder made it exit 0 with both PDFs.
+- Changes: Kept every run's raw log and recorded the commands that fail for expected reasons (no submission tag, no remote) separately from the ones that revealed bugs.
+- Failure/limitation: The first attempt was interrupted with Control+C during `pip install`, and that run's pytest then used my project's environment instead of the fresh one; I reran with my environment deactivated. All runs are on macOS, so a bare Linux machine (Chromium system libraries) is untested.
+- Confidence: High for what each run shows; Section 7 still needs a DVC remote, the xbrl and evaluate stages, metrics and the submission tag. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issue #27 — P9 statement tables, second independent keying
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, for the procedure and the checks only. I typed every label and number myself from the two page images Guna sent (10-K p32, 10-Q p6), following his CONVENTIONS.md, without looking at his keying or any parser output.
+- What it contributed: Explained double-keying and the conventions (prefixes for repeated labels, headings as empty rows, no $ in cells) and the expected row counts (24 and 34), and wrote a script that checks the arithmetic of my file.
+- How verified: Row counts 24 and 34. Arithmetic only, with no comparison against anything else: every subtotal and total adds up, EPS equals net income divided by shares, and total assets equal liabilities plus equity in both periods (45 of 45 checks). Sent to Guna for the cell-by-cell comparison and reconciliation.
+- Failure/limitation: Excel stores the numbers as numbers with display formats, so Guna reshapes the file with scripts/write_gt_tables.py; arithmetic cannot catch a label typo or two errors that cancel, which is what the comparison with Guna's keying is for.
+- Confidence: High for the arithmetic; final once the comparison is reconciled. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issue #72 — Codelab sections for Parts 2, 6 and 11
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat.
+- What it contributed: Drafted the three sections from the merged reports (`reports/tables_method.md`, `reports/format_decision.md`, `reports/xbrl.md`) and the commands I ran, and the four screenshot placeholders.
+- How verified: Every number in the sections comes from an output I re-ran tonight for the screenshots: the p32 table CSV, `format_stats.py` (51,559 / 69,412 / 112,464 / 914,746 approximate tokens) and `xbrl.py compare` (328 of 388, 84.5%); the fourth screenshot is the executed notebook cell showing 0 non-match cells without a cause.
+- Failure/limitation: Copying from the rendered card pasted plain text, so code blocks and tables lost their formatting; re-pasting the raw Markdown with Paste from Markdown fixes it.
+- Confidence: High for the content. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
