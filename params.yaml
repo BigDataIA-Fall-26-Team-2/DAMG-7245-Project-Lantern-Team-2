@@ -33,21 +33,44 @@ tables:
   min_numeric_rows: 3     # fewer data rows than this is not a table (prose pages)
   visible_max_gray: 0.9   # rulings with mean fill gray >= this are invisible (white cell borders)
 
-# Owner: Dhruvi (Part 11 - XBRL); keys to be filled in once mapping/tolerance approach is set
-xbrl: {}
+# Owner: Dhruvi (Part 11 - XBRL). Comparison tolerance comes from each XBRL fact decimals, not from here.
+xbrl:
+  fuzzy_cutoff: 0.85
+  statement_pages:
+    AAPL_10K_20250927: {income: 32, balance: 34, cash_flow: 36}
+    AAPL_10Q_20260627: {income: 4, balance: 6, cash_flow: 9}
 
 # Owner: Shravya (Part 3 - layout)
 layout:
   model: "efficientdet"
-  score_threshold: 0.5
+  score_threshold: 0.25  # sweep on 9 pages: 0.25/0.2/0.1 identical; 0.3 drops blocks on 6/9; 0.5 leaves a page empty
+  max_overlap: 0.5  # drop a box if >50% of it lies inside a higher-scoring box
   pad_pt: 2.0
-
+  qa_pages:              # pages that get a box-overlay picture in reports/layout/ (also the 10 audit pages)
+    AAPL_10K_20250927: [1, 10, 20, 22, 32, 34, 50]
+    AAPL_10Q_20260627: [4, 15, 28]
+    multicolumn: [1]
+  text_pad_pt: 8         # sweep: clipped first letters 132->35 (10-K), 51->10 (10-Q); 12 pt gains little and risks the column gap
+  dark_page_brightness: 0.5  # invert pages darker than this before detection (multicolumn fixture: 0 -> 7 text blocks)
+  dark_page_brightness: 0.5  # invert pages darker than this before detection; fixture 0.18 vs Apple pages 0.87-0.96
+  column_gap_pt: 50          # new column when block left edges jump by more than this; multicolumn fixture gaps are 150+ pt
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
 docling:
   do_ocr: false             # Apple PDFs have a text layer (P1: 0 OCR pages); OCR only slows Docling down
   table_mode: "accurate"    # TableFormer mode: "accurate" or "fast"
   device: "auto"            # auto | cpu | mps (Mac GPU); auto uses MPS when available
   html_stem: "AAPL_10K_20250927"   # the filing whose original iXBRL HTML is also converted (Part 4 task 2)
+
+# Owner: Guna (Part 5 - export)
+export:
+  out_dir: "data/export"
+  layout_dir: "data/layout"
+  docling_dir: "data/docling"
+  tables_dir: "data/tables"
+  paragraph_gap_pt: 6.0
+  emit_docling: true
+  company_by_ticker:
+    AAPL: "Apple Inc."
 
 # Owner: Shravya (Part 10 - benchmarking); keys to be filled in during that part
 bench: {}

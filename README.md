@@ -29,6 +29,10 @@ Full project summary, architecture diagram, reproduction steps, and the Codelab/
 | Streamlit | App: team UI (frontend/) | requirements.txt |
 | Docling | P4: alternative parsing path (layout, reading order, tables in one pass) | requirements.txt |
 | docling-ibm-models (TableFormer) | P4: Docling's layout and table-structure models | requirements.txt |
+| LayoutParser | P3: page layout detection (Text/Title/List/Table/Figure blocks) | requirements.txt |
+| effdet (EfficientDet) | P3: PubLayNet detection backend for LayoutParser | requirements.txt |
+| PyTorch + torchvision | P3: deep-learning runtime for the layout model | requirements.txt |
+| huggingface_hub | P3: model weights host (LayoutParser's built-in link is dead) | requirements.txt |
 <!-- Add one row per new tool/library the moment you introduce it (see SKILLS.md). -->
 
 ## Shared development environment
