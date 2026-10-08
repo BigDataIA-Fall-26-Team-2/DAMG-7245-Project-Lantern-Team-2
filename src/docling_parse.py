@@ -188,14 +188,35 @@ def export_tables(doc, stem, pdf_path, out):
     return written, empty
 
 
-def convert_html(conv, row, out):
+def convert_via_serve(path, p):
+    """Convert one file with a running docling-serve (POST /v1/convert/file) and rebuild the DoclingDocument.
+
+    Used when params.yaml docling.serve_url is set (#83); same OCR and TableFormer settings as the library path."""
+    import mimetypes
+    import requests
+    from docling_core.types.doc import DoclingDocument
+    mime = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+    with open(path, "rb") as f:
+        r = requests.post(p["serve_url"].rstrip("/") + "/v1/convert/file",
+                          files={"files": (Path(path).name, f, mime)},
+                          data={"to_formats": "json", "do_ocr": str(p["do_ocr"]).lower(),
+                                "table_mode": p["table_mode"]},
+                          timeout=p.get("serve_timeout_s", 600))
+    r.raise_for_status()
+    body = r.json()
+    if body.get("status") != "success":
+        raise RuntimeError(f"docling-serve failed on {path}: {body.get('status')} {body.get('errors')}")
+    return DoclingDocument.model_validate(body["document"]["json_content"])
+
+
+def convert_html(convert, row, out):
     """Part 4 task 2: also convert the filing's original iXBRL HTML, to isolate what PDF rendering changed.
 
     HTML has no pages, so there are no page numbers or boxes: only text and tables can be compared."""
     stem = row["stem"]
     clear_outputs(stem, out, html=True)
     t = time.perf_counter()
-    doc = conv.convert(row["source_file"]).document
+    doc = convert(row["source_file"])
     md = doc.export_to_markdown()
     (out / f"{stem}.html.md").write_text(md)
     doc.save_as_json(out / f"{stem}.html.json")
@@ -209,18 +230,22 @@ def main(params_path, input_dir, output):
     out = Path(output)
     out.mkdir(parents=True, exist_ok=True)
     manifest = load_manifest(input_dir)
-    conv = make_converter(p)
+    if p.get("serve_url"):                       # docling-serve over HTTP (#83)
+        convert = lambda path: convert_via_serve(path, p)
+    else:                                        # Docling as a library
+        conv = make_converter(p)
+        convert = lambda path: conv.convert(str(path)).document
     for pdf_path in sorted(Path(input_dir).glob("*.pdf")):
         stem = pdf_path.stem
         t = time.perf_counter()
-        doc = conv.convert(str(pdf_path)).document
+        doc = convert(pdf_path)
         clear_outputs(stem, out)
         n_pages = export_document(doc, stem, out)
         counts = export_blocks(doc, stem, manifest.get(stem, {}).get("doc_id", stem), out, crop_offsets(pdf_path))
         written, empty = export_tables(doc, stem, pdf_path, out)
         print(f"{stem}: {n_pages} pages, {len(doc.tables)} tables ({written} in team format, {empty} empty), blocks {counts}, {time.perf_counter() - t:.1f}s")
     if p.get("html_stem") in manifest:   # skipped for folders without a manifest (fixtures)
-        convert_html(conv, manifest[p["html_stem"]], out)
+        convert_html(convert, manifest[p["html_stem"]], out)
 
 
 if __name__ == "__main__":
