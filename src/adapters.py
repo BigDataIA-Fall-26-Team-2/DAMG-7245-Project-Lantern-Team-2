@@ -69,7 +69,7 @@ def block_from_layout_record(manifest_row, rec, section):
         text=text,
         table=None,
         extractor="pdfplumber",
-        extractor_version=str(rec.get("model") or "layout"),
+        extractor_version=rec.get("extractor_version") or extractor_version("pdfplumber"),
         ocr=bool(rec.get("ocr", False)),
         ocr_conf=None,
     )
