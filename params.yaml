@@ -51,8 +51,7 @@ layout:
     AAPL_10Q_20260627: [4, 15, 28]
     multicolumn: [1]
   text_pad_pt: 8         # sweep: clipped first letters 132->35 (10-K), 51->10 (10-Q); 12 pt gains little and risks the column gap
-  dark_page_brightness: 0.5  # invert pages darker than this before detection (multicolumn fixture: 0 -> 7 text blocks)
-  dark_page_brightness: 0.5  # invert pages darker than this before detection; fixture 0.18 vs Apple pages 0.87-0.96
+  dark_page_brightness: 0.5  # invert pages darker than this before detection; fixture 0.18 vs Apple pages 0.87-0.96 (multicolumn fixture: 0 -> 7 text blocks)
   column_gap_pt: 50          # new column when block left edges jump by more than this; multicolumn fixture gaps are 150+ pt
 # Owner: Shravya (Part 4 - Docling); keys to be filled in during that part
 docling:
