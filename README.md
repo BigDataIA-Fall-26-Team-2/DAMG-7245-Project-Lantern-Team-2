@@ -125,7 +125,9 @@ Outputs go to the runner's temporary directory.
 
 `requirements-ci.txt` selects only the packages needed for these checks and uses
 `requirements.txt` as a constraints file, keeping version pins in one place.
-The download/render packages are included for existing mocked tests; CI does
+Pydantic supports the export/schema tests. Docling and layout load their model
+packages only when conversion/detection is requested, so their existing helper
+tests do not require model installations. The download/render packages are included for existing mocked tests; CI does
 not download filings, render HTML, access the DVC remote, or call cloud document
 services. No project credentials or repository secrets are required. GitHub
 uses its automatic read-only token to check out this private repository.

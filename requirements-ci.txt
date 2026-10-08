@@ -11,3 +11,6 @@ pypdf
 # Existing offline download/render tests import these packages (no browser needed).
 sec-edgar-downloader
 playwright
+
+# Schema validation used by the existing export tests.
+pydantic
