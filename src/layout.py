@@ -14,9 +14,7 @@ from pathlib import Path
 import numpy as np
 import pdfplumber
 import pytesseract
-import torch
 import yaml
-import layoutparser as lp
 from PIL import ImageDraw, ImageOps
 import tables as tbl   # Dhruvi's P2 extractor; extract_best_df is a shared function in CONTRACTS.md
 
@@ -25,15 +23,6 @@ MODEL_PATH = Path("models/publaynet-tf_efficientdet_d0.pth.tar")
 # LayoutParser's built-in Dropbox link is dead; the LayoutParser team hosts the same weights on Hugging Face.
 MODEL_URL = ("https://huggingface.co/layoutparser/efficientdet/resolve/main/"
              "PubLayNet/tf_efficientdet_d0/publaynet-tf_efficientdet_d0.pth.tar")
-
-# PyTorch >= 2.6 loads checkpoints in "weights only" mode. This checkpoint also stores its
-# training args and numpy number types, so allow exactly those (safer than weights_only=False).
-_scalar = np._core.multiarray.scalar if hasattr(np, "_core") else np.core.multiarray.scalar
-torch.serialization.add_safe_globals([
-    (_scalar, "numpy.core.multiarray.scalar"),
-    np.dtype, np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType,
-    argparse.Namespace,
-])
 
 DPI = 150         # resolution the page image is rendered at for the detector
 K = 72 / DPI      # pixels -> PDF points
@@ -48,6 +37,18 @@ def is_footer(text):
 
 def load_model():
     """Load the PubLayNet EfficientDet model, downloading the weights first if missing."""
+    import torch
+    import layoutparser as lp
+
+    # PyTorch >= 2.6 loads checkpoints in "weights only" mode. This checkpoint also stores its
+    # training args and numpy number types, so allow exactly those (safer than weights_only=False).
+    _scalar = np._core.multiarray.scalar if hasattr(np, "_core") else np.core.multiarray.scalar
+    torch.serialization.add_safe_globals([
+        (_scalar, "numpy.core.multiarray.scalar"),
+        np.dtype, np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType,
+        argparse.Namespace,
+    ])
+
     if not MODEL_PATH.exists():
         MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
         print(f"downloading layout weights -> {MODEL_PATH}")
@@ -69,6 +70,8 @@ def detect_page(model, page, params):
     """Detect blocks on one pdfplumber page, dropping low scores and duplicates.
 
     Returns (page image, kept LayoutParser boxes, records with bbox in points, top-left origin)."""
+    import layoutparser as lp
+
     # Render the full mediabox: pdfplumber's coordinates use the mediabox, but by default it renders only
     # the cropbox, which shifted every box on the cropped, rotated multicolumn fixture.
     img = page.to_image(resolution=DPI, force_mediabox=True).original.convert("RGB")
