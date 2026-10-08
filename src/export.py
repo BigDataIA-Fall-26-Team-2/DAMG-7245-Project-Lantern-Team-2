@@ -134,6 +134,64 @@ def write_jsonl(blocks, path):
         for b in reading_order(blocks):
             f.write(b.to_jsonl() + "\n")
 
+def table_to_markdown(t):
+    lines = ["| " + " | ".join(str(c) for c in t.columns) + " |"]
+    lines.append("| " + " | ".join("---" for _ in t.columns) + " |")
+    for row in t.rows:
+        cells = ["" if c is None else str(c) for c in row]
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def provenance_comment(b):
+    fields = {
+        "doc_id": b.doc_id,
+        "page": b.page,
+        "block_id": b.block_id,
+        "block_type": b.block_type,
+        "bbox": b.bbox,
+        "units": b.units,
+        "origin": b.origin,
+        "extractor": b.extractor,
+        "extractor_version": b.extractor_version,
+        "ocr": b.ocr,
+        "ocr_conf": b.ocr_conf,
+    }
+    return "<!-- " + json.dumps(fields, ensure_ascii=False) + " -->"
+
+
+def block_to_markdown(b):
+    if b.block_type == "Title":
+        body = f"## {b.text}"
+    elif b.block_type == "Table" and b.table is not None:
+        body = table_to_markdown(b.table)
+    elif b.block_type == "List":
+        body = "\n".join(f"- {line}" for line in (b.text or "").split("\n") if line)
+    elif b.block_type == "Footnote":
+        body = f"> {b.text}"
+    else:
+        body = b.text or ""
+    return provenance_comment(b) + "\n" + body
+
+
+def write_markdown(blocks, path, manifest_row):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ordered = reading_order(blocks)
+    head = [
+        f"# {manifest_row['company']} {manifest_row['form']} "
+        f"{manifest_row['fiscal_year']} {manifest_row['fiscal_period']}",
+        "",
+        provenance_comment(ordered[0]) if ordered else "",
+    ]
+    parts = [head[0], head[1]]
+    current_page = None
+    for b in ordered:
+        if b.page != current_page:
+            current_page = b.page
+            parts.append(f"\n<!-- page {b.page} -->")
+        parts.append(block_to_markdown(b))
+    path.write_text("\n\n".join(parts) + "\n", encoding="utf-8")    
+
 
 def main():
     manifest = load_manifest()
@@ -141,6 +199,7 @@ def main():
         trad, table_bbox = layout_blocks(row, stem)
         trad += table_blocks(row, stem, table_bbox)
         write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
+        write_markdown(trad, EXPORT_DIR / f"{stem}.md", row)
         doc = []
         if EMIT_DOCLING:
             doc = docling_blocks(row, stem)
