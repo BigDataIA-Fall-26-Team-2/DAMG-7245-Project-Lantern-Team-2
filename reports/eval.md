@@ -158,8 +158,8 @@ came from, so a later change is a visible decision rather than silent drift.
 
 | Gate | Threshold | Baseline |
 |---|---|---|
-| Worst prose WER | <= 0.25 | 0.153 |
-| Mean prose CER | <= 0.20 | 0.079 |
+| Worst prose WER | <= 0.20 | 0.153 |
+| Mean prose CER | <= 0.12 | 0.0795 |
 | Mean numeric-token F1, all pages | >= 0.65 | 0.750 |
 | Table cell F1, every GT table | >= 0.90 | 1.000 |
 | Table value recall, every GT table | >= 0.90 | 1.000 |
@@ -178,6 +178,7 @@ scoring. Run on the same inputs:
 | `none` (baseline) | 1.0000 | 1.0000 | 0.9536 | 0.6709 |
 | `no-scale` | 0.1053 | 0.0000 | 0.9536 | 0.6709 |
 | `drop-parens` | 0.9474 | 0.9643 | 0.7671 | 0.7295 |
+| `drop-words` | 1.0000 | 1.0000 | 0.9536 | 0.6283 |
 
 `no-scale` simulates forgetting the per-row scale and carrying the printed
 figure through as if already in full units. The table cell metric collapses to
@@ -191,12 +192,39 @@ only alters the scaled `rows` while the text hypothesis is built from
 scale error is invisible to WER and only the cell comparison catches it. It is
 also the reason the cell comparison exists.
 
-The failing run is recorded in `reports/`:
+`drop-words` is the text-side check. It deletes every fifth word of every text
+block and leaves tables alone, simulating a parser that silently loses text.
+Prose worst WER rises from 0.153 to 0.3153 and prose mean CER from 0.0795 to
+0.2571, so both prose gates fail, while all eleven other gates pass and both
+table cell scores stay at 1.0. Each gate fires on the damage it guards and on
+nothing else. The run is recorded in `reports/teeth_check_prose_failing_run.txt`.
+
+Two separate things were done to the text gates, and they should not be
+confused. The break mode is what proves they work: the earlier, looser gates
+(0.25 and 0.20) would also have failed on it. The tightening to 0.20 and 0.12
+is a separate change that makes them catch smaller damage, by cutting the
+headroom over the worst prose page from 0.097 to 0.047.
+
+Statement-page WER *falls* under `drop-words`, from 0.6709 to 0.6283. Deleting
+words can only bring a hypothesis closer to the reference if it contained
+surplus words, which is independent confirmation of finding 6: the traditional
+statement pages carry their row labels twice.
+
+The table failing run is recorded in `reports/`:
 
 ```
 python src/evaluate.py --break no-scale --out reports/metrics_break_no_scale.json
 set LANTERN_METRICS=reports/metrics_break_no_scale.json
 pytest tests/test_quality.py -q > reports/teeth_check_failing_run.txt
+set LANTERN_METRICS=
+```
+
+and the prose one the same way:
+
+```
+python src/evaluate.py --break drop-words --out reports/metrics_break_drop_words.json
+set LANTERN_METRICS=reports/metrics_break_drop_words.json
+pytest tests/test_quality.py -q > reports/teeth_check_prose_failing_run.txt
 set LANTERN_METRICS=
 ```
 
@@ -218,9 +246,9 @@ OCR trigger changed.
 
 ## 5. Reproducibility and metrics diff
 
-DVC is now set up on main by Part 8, but the evaluate stage is not yet in
-`dvc.yaml`, so `dvc repro evaluate` and `dvc metrics diff` cannot be run. The
-stage definition has been handed to the Part 8 owner:
+The evaluate stage is in `dvc.yaml`, with `reports/metrics.json` declared as
+metrics and `reports/plots/drift.png` as a plot (both `cache: false`, so they
+stay in git where this report links to them):
 
 ```yaml
   evaluate:
@@ -239,23 +267,27 @@ stage definition has been handed to the Part 8 owner:
           cache: false
 ```
 
-The before-and-after that the diff should show is recorded here in the
-meantime. Folding table content into the page hypothesis, so that a statement
-page is compared as a whole page rather than as its headings alone:
+```
+dvc repro -s evaluate
+dvc metrics show
+```
 
-| Metric | before | after | change |
-|---|---|---|---|
-| mean WER, traditional | 0.5153 | 0.4850 | -0.0303 |
-| mean CER, traditional | 0.4885 | 0.4582 | -0.0303 |
-| mean numeric-token F1, traditional | 0.3152 | 0.7497 | +0.4345 |
-
-Reproduce by hand until the stage lands:
+`dvc metrics diff` was exercised with the `no-scale` break mode: score the
+broken hypothesis into the workspace, diff it against the committed baseline,
+then score the normal hypothesis again. The output is kept in
+`reports/metrics_diff_no_scale.txt`. It reports exactly the metrics the break
+should move and nothing else: table cell F1 falls from 1.0 to 0.1053 on 10-K
+p32 and from 1.0 to 0.0 on 10-Q p6, on both the traditional and Docling paths,
+while every text metric is unchanged.
 
 ```
-python src/export.py
+python src/evaluate.py --break no-scale
+dvc metrics diff > reports/metrics_diff_no_scale.txt
 python src/evaluate.py
-pytest tests/test_quality.py -q
 ```
+
+The stage reads `data/managed` for the Part 7 side-by-side, which is tracked on
+the Part 7 branch; it is added to this stage's deps once both are merged.
 
 ## 6. Findings
 
@@ -381,12 +413,6 @@ and survived. Docling and Textract both read the two cells intact.
 
 ### Open items
 
-- **The text gates are loose and unproven.** Prose WER is gated at 0.25 against
-  a measured 0.153, and neither break mode degraded prose text, so those gates
-  have never been observed to fire. The table gates are proven; the text gates
-  are not. Tightening them and adding a prose-damaging break mode is the next
-  change.
-- **`dvc repro evaluate` and `dvc metrics diff`**: see section 5.
 - **`data/ground_truth/` is committed to git rather than DVC-tracked**, against
   the deliverable list. When it was committed DVC was not yet available on this
   machine. It is hand-keyed source material rather than regenerable output, so

@@ -50,8 +50,8 @@ _NUM_RE = re.compile(r"\(?-?\$?\d[\d,]*(?:\.\d+)?\)?%?")
 
 PATHS = ("traditional", "docling", "managed")
 
-BREAK_MODES = ("none", "no-scale", "drop-parens", "no-ocr", "strip-prefix")
-
+BREAK_MODES = ("none", "no-scale", "drop-parens", "no-ocr", "strip-prefix",
+               "drop-words")
 
 def apply_conventions(s):
     s = unicodedata.normalize("NFKC", s)
@@ -177,6 +177,11 @@ def degrade(rec, mode):
             if t.get(key):
                 t[key] = [[(str(row[0]).split(": ")[-1] if i == 0 else c)
                            for i, c in enumerate(row)] for row in t[key]]
+    if mode == "drop-words" and rec.get("text"):
+        # simulate a parser silently losing text (clipped letters, a missed
+        # line): delete every 5th word of every text block; tables untouched
+        words = rec["text"].split()
+        rec["text"] = " ".join(w for i, w in enumerate(words, 1) if i % 5)
     return rec
 
 
