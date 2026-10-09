@@ -147,3 +147,11 @@
 - GPU cost estimates were omitted because no successful GPU measurement exists.
 - Recorded regenerated metrics, bounding-box fallback evidence, layout previews,
   and drift plot. Metrics include both improvements and regressions.
+
+### Streamlit deployment README and review handoff
+- Tool: OpenAI Codex. Updated the README with the Elastic IP app URL, systemd operations, overnight stop/start behavior, and the completed reproduction status.
+- Evidence: Lokesh confirmed the public app worked and supplied a health-check response of `ok`; reproduction and S3 validation are recorded above. These are user-run EC2 checks, not a new remote execution by Codex.
+- Integrated main through PR #129 without changing the teammate reports. The earlier 183-test run predates that fixture-test update.
+- Limitation: final fresh-cache retrieval and benchmark-report refresh remain pending; HTTP availability requires EC2 to be running. No TLS or continuous uptime is claimed.
+- Verification: reviewed the documentation diff and ran git diff --check. No application or pipeline code changed in this documentation update.
+- Confidence: high for the documented user-verified deployment; final release validation remains explicit.
