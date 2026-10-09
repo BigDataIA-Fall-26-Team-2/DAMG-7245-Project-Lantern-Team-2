@@ -2,21 +2,19 @@
 
 ## Evidence and status
 
-This report uses the successful CPU measurements from the team's EC2 reproduction.
-[ec2_benchmark_observed.csv](ec2_benchmark_observed.csv) is a transcription of the
-benchmark summary printed in the EC2 terminal and supplied by Lokesh; it is not a
-new execution or a downloaded copy of `data/bench/summary.csv`.
-
-**Final verification pending:** after merging the device-handling fix, run
-`dvc repro bench` on EC2, inspect `data/bench/summary.csv`, `cost.csv`, `machine.json`,
-and `skipped.json`, and update this report to match that run before the final DVC
-push. The measurements below describe the earlier successful CPU jobs, not the
-pending corrected run. Mac/MPS performance comparisons are not used in this report.
+This report uses the final corrected CPU benchmark artifacts retrieved from the
+team's EC2 deployment checkout on October 9, 2026.
+[ec2_benchmark_observed.csv](ec2_benchmark_observed.csv) copies the values from
+`data/bench/summary.csv` (line endings normalized), downloaded from `/home/ubuntu/lantern-streamlit`.
+The accompanying `cost.csv`, `machine.json`, and `skipped.json` were retrieved
+from the same output folder. No benchmark was rerun for this report update.
+The final reproduction log records the DVC artifact upload to S3; this update
+verified the EC2 files directly, not a fresh S3 download.
 
 ## Hardware and method
 
 The recorded reproduction environment is Ubuntu 24.04.4 LTS on an x86_64 EC2
-m7i-flex.large instance, approximately 8 GiB RAM, Python 3.11 and CPU-only
+m7i-flex.large instance, 7.6 GiB reported RAM, 2 logical CPUs, Python 3.11.17 and CPU-only
 PyTorch 2.14.1+cpu. Environment setup is recorded in
 [Lokesh's engineering log](../docs/ai_log/lokesh.md); retain the final run's
 `data/bench/machine.json` alongside its CSVs for machine-level provenance.
@@ -39,10 +37,10 @@ RSS values are labeled MB by the script but are calculated as bytes divided by 2
 
 | Stage | Pages | p50 s/page | p95 s/page | Mean s/page | Total page time (s) | Setup (s) | Peak RSS (MiB) | Errors | Empty |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| parse_pdfplumber | 94 | 0.114 | 0.505 | 0.315 | 29.6 | 0.27 | 632.4 | 0 | 1 |
-| tables | 94 | 0.532 | 0.976 | 0.527 | 49.6 | 0.64 | 235.1 | 0 | 62 |
-| layout | 94 | 0.748 | 2.284 | 1.021 | 96.0 | 3.45 | 1611.2 | 0 | 1 |
-| parse_docling_cpu | 94 | 4.798 | 16.658 | 6.536 | 614.4 | 3.88 | 1624.7 | 0 | 3 |
+| parse_pdfplumber | 94 | 0.113 | 0.531 | 0.293 | 27.6 | 0.27 | 632.6 | 0 | 1 |
+| tables | 94 | 0.542 | 0.994 | 0.54 | 50.8 | 0.64 | 234.9 | 0 | 62 |
+| layout | 94 | 0.741 | 2.268 | 1.021 | 96.0 | 3.45 | 1617.3 | 0 | 1 |
+| parse_docling_cpu | 94 | 4.78 | 16.48 | 6.503 | 611.3 | 3.88 | 1598.1 | 0 | 3 |
 
 All CPU jobs completed without page errors. `empty` means no extracted output;
 it is distinct from an exception and does not alone establish whether a page was
@@ -63,7 +61,7 @@ price quote or an EC2 billing measurement. The configured sources are
 [AWS Textract pricing](https://aws.amazon.com/textract/pricing/).
 
 The traditional mean is the sum of the text, tables, and layout CSV means:
-`0.315 + 0.527 + 1.021 = 1.863 seconds/page`. Docling uses `6.536 seconds/page`.
+`0.293 + 0.540 + 1.021 = 1.854 seconds/page`. Docling uses `6.503 seconds/page`.
 For each measured path:
 
 ```text
@@ -72,8 +70,16 @@ cost/year = hours/year × configured hourly price
 managed cost/year = pages/year × configured per-page service price
 ```
 
-These formulas are implemented in [bench.py](../src/bench.py). Final numeric cost
-rows will be taken from the corrected EC2 `cost.csv` after the pending rerun.
+These formulas are implemented in [bench.py](../src/bench.py). The downloaded
+final `cost.csv` reports the following projections:
+
+| Option | Hardware assumption | USD / 1,000 pages | USD / year |
+|---|---|---:|---:|
+| Traditional (P1+P2+P3) | c7i.2xlarge, 4 workers | 0.046 | 22.98 |
+| Docling | c7i.2xlarge, 4 workers | 0.1612 | 80.61 |
+| Textract OCR | Managed API | 1.5 | 750.00 |
+| Textract tables | Managed API | 15.0 | 7,500.00 |
+
 Applying these timings to the configured c7i.2xlarge is a hardware extrapolation:
 that instance type was not benchmarked here. Four-way scaling is unmeasured and
 may be optimistic because each process can already use multiple CPU threads.
@@ -85,8 +91,8 @@ instance time, engineering, and maintenance are outside this model.
 
 ## Bottlenecks and recommendation
 
-Docling dominates the observed page-processing time: 614.4 seconds versus 96.0
-for layout, 49.6 for tables, and 29.6 for text/OCR. Its p95 is 16.658 seconds/page.
+Docling dominates the observed page-processing time: 611.3 seconds versus 96.0
+for layout, 50.8 for tables, and 27.6 for text/OCR. Its p95 is 16.48 seconds/page.
 Setup is smaller than total page time in each measured stage; retaining warm
 workers can reduce repeated setup, but concurrency needs a separate measurement.
 
@@ -122,5 +128,5 @@ not rely on them. Never relabel an EC2 archive as Mac evidence.
 - RSS is sampled after pages, so brief memory spikes can be missed.
 - Docling converts individual page ranges, which adds per-call overhead.
 - Full pipeline success and passing tests do not validate cost-model assumptions.
-- The corrected EC2 rerun, final generated CSV comparison, and artifact upload are
-  still pending; the transcription above preserves the supplied observations.
+- The final EC2 files were retrieved and compared for this update. Fresh-cache
+  S3 retrieval was not verified locally: the local AWS identity returned 403.
