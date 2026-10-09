@@ -114,6 +114,11 @@ stages:
       md5: 1d6b381b5f89bf1ca7689c6c117f46fb.dir
       size: 910483
       nfiles: 6
+    - path: data/raw
+      hash: md5
+      md5: 340bf7ff02c7e8fc54a1e0c4a8793cb7.dir
+      size: 17999120
+      nfiles: 156
     - path: data/rendered
       hash: md5
       md5: fb8b8f38b62d24672824b884b07ddffb.dir
@@ -123,11 +128,19 @@ stages:
       hash: md5
       md5: a32b6939d3391ae6e9c2030e5bd2a8c1
       size: 4945
+    - path: src/adapters.py
+      hash: md5
+      md5: 3551a9578a44cf2be74059f00665e9a5
+      size: 6066
     - path: src/managed
       hash: md5
-      md5: 89252d934f09e8dfb17d89d41a150d23.dir
-      size: 38191
+      md5: 5ab49fa8b2ebcdc566f01693bb1586f9.dir
+      size: 38728
       nfiles: 4
+    - path: src/schema.py
+      hash: md5
+      md5: 2c3147dddd3b929dc2aec7fa9fc7a8bf
+      size: 5218
     - path: src/tables.py
       hash: md5
       md5: db6681df96d0169fd1439996ed724aea

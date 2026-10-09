@@ -39,8 +39,11 @@ stages:
     deps:
       - src/tables.py
       - src/managed
+      - src/adapters.py
+      - src/schema.py
       - requirements.txt
       - data/rendered
+      - data/raw
       - data/managed
     params:
       - tables
