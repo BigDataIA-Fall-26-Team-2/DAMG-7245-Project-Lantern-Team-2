@@ -58,7 +58,8 @@ because they are not reading errors:
 | 10-Q p6 | Traditional | 0.8216 | 0.8014 | 0.8467 | 0.9818 |
 | | Docling | 0.2535 | 0.3035 | 0.9677 | 1.0000 |
 | | Textract | 0.0423 | 0.0210 | 0.9697 | 1.0000 |
-| Scanned p1 | Textract | 0.0188 | 0.0101 | 0.9333 | n/a |
+| Scanned p1 | Tesseract (Part 1) | 0.0225 | 0.0107 | 0.9333 | n/a |
+| | Textract | 0.0188 | 0.0101 | 0.9333 | n/a |
 
 Docling numbers include its tables. An earlier version of this table showed
 Docling at 0.0 numeric F1, because the export was dropping Docling's tables.
@@ -117,13 +118,19 @@ p32.
 
 ### The scanned page
 
-Textract reads the scanned fixture almost perfect: 0.019 WER, 0.010 CER, 0.93
-numeric F1. **We did not measure the open-source comparison on this page**: the
-scanned fixture was not run through Part 1's Tesseract stage before the
-deadline. This is the comparison that matters most for the decision, because a
-scan is exactly where a managed service should be worth its price, so it is
-the first thing to run next. The brief's acceptance (one page and one table
-side by side) is already met by the two statement pages above.
+On the scanned fixture, Textract gets 0.019 WER, 0.010 CER and 0.93 numeric F1.
+Part 1's Tesseract on the same page gets 0.023 WER, 0.011 CER and **the same
+0.93 numeric F1**. So on this page the free OCR is only 0.4 points of WER
+behind Textract and exactly same on numbers. The Tesseract number comes from
+the fixture gates (`tests/test_fixture_quality.py`, `reports/eval.md` section
+3), so it is measured again in CI on every PR.
+
+This matters for the recommendation. A scan was supposed to be the place where
+a managed service clearly earns its price, and on this scan it does not. To be
+fair to Textract, this fixture is a clean scan: straight, good resolution,
+simple layout. We did not test the harder scans where OCR usually breaks
+(skewed or noisy pages, low DPI, tables inside a scan), and thats where
+Textract could still be clearly better.
 
 ## 4. Fallback design
 
@@ -353,9 +360,10 @@ there.
 Dont use Textract for everything. Use it as a fallback, on a small set of
 pages, behind the flag.
 
-**Where it belongs:** scanned pages and pages that fail the OCR or table
-trigger. Thats where it clearly does better, and where the open-source path has
-no text layer to read.
+**Where it belongs:** pages that fail the OCR or table trigger, and hard scans
+(skewed, noisy, low resolution, tables inside the scan). On our clean scanned
+fixture Tesseract was almost as good (0.023 vs 0.019 WER, same numeric F1), so
+Textract is for the scans Tesseract cant read, not for every scan.
 
 **Where it dont belong:** born-digital filings, which is almost all of
 FinTrust's volume. There the text layer is exact, Docling reads statement
@@ -376,8 +384,8 @@ is a provider-specific block graph that still needs mapping, scale
 normalisation and section context, so buying it dont remove the engineering, it
 just moves it. On data handling, client documents need an account-level
 training opt-out, a region guarantee and a retention answer before even one
-page is sent. So we keep the open-source path as default and send only scans
-and failing pages to Textract, which is cheaper, more accurate where it
+page is sent. So we keep the open-source path as default and send only hard
+scans and failing pages to Textract, which is cheaper, more accurate where it
 matters, and keeps client data at home unless we choose otherwise.
 
 ## 9. Limitations
@@ -385,7 +393,8 @@ matters, and keeps client data at home unless we choose otherwise.
 - Three pages, two of them from one company's very clean filings. The
   statement-page comparison is strong evidence for clean digital tables and
   weak evidence for anything else.
-- The scanned-page comparison against Tesseract was not measured (section 3).
+- The Tesseract vs Textract comparison is one clean scanned page. Harder scans
+  were not tested (section 3).
 - The cache is not yet in the team's DVC remote (section 4).
 - One provider only, Google Document AI and Azure were not run (stretch goal).
 - The measured table trigger rate of 0 of 91 comes from one company's clean

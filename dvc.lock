@@ -347,8 +347,8 @@ stages:
       nfiles: 6
     - path: src/evaluate.py
       hash: md5
-      md5: 6cd06d785838b345a668ab54ac32c78d
-      size: 24542
+      md5: d7757552823c48c8133d7e86dceba476
+      size: 27359
     params:
       params.yaml:
         evaluate:
@@ -389,6 +389,11 @@ stages:
             allow_unmeasured:
             - multicol_p1
             - scanned_p1
+            fixtures:
+              max_wer_multicolumn: 0.95
+              max_wer_scanned: 0.05
+              max_cer_scanned: 0.03
+              max_wer_statement: 0.12
     outs:
     - path: reports/metrics.json
       hash: md5
