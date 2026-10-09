@@ -344,6 +344,72 @@ def parser_table_cells(rec, headings=frozenset()):
     return cells, cells_raw, values
 
 
+# --- committed fixtures (runs in CI) --------------------------------------
+
+# fixture ground truth uses a short name for one fixture file
+FIXTURE_STEMS = {"multicol": "multicolumn"}
+
+
+def contract_csv_cells(path, headings):
+    """A Part 2 contract table CSV -> (cells, cells_raw), keyed like the
+    ground truth: section prefix stripped against the ground truth's own
+    headings, columns by position."""
+    rows = list(csv.DictReader(open(path, encoding="utf-8-sig", newline="")))
+    cols = []
+    for r in rows:
+        if r["col_label"] not in cols:
+            cols.append(r["col_label"])
+    cells, cells_raw = set(), set()
+    for r in rows:
+        label = strip_section(normalise(r["row_label"]), headings)
+        ci = cols.index(r["col_label"])
+        v = to_number(r.get("value") or r.get("raw"))
+        if v is not None:
+            cells.add((label, ci, v))
+        raw_v = to_number(r.get("raw"))
+        if raw_v is not None:
+            cells_raw.add((label, ci, raw_v))
+    return cells, cells_raw
+
+
+def score_fixtures(parsed_dir, tables_dir, gt_dir):
+    """Score the stage outputs for the committed fixtures against
+    tests/fixtures/gt. parsed_dir is what parse_text.py wrote
+    (<stem>_p<NNNN>.txt), tables_dir what tables.py wrote
+    (<stem>_p<NNNN>_t<k>.csv). A page or table with no output is scored as
+    empty and listed under "missing", same rule as for the filings."""
+    parsed_dir, tables_dir, gt_dir = Path(parsed_dir), Path(tables_dir), Path(gt_dir)
+    out = {"pages": {}, "tables": {}, "missing": []}
+    for gt_file in sorted(gt_dir.glob("*.gt.txt")):
+        key = gt_file.name[: -len(".gt.txt")]
+        name, _, page_s = key.rpartition("_p")
+        stem = FIXTURE_STEMS.get(name, name)
+        hyp_file = parsed_dir / f"{stem}_p{int(page_s):04d}.txt"
+        if hyp_file.exists():
+            hyp = hyp_file.read_text(encoding="utf-8")
+        else:
+            hyp = ""
+            out["missing"].append(key)
+        m = text_metrics(gt_file.read_text(encoding="utf-8"), hyp)
+        if m:
+            out["pages"][key] = m
+    for gt_file in sorted(gt_dir.glob("*_t*.gt.csv")):
+        key = gt_file.name[: -len(".gt.csv")]
+        base, _, t = key.rpartition("_t")
+        name, _, page_s = base.rpartition("_p")
+        stem = FIXTURE_STEMS.get(name, name)
+        hyp_file = tables_dir / f"{stem}_p{int(page_s):04d}_t{t}.csv"
+        gt = load_gt_table(gt_file)
+        if hyp_file.exists():
+            hc, hcr = contract_csv_cells(hyp_file, gt["headings"])
+        else:
+            hc, hcr = set(), set()
+            out["missing"].append(key)
+        out["tables"][key] = {"cell": prf(gt["cells"], hc),
+                              "cell_raw": prf(gt["cells_raw"], hcr)}
+    return out
+
+
 # --- drift ----------------------------------------------------------------
 
 def block_lengths(by_page):

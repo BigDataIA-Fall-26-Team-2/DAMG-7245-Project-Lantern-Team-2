@@ -90,113 +90,6 @@ stages:
     outs:
       - ${export.out_dir}
 
-stages:
-  download:
-    cmd: python src/download.py --params params.yaml --output data/raw
-    deps:
-      - src/download.py
-      - requirements.txt
-    params:
-      - download
-    outs:
-      - data/raw
-
-  render:
-    cmd: python -m playwright install chromium && python src/render.py --params params.yaml --input data/raw --output data/rendered
-    deps:
-      - src/render.py
-      - src/contracts.py
-      - requirements.txt
-      - data/raw
-    params:
-      - render
-      - download.ticker
-      - download.filings
-    outs:
-      - data/rendered
-
-  parse_pdfplumber:
-    cmd: python src/parse_text.py --params params.yaml --input data/rendered --output data/parsed
-    deps:
-      - src/parse_text.py
-      - requirements.txt
-      - data/rendered
-    params:
-      - ocr
-    outs:
-      - data/parsed
-
-  tables:
-    cmd: python src/tables.py --params params.yaml --input data/rendered --output data/tables
-    deps:
-      - src/tables.py
-      - requirements.txt
-      - data/rendered
-    params:
-      - tables
-    outs:
-      - data/tables
-
-  layout:
-    cmd: python src/layout.py --params params.yaml --input data/rendered --output data/layout --figures data/figures --qa reports/layout
-    deps:
-      - src/layout.py
-      - src/tables.py
-      - requirements.txt
-      - data/rendered
-    params:
-      - layout
-      - tables
-      - ocr.dpi
-    outs:
-      - data/layout
-      - data/figures
-
-  parse_docling:
-    cmd: python src/docling_parse.py --params params.yaml --input data/rendered --output data/docling
-    deps:
-      - src/docling_parse.py
-      - src/tables.py
-      - requirements.txt
-      - data/rendered
-      - data/raw
-    params:
-      - docling
-    outs:
-      - data/docling
-
-  export:
-    cmd: python src/export.py
-    deps:
-      - src/export.py
-      - src/export_txt.py
-      - src/adapters.py
-      - src/schema.py
-      - requirements.txt
-      - data/rendered
-      - ${export.layout_dir}
-      - ${export.tables_dir}
-      - ${export.docling_dir}
-    params:
-      - export
-    outs:
-      - ${export.out_dir}
-
-  evaluate:
-    cmd: python src/evaluate.py
-    deps:
-      - src/evaluate.py
-      - data/ground_truth
-      - data/export
-    params:
-      - evaluate
-    metrics:
-      - reports/metrics.json:
-          cache: false
-    plots:
-      - reports/plots/drift.png:
-          cache: false
-
   xbrl:
     cmd: >-
       python src/xbrl.py --input data/rendered/manifest.csv --output data/xbrl &&
@@ -214,3 +107,18 @@ stages:
       - xbrl
     outs:
       - data/xbrl
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - data/ground_truth
+      - data/export
+    params:
+      - evaluate
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    plots:
+      - reports/plots/drift.png:
+          cache: false

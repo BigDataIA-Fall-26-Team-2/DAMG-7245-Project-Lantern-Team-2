@@ -312,8 +312,8 @@ stages:
       nfiles: 44
     - path: src/evaluate.py
       hash: md5
-      md5: 661c3cf53f9cc6289bc16a40ce8bc825
-      size: 21547
+      md5: d7757552823c48c8133d7e86dceba476
+      size: 27359
     params:
       params.yaml:
         evaluate:
@@ -346,17 +346,25 @@ stages:
           thresholds:
             min_gt_pages: 16
             min_gt_tables: 2
-            max_wer_prose: 0.25
-            max_cer_prose: 0.2
+            max_wer_prose: 0.2
+            max_cer_prose: 0.12
             min_numeric_f1: 0.65
             min_table_cell_f1: 0.9
             min_table_value_recall: 0.9
+            allow_unmeasured:
+            - multicol_p1
+            - scanned_p1
+            fixtures:
+              max_wer_multicolumn: 0.95
+              max_wer_scanned: 0.05
+              max_cer_scanned: 0.03
+              max_wer_statement: 0.12
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: beaaebbbb0e5d34d6bdd20a00053cef4
-      size: 23516
+      md5: 5b71261d1dc0e2696a84c5bccef9a7d3
+      size: 23736
     - path: reports/plots/drift.png
       hash: md5
-      md5: f3ce3781b371dd480cea9ec2dd509ca8
-      size: 76807
+      md5: 86721bc7b86518a2fc9871415b6f4cf8
+      size: 76806

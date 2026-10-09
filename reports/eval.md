@@ -184,6 +184,31 @@ export at all is listed under `unmeasured`, and
 `params.yaml` under `evaluate.thresholds.allow_unmeasured`.
 `tests/test_evaluate_missing.py` reproduces the reviewer's exact case.
 
+### Fixture gates, scored fresh in CI
+
+Also from review on #111: CI only checked a saved metrics file, so a parser
+regression could leave it green. The smoke workflow already runs Part 1's
+`parse_text.py` (with Tesseract) and Part 2's `tables.py` on `tests/fixtures`,
+so `tests/test_fixture_quality.py` now scores exactly those outputs against
+`tests/fixtures/gt/`, with the same metrics as the filings
+(`score_fixtures()` in `src/evaluate.py`). In CI it reads what the workflow
+wrote to `$RUNNER_TEMP/lantern-smoke`, on a laptop it runs the two stages
+itself first. So on every PR the parsers are run and scored, not a saved file.
+
+| Fixture | What runs | WER | CER | numeric F1 | Gate |
+|---|---|---|---|---|---|
+| `scanned.pdf` p1 | Tesseract | 0.0225 | 0.0107 | 0.9333 | WER <= 0.05, CER <= 0.03 |
+| `statement.pdf` p1 | pdfplumber text | 0.0714 | 0.0457 | 0.9767 | WER <= 0.12 |
+| `multicolumn.pdf` p1 | pdfplumber text | 0.9255 | 0.7609 | 0.8308 | WER <= 0.95 |
+| `statement.pdf` p1 table | Camelot | cell F1 1.0 | raw cell F1 1.0 | | >= 0.90 |
+
+A gate also fails if any fixture ground truth has no output at all. The
+multicolumn gate is very loose on a bad result on purpose: it only stops it
+getting worse, the result itself is finding 10. The statement fixture is a
+copy of 10-K p32, and its raw text scores 0.0714 WER while the export of the
+same page scores 0.7262, which confirms again that the export's high WER comes
+from the layout step and not from reading (finding 6).
+
 ### Proving the gates actually work
 
 `src/evaluate.py --break <mode>` damages the hypothesis in one named way before
@@ -426,6 +451,17 @@ numeric tokens are taken. No current score moved because of this one, our
 exports dont have entities, but now an exporter that writes them is not
 punished. Also tested in `tests/test_evaluate_metrics.py`.
 
+**10. Part 1's raw text mixes the two columns of a multi-column page (raised
+with Part 1 and Part 3).** On `tests/fixtures/multicolumn.pdf` p1, the text
+`parse_text.py` writes scores 0.9255 WER and 0.7609 CER. pdfplumber reads each
+line straight across the page, so a line of the left column is followed by the
+same line of the right column, and the reading order is lost. Numeric F1 is
+still 0.8308, because numbers are order-free, so the words are mostly read, only
+in the wrong order. The traditional path fixes column order later in the layout
+stage (Part 3, `column_gap_pt`), but the layout and export stages dont run on
+fixtures, so that fix is not measured here. Anyone using Part 1's raw text
+directly gets the mixed order.
+
 ## 7. Scope and what these numbers dont claim
 
 ### Scope we chose
@@ -433,14 +469,13 @@ punished. Also tested in `tests/test_evaluate_metrics.py`.
 - One company, two filings: that is the pinned scope of the assignment. Apple
   filings are very clean, so these numbers are an optimistic bound and we are
   not saying this is general accuracy.
-- 16 of the 20 sample slots are scored. The multi-column and scanned fixture
-  pages have hand-made ground truth but no pipeline output, because the fixtures
-  were not run through the stages. So these two strata are not measured. They
-  are declared openly in `params.yaml` (`allow_unmeasured: [multicol_p1,
-  scanned_p1]`) and listed in `metrics.json` under `unmeasured`, so they cant
-  disappear silently. The CI gates in `tests/test_quality.py` run on local
-  data and not on the committed fixtures. To close this, the fixtures need to
-  be run through the stages.
+- 16 of the 20 sample slots are in the filing averages above. The
+  multi-column and scanned slots come from fixtures, and the layout and export
+  stages dont run on fixtures, so they have no filing export to score. They
+  are declared in `params.yaml` (`allow_unmeasured`) and listed in
+  `metrics.json` under `unmeasured`. But they are not unmeasured anymore: the
+  fixture gates in section 3 score them on the Part 1 and Part 2 outputs, in CI
+  on every PR (scanned WER 0.0225, multi-column WER 0.9255).
 - Table ground truth is two tables out of 32 extracted from the 10-K and 23
   from the 10-Q, which is the brief's minimum. Cell F1 of 1.0 is measured on two
   statement tables, it is not a number for the whole pipeline.
@@ -455,8 +490,9 @@ punished. Also tested in `tests/test_evaluate_metrics.py`.
   deliverable list. When we committed it DVC was not there on this machine. It
   is hand-keyed source material and not regenerable output, so git is ok, but
   it is not what was asked.
-- **Layout Table boxes** (finding 6) and **clipped parentheses** (finding 7)
-  are raised with Parts 3 and 2, not fixed here.
+- **Layout Table boxes** (finding 6), **clipped parentheses** (finding 7) and
+  **multi-column reading order** (finding 10) are raised with Parts 3, 2 and 1,
+  not fixed here.
 - The 18 pages are typed by one person. The two statement tables are
   double-keyed as per the Lab 9 protocol (#27): keyed separately by Guna and
   Dhruvi, 113 cells compared, 0 value disagreements.

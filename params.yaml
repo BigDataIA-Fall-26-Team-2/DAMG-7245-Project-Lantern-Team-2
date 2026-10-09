@@ -127,4 +127,9 @@ evaluate:
     min_numeric_f1: 0.65       # baseline 0.7235 all pages, traditional (repeats counted)
     min_table_cell_f1: 0.90     # baseline 1.0 on both hand-keyed tables
     min_table_value_recall: 0.90  # baseline 1.0
-    allow_unmeasured: [multicol_p1, scanned_p1]   # fixtures not run through the stages yet, eval.md section 7
+    allow_unmeasured: [multicol_p1, scanned_p1]    # fixtures have no filing export; scored by tests/test_fixture_quality.py instead
+    fixtures:                     # committed fixtures, scored fresh in CI by tests/test_fixture_quality.py
+      max_wer_multicolumn: 0.95   # baseline 0.9255: Part 1 raw text reads across the columns (eval.md finding 10)
+      max_wer_scanned: 0.05       # baseline 0.0225, Tesseract
+      max_cer_scanned: 0.03       # baseline 0.0107
+      max_wer_statement: 0.12     # baseline 0.0714
