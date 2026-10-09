@@ -98,6 +98,13 @@
 - Limitations: Linux output hashes differ from the earlier Mac run. Grader access and retrieval from an empty cache remain unverified.
 - AI assistance: OpenAI Codex guided setup and troubleshooting; commands were run manually on EC2.
 
+## 2026-10-08 — #66 README update (draft for author review)
+
+- **Tool/model:** OpenAI Codex (GPT-6).
+- **Contribution:** Replaced the initial three-stage README with the current ten-stage architecture, repository tree, Linux/Python 3.11 and CPU setup, private S3/IAM-role access, reproduction and fixture commands, app launch, benchmark-based runtime guidance, all Parts and report links, contribution allocation, AI disclosure, and the exact Section 8.2 attestation. Created a separate branch from main ac01916. The four 25% shares follow issue #66; authors must review the declaration before submission.
+- **Verification:** Cross-checked commands and paths against dvc.yaml, params.yaml, requirements.txt, smoke.yml, app/app.py, reports/benchmarks.md, and existing engineering logs. Read the local case-study brief's Sections 7–8.2 for reproduction and verbatim attestation. Checked local Markdown targets, paired fences, all ten stage names, attestation text, and git diff whitespace. No pipeline runs or new runtime results are claimed for this documentation change.
+- **Failure/limitation:** Initial link validation caught the missing tests/fixtures/README.md; replaced those links with the existing fixture directory. Final Codelab/video/app links, the submission tag, and current full EC2 reproduction evidence are unavailable and explicitly pending. PR #125 is described as pending rather than already merged. Issue #66 must remain open until final links and evidence are filled in. No application tests were rerun for prose-only changes.
+- **Confidence:** Documentation matches inspected main and recorded evidence; final publication readiness remains conditional on the listed deliverables.
 ## 2026-10-08 — #47 managed OCR fallback and DVC inputs (draft for author review)
 
 - **Tool/model:** OpenAI Codex (GPT-6).
