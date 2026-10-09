@@ -14,7 +14,7 @@ Document: Apple FY2025 10-K (`AAPL_10K_20250927`, 61 pages). Measurements: `repo
 | JSONL | `data/export/AAPL_10K_20250927.docling.jsonl` | `src/export.py`, Part 5 schema, Docling path |
 | JSON (lossless) | `data/docling/AAPL_10K_20250927.json` | Docling, Part 4 |
 
-The traditional-path JSONL and Markdown (`data/export/{stem}.jsonl`, `.md`) could not be produced yet: they need `data/layout` from Part 3 (#100, not merged), and `export.py` skips that path cleanly without it.
+The traditional-path JSONL and Markdown (`data/export/{stem}.jsonl`, `.md`) could not be produced yet: they need `data/layout` from Part 3 (#100, not merged), and `export.py` skips that path cleanly without it. (Done: see "Retest on the final export" below.)
 
 ## Size, tokens and provenance
 
@@ -61,14 +61,14 @@ What this shows:
 | Baseline | TXT | smallest (51,559 tokens) and answers by text search, but carries no positions |
 | Archive only | Docling JSON | lossless, but ≈915k tokens |
 
-Condition on the decision: the JSONL that feeds Case Study 2 must include tables as structured objects (Part 5 requires this for the traditional path). Rerun the three questions on `data/export/AAPL_10K_20250927.jsonl` once Part 3 (#100) is merged.
+Condition on the decision: the JSONL that feeds Case Study 2 must include tables as structured objects (Part 5 requires this for the traditional path). Rerun the three questions on `data/export/AAPL_10K_20250927.jsonl` once Part 3 (#100) is merged. (Done: see "Retest on the final export" below.)
 
 ## Limitations
 
 - One run per format, one model; answers can vary between runs.
 - The TXT run used a regular chat (account memory on); Markdown and JSONL used incognito chats. Memory holds no figures from the filing.
 - The model ran code over the attached files (it searched them) rather than reading them end to end, so the test measures what a file contains and exposes, more than how well a model reads long context.
-- The traditional-path JSONL and Markdown were not tested (no `data/layout` yet); the JSONL tested is the Docling export, which is text-only.
+- The traditional-path JSONL and Markdown were not tested (no `data/layout` yet); the JSONL tested is the Docling export, which is text-only. (Done: see "Retest on the final export" below.)
 - Tokens are approximated as characters / 4, not counted with a tokenizer.
 
 
