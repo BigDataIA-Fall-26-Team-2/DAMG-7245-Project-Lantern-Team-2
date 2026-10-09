@@ -109,6 +109,7 @@ stages:
       - src/evaluate.py
       - data/ground_truth
       - data/export
+      - data/xbrl
       - ${managed.cache_dir}
     params:
       - evaluate

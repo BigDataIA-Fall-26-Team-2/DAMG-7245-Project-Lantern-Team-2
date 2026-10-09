@@ -475,6 +475,28 @@ def write_plot(results, exports, path):
 
 # --- main -----------------------------------------------------------------
 
+def xbrl_match_rates(xbrl_dir):
+    """Part 11 results for metrics.json, from the xbrl stage's comparison_{path}.csv files:
+    cells, strict match rate, value agreement (match + sign) and match rate per statement."""
+    out = {}
+    for f in sorted(Path(xbrl_dir).glob("comparison_*.csv")):
+        with open(f, newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+        if not rows:
+            continue
+        n = len(rows)
+        by_statement = defaultdict(list)
+        for r in rows:
+            by_statement[r["statement"]].append(r["status"] == "match")
+        out[f.stem.split("_", 1)[1]] = {
+            "cells": n,
+            "match_rate": round(sum(r["status"] == "match" for r in rows) / n, 4),
+            "value_agreement": round(sum(r["status"] in ("match", "sign") for r in rows) / n, 4),
+            "by_statement": {s: round(sum(v) / len(v), 4) for s, v in sorted(by_statement.items())},
+        }
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--params", default="params.yaml")
@@ -667,6 +689,8 @@ def main():
         "chunk_chars_mean": round(sum(lens) / len(lens), 1) if lens else 0.0,
         "chunk_chars_n": len(lens),
     }
+
+    results["xbrl"] = xbrl_match_rates(Path(cfg.get("xbrl_dir", "data/xbrl")))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(results, indent=2), encoding="utf-8")

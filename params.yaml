@@ -113,6 +113,7 @@ evaluate:
   gt_dir: data/ground_truth
   export_dir: data/export
   metrics_out: reports/metrics.json
+  xbrl_dir: data/xbrl        # Part 11 comparison CSVs, for the XBRL match rate in metrics.json
   plot_out: reports/plots/drift.png
   stems:
     - AAPL_10K_20250927
