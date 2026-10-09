@@ -147,3 +147,11 @@
 - How verified: Ran the app on both filings: 10-K p32 shows 57 of 57 income-statement cells matched with the selected cell boxed on the page, and the net income button jumps to 112,010 on p32. Checked that Docling block coordinates are pt with a top-left origin before drawing them. tests/test_app.py passes in .venv.
 - Failure/limitation: The first run showed empty Records and no layout boxes, because they read only traditional-path files that need data/layout, which my machine does not have; one test run failed only because that Terminal used the conda base Python instead of .venv.
 - Confidence: High for the panels I clicked through on my data. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issues #59, #68 (PR #120 review fixes) — path-consistent panels and cache invalidation
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide.
+- What it contributed: The patch for Lokesh's two review points: Table CSV and Page text now follow the docling/traditional switch and always name their source file (labelling any fallback), and every cached reader is keyed on file size and modification time; plus tests/test_app_cache.py.
+- How verified: tests/test_app_cache.py reproduces his case (write 1, overwrite with 2, read 2): 2 passed; with the old path-only cache key the CSV test fails (teeth check); tests/test_app.py and the full suite pass (147 passed, 11 skipped).
+- Failure/limitation: My first version only made Records and the layout boxes path-aware, which still mixed paths in Table CSV and Page text, and its caches ignored file changes; both were caught in review.
+- Confidence: High. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
