@@ -1,0 +1,698 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Project LANTERN: Reproducible Ingestion of SEC Filings</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14" ga4id=""></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  codelab-ga4id=""
+                  id="lantern-case-study-1"
+                  title="Project LANTERN: Reproducible Ingestion of SEC Filings"
+                  environment="web"
+                  feedback-link="https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues">
+    
+      <google-codelab-step label="Overview" duration="0">
+        <p>Project LANTERN turns Apple&#39;s SEC 10-K and 10-Q filings into a layout-aware, XBRL-validated dataset where every sentence and number traces back to its page and position. The whole pipeline rebuilds from raw filings with one command (dvc repro) and is tested on every pull request. Built by Team 2 (Dhruvi, Lokesh, Guna, Shravya) for DAMG 7245, Fall 2026.</p>
+<h2 class="checklist" is-upgraded>What you&#39;ll learn</h2>
+<ul class="checklist">
+<li>Download SEC filings and render them to PDF reproducibly</li>
+<li>Extract text with OCR fallback, and tables with a hybrid Camelot/pdfplumber extractor</li>
+<li>Detect page layout with a deep-learning model and route each region to the right tool</li>
+<li>Compare an all-in-one parser (Docling) against the traditional pipeline</li>
+<li>Export traceable records, validate numbers against XBRL, and evaluate against ground truth</li>
+<li>Benchmark speed and cost, and make a build-vs-buy recommendation</li>
+</ul>
+<h2 is-upgraded>The pipeline</h2>
+<p>download -&gt; render -&gt; parse_pdfplumber -&gt; tables -&gt; layout -&gt; parse_docling -&gt; export -&gt; xbrl -&gt; evaluate -&gt; bench</p>
+<p class="image-container"><img src="img/c25f3ca5cee7ddc6.png"></p>
+<p>Each step of this Codelab covers one Part of the case study, with the command to run it, the key results, and what broke along the way.</p>
+<h2 is-upgraded>Repository</h2>
+<table>
+<tr><td colspan="1" rowspan="1"><p>https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2</p>
+</td></tr>
+</table>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 0: Download, render and fixtures" duration="0">
+        <p><strong>Goal:</strong> Download fixed SEC filings, preserve their source attachments, and render PDFs with a manifest for downstream extraction.</p>
+<h2 is-upgraded>Step 0.1: Prepare the inputs</h2>
+<p>Use Python 3.11 and the pinned requirements. Part 8 describes the verified Ubuntu environment. Run commands from the repository root. params.yaml pins Apple 10-K accession 0000320193-25-000079 and 10-Q accession 0000320193-26-000020. Set a valid SEC contact in download.user_agent_name and download.user_agent_email before downloading.</p>
+<h2 is-upgraded>Step 0.2: Download and unpack filings</h2>
+<p>python src/download.py --params params.yaml --output data/raw</p>
+<p>The downloader saves the submission and unpacks its attachments. Keep the original iXBRL HTML, taxonomy files, and images together: rendering and XBRL validation rely on those relative paths. DVC versions the raw artifacts; Git stores the code, configuration, and pointers.</p>
+<h2 is-upgraded>Step 0.3: Render PDFs and inspect the manifest</h2>
+<p>python -m playwright install chromium<br> python src/render.py --params params.yaml --input data/raw --output data/rendered</p>
+<p>Playwright opens the unpacked original HTML and renders Letter-size PDFs. data/rendered/manifest.csv links each PDF stem to filing identity and source metadata. The reproduced corpus has 61 pages for the Apple 10-K and 30 pages for the 10-Q.</p>
+<h2 is-upgraded>Step 0.4: Use small offline fixtures</h2>
+<p>tests/fixtures contains scanned.pdf, statement.pdf, and multicolumn.pdf. They exercise image-only OCR, financial tables, and multi-column layout. Reference transcriptions and table data are under tests/fixtures/gt. These committed fixtures allow CI checks without downloading SEC filings.</p>
+<h2 is-upgraded>What broke and how we fixed it</h2>
+<p>SEC submissions can include uuencoded binary attachments. Leaving these encoded or rendering an HTML copy outside its unpacked directory broke embedded images. The downloader decodes the attachments and the renderer uses the original HTML path. Rendering fails when an image cannot load instead of silently keeping broken-image placeholders.</p>
+<p>The XBRL stage handles the unpacked XML envelope using a temporary unwrapped copy for Arelle; this is a downstream workaround. Changes to rendering can change page-based ground truth, so verify the manifest and page counts and reproduce affected downstream stages through DVC.</p>
+<p>Evidence: src/download.py, src/render.py, params.yaml, data/rendered/manifest.csv after reproduction, and docs/ai_log/lokesh.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 1: Text extraction and OCR" duration="0">
+        <p><strong>Goal:</strong> Extract page text and word coordinates, using OCR when the native PDF text layer is missing or unreliable.</p>
+<h2 is-upgraded>Step 1.1: Run text extraction</h2>
+<p>python src/parse_text.py --params params.yaml --input data/rendered --output data/parsed</p>
+<p>pdfplumber reads native text and word boxes first. OCR is triggered by either fewer than ocr.min_chars non-whitespace characters or a junk-token fraction above ocr.junk_ratio. The configured values are 20 characters and 0.3, with English Tesseract at 300 DPI. These are independent signals: either can trigger OCR.</p>
+<h2 is-upgraded>Step 1.2: Inspect text, boxes, and decisions</h2>
+<p>Outputs include {stem}_pNNNN.txt page text, {stem}.words.jsonl word records, and ocr_log.csv. Word records retain doc_id, page, text, bbox, ocr, and ocr_conf. Pages are one-based and boxes use a top-left origin in displayed PDF points.</p>
+<p>Tesseract boxes begin in raster pixels; conversion uses the actual image dimensions and displayed page frame. Native words have null confidence. OCR confidence uses a 0–100 scale and is not a calibrated probability. The log records OCR triggers, the engine, mean confidence, text length, and managed fallback status.</p>
+<h2 is-upgraded>Step 1.3: Check the scanned fixture</h2>
+<p>python src/parse_text.py --params params.yaml --input tests/fixtures --output /tmp/lantern-parsed-fixtures<br> python -m pytest -q tests/test_parse_text.py tests/test_managed_ocr.py</p>
+<p>The scanned fixture forces the OCR path. For a local Tesseract-only comparison, use fixture parameters without the managed section: setting managed.enabled to false prevents paid calls but still permits cached Textract results. The fixture quality tests were updated to preserve this distinction.</p>
+<h2 is-upgraded>Step 1.4: Handle low-confidence OCR</h2>
+<p>After Tesseract, empty output or confidence below managed.trigger.min_ocr_conf checks the shared Textract cache. The configured threshold is 0.75; Tesseract confidence is divided by 100 before comparison. A usable cache hit supplies managed text and word boxes with engine aws-textract.</p>
+<p>With managed.enabled: false, a cache miss preserves Tesseract output and records disabled_cache_miss. An empty managed response also preserves local output with an explicit status. Cache or service errors propagate instead of silently appearing successful. Live calls require enabling managed extraction and an authorized AWS identity.</p>
+<h2 is-upgraded>Results and limitations</h2>
+<p>The corrected EC2 text benchmark processed 94 pages with zero errors and one empty page. Mean page time was 0.293 seconds, p95 was 0.531 seconds, and total page-processing time was 27.6 seconds. These are benchmark measurements supplied from EC2, not full-pipeline wall time or proof of transcription accuracy. Accuracy is evaluated separately in reports/metrics.json.</p>
+<h2 is-upgraded>What broke and how we fixed it</h2>
+<p>Assuming raster coordinates were already PDF points produced incorrect boxes; conversion now uses actual raster size and the displayed PDF frame. The confidence boundary also required normalizing the Tesseract scale before comparing it with the managed threshold. Review covered cache hits, disabled misses, boundary confidence, empty managed responses, and propagated failures.</p>
+<p>Outputs are staged before replacement so a failed extraction preserves previous results, while successful runs remove stale page-text and word files. Multi-column reading-order improvement is a separate stretch task; no measured improvement is claimed here.</p>
+<p>Evidence: src/parse_text.py, tests/test_parse_text.py, tests/test_managed_ocr.py, tests/test_fixture_quality.py, docs/CONTRACTS.md, data/bench after dvc pull, and docs/ai_log/lokesh.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 2: Tables" duration="0">
+        <p><strong>Goal:</strong> In this part we take every financial table in the rendered PDFs and turn it into a clean CSV file, with full numbers and clearly named periods, so later steps can use them without guessing.</p>
+<h2 is-upgraded>Step 2.1: Pick a method by testing a few</h2>
+<p>Apple&#39;s tables don&#39;t have any lines drawn between the cells, which turns out to matter a lot. So before choosing a tool, we tried five table methods on four statement pages and checked 40 cells by hand against the page (the results are in reports/tables_method.md). Camelot&#39;s lattice mode found nothing at all, since it looks for drawn lines. Camelot&#39;s stream mode and pdfplumber&#39;s text mode both did well, so we kept those two.</p>
+<h2 is-upgraded>Step 2.2: Run the extractor</h2>
+<p>python src/tables.py --input data/rendered --output data/tables</p>
+<p>For each page, the script tries both methods, scores what each one found and keeps the better result. It writes down every decision in data/tables/log/tables_log.csv, so you can always see why a method won.</p>
+<p>You should end up with 32 tables. On our filings, camelot-stream won 17 of them and pdfplumber-text won 15.</p>
+<p class="image-container"><img src="img/2434a28c72b102af.png"></p>
+<h2 is-upgraded>Step 2.3: What&#39;s inside each CSV</h2>
+<p>Each row is one cell of the table, with five columns: row_label, col_label, raw, value and scale.</p>
+<p>A few things get cleaned along the way. A number in brackets like (2,037) becomes −2,037, and a dash becomes 0. &#34;In millions&#34; is applied, so 112,010 is stored as 112,010,000,000, but per-share amounts are left alone. The col_label says which period the number belongs to, for example &#34;FY ended 2025-09-27&#34;. We also keep the number exactly as printed in raw, so you can always check a cleaned value against the page.</p>
+<p>What went wrong along the way: at first, old CSVs were left behind when the script ran again, so now it clears them first. One table mixed millions, thousands and plain numbers, so the scale is now set row by row. And when the layout step passed in a box around a table, the &#34;in millions&#34; note and the period headers above it got cut off. Now the script always reads the whole page and only uses the box to pick the table. Later, Guna&#39;s evaluation spotted that a closing bracket at the right edge of a table was sometimes cut off, as in &#34;(14,264&#34;. That&#39;s fixed too (#123), and it turned up in 9 cells in total, with no values changing.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 3: Layout detection" duration="0">
+        <p><strong>Goal:</strong> Identify each page&#39;s layout, including titles, paragraphs, lists, tables, and figures. Extract each region using the appropriate tool and organize the blocks in reading order with their sections.</p>
+<h2 is-upgraded><strong>Step 3.1: Run layout detection</strong></h2>
+<p>python src/layout.py --params params.yaml --input data/rendered --output data/layout --qa reports/layout --figures data/figures --tables data/tables</p>
+<p>LayoutParser&#39;s EfficientDet model, trained on PubLayNet, identifies the blocks on each page. Text is extracted using pdfplumber, with Tesseract used when a block has no text. Tables are processed using the Part 2 extractor, while figures are saved as cropped images. Each block is assigned to the section of the nearest heading above it.</p>
+<h2 is-upgraded><strong>Step 3.2: Inspect the outputs</strong></h2>
+<ul>
+<li>data/layout/{stem}.blocks.jsonl: Contains one record per block, including its type, bounding box in points (top-left origin), section, text, and table.</li>
+<li>data/layout/{stem}.pages.csv: Records each page, including blank pages.</li>
+<li>reports/layout/: Contains overlay images for reviewing the detected layouts.</li>
+</ul>
+<h2 is-upgraded><strong>Step 3.3: Tune with measurements</strong></h2>
+<ul>
+<li><strong>Detection threshold (0.5 → 0.25):</strong> Testing across 9 pages showed identical results at 0.25, 0.2, and 0.1, while 0.5 left one page without detected blocks.</li>
+<li><strong>8 pt text padding:</strong> Some boxes clipped the first letters of words (&#34;he Company&#34;). Adding padding reduced clipped starts from 132 to 35.</li>
+<li><strong>Full-width table boxes:</strong> The detector often captured only the numeric columns, so table boxes were extended to the full page width before extraction.</li>
+</ul>
+<h2 is-upgraded><strong>Step 3.4: Check the results</strong></h2>
+<p>A 10-page audit showed that 38% of text blocks, 39% of titles, and 3% of tables were correctly identified. The model was trained on research papers rather than 10-K filings, which explains some of these limitations. Table routing produced tables for 17 of 36 blocks in the 10-K and 12 of 19 in the 10-Q, including both income statements.</p>
+<h2 is-upgraded><strong>What broke and how we fixed it</strong></h2>
+<ul>
+<li><strong>Model download issue:</strong> The original link was no longer working, so we downloaded the weights from LayoutParser&#39;s Hugging Face repository.</li>
+<li><strong>Shifted bounding boxes:</strong> On a rotated page, the boxes were misaligned. We fixed this by rendering the full mediabox and adding an image-size check.</li>
+<li><strong>Dark annual-report spread:</strong> The model detected the page as one large &#34;Figure.&#34; Inverting dark pages increased detection from 0 to 7 text blocks.</li>
+<li><strong>Incorrect reading order:</strong> Text from different columns was mixed together, so we updated the reading order to identify columns using the blocks&#39; left edges.</li>
+<li><strong>Missing table scale and years:</strong> During the review, cropped tables lost this information. We fixed it in tables.py and added a test.</li>
+<li><strong>Duplicate row labels:</strong> Part 9&#39;s evaluation showed that row labels were exported twice. We widened the extracted tables to include their labels and removed duplicate blocks only when their words were already in the exported tables. The WER for 10-K page 32 improved from 0.726 to 0.387, while the statement average decreased from 0.671 to 0.525. Table cell F1 remained at 1.0.</li>
+</ul>
+<p><strong>Evidence:</strong> src/layout.py, reports/layout_audit.md, reports/layout/, prototyping/shravya/, tests/test_layout_absorb.py, docs/ai_log/<a href="http://shravya.md" target="_blank">shravya.md</a>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 4: Docling" duration="0">
+        <p><strong>Goal:</strong> Use Docling, an all-in-one AI document parser, to process the same PDFs as the traditional pipeline. Convert the results into the team&#39;s formats and compare both approaches using the same evaluation.</p>
+<h2 is-upgraded><strong>Step 4.1: Run Docling</strong></h2>
+<p>python src/docling_parse.py --params params.yaml --input data/rendered --output data/docling</p>
+<p>Docling handles layout detection, reading order, and table extraction using TableFormer in one pass. For each filing, it generates Markdown, lossless JSON, separate Markdown files for each page, {stem}.blocks.jsonl with top-left bounding boxes, and team-format tables in data/docling/tables/. The original HTML version of the 10-K is also converted for comparison.</p>
+<h2 is-upgraded><strong>Step 4.2: Compare the two paths</strong></h2>
+<ul>
+<li><strong>Table extraction:</strong> Docling identified 31 usable tables in the 10-K and 23 in the 10-Q, compared with 17 and 12 from the traditional pipeline. It also extracted the 10-K balance sheet, which the layout detector missed.</li>
+<li><strong>Financial statements:</strong> Both approaches produced identical results across 243 cells, with no differences. Both achieved a 100% XBRL match for income statements and balance sheets, although Docling missed one cash-flow row (&#34;beginning balances&#34;).</li>
+<li><strong>Reading order:</strong> Docling correctly processed a dark, four-column spread without fixes, while the traditional pipeline required three.</li>
+<li><strong>HTML vs PDF:</strong> Both versions of the 10-K produced the same numbers, but HTML tables were 4–5 times wider and did not preserve page or bounding box information.</li>
+</ul>
+<h2 is-upgraded><strong>Step 4.3: Score against ground truth</strong></h2>
+<p>We compared both approaches against hand-typed ground truth from 16 pages.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Metric</p>
+</td><td colspan="1" rowspan="1"><p>Docling</p>
+</td><td colspan="1" rowspan="1"><p>Traditional</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>WER</p>
+</td><td colspan="1" rowspan="1"><p>0.212</p>
+</td><td colspan="1" rowspan="1"><p>0.433</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Numeric F1</p>
+</td><td colspan="1" rowspan="1"><p>0.851</p>
+</td><td colspan="1" rowspan="1"><p>0.733</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Table cell F1</p>
+</td><td colspan="1" rowspan="1"><p>1.0</p>
+</td><td colspan="1" rowspan="1"><p>1.0</p>
+</td></tr>
+</table>
+<p>These results were measured after the Part 3 table-box fix.</p>
+<p><strong>Recommendation:</strong> Use Docling as the primary parser, with the traditional pipeline as a fallback and cross-check.</p>
+<h2 is-upgraded><strong>Step 4.4 (stretch goal): Docling as a service</strong></h2>
+<p>docker run -d --name docling-serve -p 5001:5001 quay.io/docling-project/docling-serve-cpu@sha256:225c8586e20d5d0fc6811a9e0e044fa602bcc4393f00389009bad42d6787b58f</p>
+<p>By setting docling.serve_url: &#34;http://localhost:5001&#34;, the parse_docling stage sends files to the service over HTTP. The results matched the Docling library exactly, with all 54 team-format tables identical.</p>
+<h2 is-upgraded><strong>What broke and how we fixed it</strong></h2>
+<ul>
+<li><strong>Package naming conflict:</strong> docling_parse.py conflicted with Docling&#39;s package and caused a circular import. We fixed this by loading Docling&#39;s original package first.</li>
+<li><strong>Shifted bounding boxes:</strong> Docling measured coordinates from the cropbox. Adding a per-page offset aligned them with pdfplumber within approximately 1.5 pt.</li>
+<li><strong>Dependency changes:</strong> Installing Docling downgraded huggingface_hub and websockets. We re-pinned both packages and rechecked the layout stage.</li>
+<li><strong>Old outputs and missing OCR tables:</strong> During a review, we found that previous outputs remained after reruns and OCR tables were being dropped. We updated the process to clear old outputs and use Docling&#39;s text for pages without a text layer, with tests added.</li>
+</ul>
+<p><strong>Evidence:</strong> src/docling_parse.py, reports/docling_comparison.md, reports/eval.md, prototyping/shravya/, tests/test_docling_parse.py, tests/test_docling_serve.py, docs/ai_log/shravya.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 5: Schema and exports" duration="0">
+        <p><strong>Goal:</strong> Turn every block of the traditional path into one checked record that says exactly where it came from (filing, page, box), and write the JSONL and Markdown that every later step reads.</p>
+<h2 is-upgraded><strong>Step 5.1: Run the export</strong></h2>
+<p>python src/export.py</p>
+<p>The export dont call any parser again. It only reads what the other stages already wrote: layout blocks (Part 3), table CSVs (Part 2), Docling blocks and tables (Part 4) and the render manifest (Part 0). So there is one source of truth per stage. For each filing it writes data/export/{stem}.jsonl (traditional), {stem}.docling.jsonl (Docling) and {stem}.md. Settings are in the export section of params.yaml.</p>
+<h2 is-upgraded><strong>Step 5.2: What one record looks like</strong></h2>
+<p>Every record has the same fields, the ones in Appendix B of the brief. This is the net income row of the 10-K income statement, shortened:</p>
+<p>{&#34;schema&#34;: &#34;lantern/1.0&#34;, &#34;doc_id&#34;: &#34;0000320193-25-000079&#34;, &#34;cik&#34;: &#34;0000320193&#34;,<br> &#34;ticker&#34;: &#34;AAPL&#34;, &#34;form&#34;: &#34;10-K&#34;, &#34;fiscal_year&#34;: 2025, &#34;fiscal_period&#34;: &#34;FY&#34;,<br> &#34;page&#34;: 32, &#34;section&#34;: &#34;Item 8&#34;, &#34;block_id&#34;: &#34;p0032_b901&#34;, &#34;block_type&#34;: &#34;Table&#34;,<br> &#34;bbox&#34;: [7.0, 105.11, 604.45, 557.61], &#34;units&#34;: &#34;pt&#34;, &#34;origin&#34;: &#34;top-left&#34;,<br> &#34;table&#34;: {&#34;raw_cells&#34;: [..., [&#34;Net income&#34;, &#34;112,010&#34;, &#34;93,736&#34;, &#34;96,995&#34;]],<br> &#34;rows&#34;:      [..., [&#34;Net income&#34;, &#34;112010000000.0&#34;, ...]]},<br> &#34;extractor&#34;: &#34;camelot-stream&#34;, &#34;extractor_version&#34;: &#34;camelot-py 2.0.0&#34;,<br> &#34;ocr&#34;: false, &#34;ocr_conf&#34;: null,</p>
+<p>&#34;source_path&#34;: &#34;data/rendered/AAPL_10K_20250927.pdf&#34;, &#34;sha256&#34;: &#34;0f687c47eb31...&#34;}</p>
+<p>Where each field comes from:</p>
+<ul>
+<li><strong>doc_id, cik, form, ticker:</strong> the render manifest.</li>
+<li><strong>fiscal_year, fiscal_period:</strong> the filing&#39;s own dei:DocumentFiscalYearFocus and dei:DocumentFiscalPeriodFocus facts, read from the iXBRL file. That is why the 10-Q says <strong>2026 Q3</strong>.</li>
+<li><strong>section:</strong> the Item heading first (Item 7, Item 8...), and before the first Item the nearest Title. A table gets the section of the block before it.</li>
+<li><strong>raw_cells and rows:</strong> the number as printed and the cleaned number, side by side, so you can always check one against the other.</li>
+<li><strong>source_path and sha256:</strong> the rendered PDF and its hash, because every page and box points into that file.</li>
+</ul>
+<h2 is-upgraded><strong>Step 5.3: Check every record</strong></h2>
+<p>python -c &#34;import sys;sys.path.insert(0,‘src&#39;);from schema import validate_jsonl;ok,err=validate_jsonl(‘data/export/AAPL_10K_20250927.jsonl&#39;);print(ok,len(err))&#34;</p>
+<p>python -m pytest -q tests/test_export.py</p>
+<p>The first line prints the number of good records and <strong>0</strong> errors. src/schema.py is a pydantic model and the export checks every record when it writes it. It refuses a record that has:</p>
+<ul>
+<li>a field that is not in the schema (extra=&#34;forbid&#34;), so nothing unknown gets in silently</li>
+<li>a box with bottom above top, which would be a box still in bottom-left origin</li>
+<li>block type Table but no table, or no text and no table at all</li>
+<li>ocr true but no OCR confidence</li>
+<li>a bad doc_id, cik, block_id or sha256, or a Windows path in source_path</li>
+</ul>
+<p>Keep in mind the schema checks the <strong>form</strong> of a record, not if it is <strong>right</strong>. A record with the wrong page is still valid. Correctness is measured in Part 9.</p>
+<h2 is-upgraded><strong>Step 5.4: Trace one number end to end</strong></h2>
+<p>python scripts/demo_net_income.py</p>
+<p>It follows net income for fiscal 2025 through every stage: the us-gaap:NetIncomeLoss element in the iXBRL file (printed 112,010, scale 6), page 32 of the PDF, record p0032_b901, the Markdown line, the Arelle fact and the XBRL status <strong>match</strong>. It also saves reports/demo_net_income_p32.png, the page with the exact row in red and the record&#39;s box in blue.</p>
+<p class="image-container"><img src="img/1b1161ab3ee63b40.png"></p>
+<p>In the Markdown, each block comes right after an HTML comment with its provenance, so any line can be traced back to its box on the page:</p>
+<p>&lt;!– {&#34;doc_id&#34;: &#34;0000320193-25-000079&#34;, &#34;page&#34;: 32, &#34;block_id&#34;: &#34;p0032_b901&#34;, &#34;bbox&#34;: [7.0, 105.11, 604.45, 557.61], ...} --&gt;</p>
+<p><strong>What broke and how we fixed it</strong></p>
+<ul>
+<li><strong>One box per page:</strong> Our first lookup thought every page has one table. Six 10-K pages have two. Now boxes are paired in order, and when Part 2 and Part 3 dont agree on the count, the record gets the box around all of them: wider but never wrong.</li>
+<li><strong>Fake boxes:</strong> a table with no layout box got [0, 0, 1, 1]. Part 9 found it. The first replacement used every block on the page, and it is shown in review that on a page with only a heading, that gives the heading&#39;s box. Now it is the real page box, and every approximate box is logged in reports/export_bbox_fallback.csv.</li>
+<li><strong>Docling tables missing:</strong> export skipped every Docling table. Shravya found it in review. After the fix Docling numeric F1 went from 0.345 to 0.851.</li>
+<li><strong>Wrong version string:</strong> text blocks said pdfplumber but carried the layout model&#39;s name as version. Now it is the real pdfplumber version.</li>
+<li><strong>Gaps against the brief:</strong> checking line by line, fiscal period was guessed from the date (the 10-Q said just &#34;Q&#34;), source_path and sha256 were missing, and there was no Title fallback for section. All three were fixed in a PR review, with tests.</li>
+</ul>
+<p><strong>Evidence:</strong> src/schema.py, src/adapters.py, src/export.py, tests/test_export.py, tests/test_exports_bbox.py, tests/test_export_managed.py, reports/export_bbox_fallback.csv, scripts/demo_net_income.py, docs/ai_log/guna.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 6: Format decision" duration="0">
+        <p><strong>Goal:</strong> Here we decide which file format should be the main copy of our data, and which one Case Study 2 should read.</p>
+<h2 is-upgraded>Step 6.1: Make a plain-text version and measure every format</h2>
+<p>python src/export_txt.py --input data/rendered --output data/export</p>
+<p>python src/format_stats.py --output reports/format_stats.csv \</p>
+<p>md=data/docling/AAPL_10K_20250927.md jsonl=data/export/AAPL_10K_20250927.docling.jsonl \</p>
+<p>json=data/docling/AAPL_10K_20250927.json txt=data/export/AAPL_10K_20250927.txt</p>
+<p>The first command writes a plain-text copy of each filing, which we use as the simplest baseline. The second one measures each format of the 10-K: how big it is, roughly how many tokens an AI model would have to read, and whether it keeps track of which page each piece came from.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Format</p>
+</td><td colspan="1" rowspan="1"><p>Approx. tokens</p>
+</td><td colspan="1" rowspan="1"><p>Page information</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>TXT</p>
+</td><td colspan="1" rowspan="1"><p>51,559</p>
+</td><td colspan="1" rowspan="1"><p>page breaks only</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Markdown</p>
+</td><td colspan="1" rowspan="1"><p>69,412</p>
+</td><td colspan="1" rowspan="1"><p>none</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>JSONL (Part 5 format)</p>
+</td><td colspan="1" rowspan="1"><p>112,464</p>
+</td><td colspan="1" rowspan="1"><p>page and box on all 604 records</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>JSON (Docling)</p>
+</td><td colspan="1" rowspan="1"><p>914,746</p>
+</td><td colspan="1" rowspan="1"><p>page and box, but far too big for a chat</p>
+</td></tr>
+</table>
+<p class="image-container"><img src="img/f737026436bcafed.png"></p>
+<p>Sizes measured on the export used in Step 6.2, before a review added the Docling tables.</p>
+<h2 is-upgraded>Step 6.2: Ask the same three questions of each format</h2>
+<p>I opened a fresh AI chat for each file, attached it, and asked the same three questions: net income for fiscal 2025, total assets, and product and service sales. TXT and Markdown got all three right, but only because the page numbers happened to be printed in the footer or listed in the table of contents. The Docling JSONL got none of them, because at the time its export left out the tables. To its credit, it said &#34;not in the file&#34; instead of making something up. We measured this before Guna&#39;s export fix in #111; since then the Docling export includes its 54 tables.We then retested both final JSONL exports on the same three questions: the Docling export (635 records, 31 tables) answered all three correctly, and the traditional one (455 records, 19 tables) confirmed all three supplied answers. Both took the page from each record&#39;s own <code>page</code> field (PDF pages 32 and 34), not from a printed footer or contents table.</p>
+<p>So we went with JSONL as the main copy, and it&#39;s also what Case Study 2 will read, because it&#39;s the only format that records the page and position of every single record. The one condition was that it has to include the tables, and both final exports do, which the retest confirmed.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 7: Managed service, build vs buy" duration="0">
+        <p><strong>Goal:</strong> Answer Lina&#39;s question, &#34;why not just use Textract for everything?&#34;, with measured numbers, not opinions.</p>
+<h2 is-upgraded><strong>Step 7.1: Send the same pages to Textract, once</strong></h2>
+<p>python src/managed/textract.py --params params.yaml --enable</p>
+<p>Three pages went to AWS Textract (AnalyzeDocument with Tables and Layout): two clean statement pages, 10-K p32 and 10-Q p6, and page 1 of our scanned fixture. Every answer is saved in data/managed/ under the <strong>hash of the page image</strong>, so the same page never gets paid twice. Without --enable, and with managed.enabled: false in params.yaml, it only reads the cache and makes no call, so the pipeline runs with no AWS credentials. The 3 pages gave 30 records in our schema and cost <strong>$0.045</strong> at list price.</p>
+<h2 is-upgraded><strong>Step 7.2: Compare on the same pages and the same ground truth</strong></h2>
+<p>dvc repro -s evaluate</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Page</p>
+</td><td colspan="1" rowspan="1"><p>Path</p>
+</td><td colspan="1" rowspan="1"><p>WER</p>
+</td><td colspan="1" rowspan="1"><p>Numeric F1</p>
+</td><td colspan="1" rowspan="1"><p>Raw cell F1</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>10-K p32</p>
+</td><td colspan="1" rowspan="1"><p>Traditional</p>
+</td><td colspan="1" rowspan="1"><p>0.387</p>
+</td><td colspan="1" rowspan="1"><p>0.950</p>
+</td><td colspan="1" rowspan="1"><p>1.000</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Docling</p>
+</td><td colspan="1" rowspan="1"><p>0.208</p>
+</td><td colspan="1" rowspan="1"><p>0.950</p>
+</td><td colspan="1" rowspan="1"><p>1.000</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Textract</p>
+</td><td colspan="1" rowspan="1"><p>0.048</p>
+</td><td colspan="1" rowspan="1"><p>0.977</p>
+</td><td colspan="1" rowspan="1"><p>1.000</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Google Form Parser</p>
+</td><td colspan="1" rowspan="1"><p>0.119</p>
+</td><td colspan="1" rowspan="1"><p>0.961</p>
+</td><td colspan="1" rowspan="1"><p>0.974</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>10-Q p6</p>
+</td><td colspan="1" rowspan="1"><p>Traditional</p>
+</td><td colspan="1" rowspan="1"><p>0.676</p>
+</td><td colspan="1" rowspan="1"><p>0.923</p>
+</td><td colspan="1" rowspan="1"><p>1.000</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Docling</p>
+</td><td colspan="1" rowspan="1"><p>0.254</p>
+</td><td colspan="1" rowspan="1"><p>0.968</p>
+</td><td colspan="1" rowspan="1"><p>1.000</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Textract</p>
+</td><td colspan="1" rowspan="1"><p>0.042</p>
+</td><td colspan="1" rowspan="1"><p>0.970</p>
+</td><td colspan="1" rowspan="1"><p>1.000</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Google Form Parser</p>
+</td><td colspan="1" rowspan="1"><p>0.103</p>
+</td><td colspan="1" rowspan="1"><p>0.970</p>
+</td><td colspan="1" rowspan="1"><p>0.991</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Scanned p1</p>
+</td><td colspan="1" rowspan="1"><p>Tesseract (Part 1)</p>
+</td><td colspan="1" rowspan="1"><p>0.023</p>
+</td><td colspan="1" rowspan="1"><p>0.933</p>
+</td><td colspan="1" rowspan="1"><p>n/a</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Textract</p>
+</td><td colspan="1" rowspan="1"><p>0.019</p>
+</td><td colspan="1" rowspan="1"><p>0.933</p>
+</td><td colspan="1" rowspan="1"><p>n/a</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"></td><td colspan="1" rowspan="1"><p>Google Form Parser</p>
+</td><td colspan="1" rowspan="1"><p>0.030</p>
+</td><td colspan="1" rowspan="1"><p>0.913</p>
+</td><td colspan="1" rowspan="1"><p>n/a</p>
+</td></tr>
+</table>
+<p>Don&#39;t read the WER column as &#34;Textract is ten times better&#34;. Most of the open-source WER on these pages is page structure (the row label prefixes, and the title and units lines the layout stage still misses), not misreading.</p>
+<h2 is-upgraded><strong>Step 7.3: Textract as a fallback inside the pipeline</strong></h2>
+<ul>
+<li><strong>Table side</strong> (src/tables.py, managed_fallback()): a page goes to the fallback only if it has at least 3 numeric rows <strong>and</strong> its best table score is below managed.trigger.min_table_score (0.50). On our filings it fires on <strong>0 of 91</strong> pages. When it fires, the Textract table replaces the weak Part 2 table in the export.</li>
+<li><strong>OCR side</strong> (src/parse_text.py, by Lokesh in a PR): a Tesseract page with mean confidence below 0.75, or empty, checks the same cache.</li>
+<li>Off by default, cache first, never fails the stage. The cache is tracked with dvc add data/managed (data/managed.dvc), is a dependency of the stages that read it, and is pushed to the team&#39;s S3 remote.</li>
+</ul>
+<h2 is-upgraded><strong>Step 7.4: What it costs at FinTrust&#39;s volume</strong></h2>
+<p>5,000 filings a year, about 100 pages each, so 500,000 pages. Prices from the AWS and Google pricing pages, self-hosted compute from Part 10&#39;s EC2 timings.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Option</p>
+</td><td colspan="1" rowspan="1"><p>Per 1,000 pages</p>
+</td><td colspan="1" rowspan="1"><p>Per year</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Self-hosted traditional, compute only</p>
+</td><td colspan="1" rowspan="1"><p>$0.05</p>
+</td><td colspan="1" rowspan="1"><p>$23</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Self-hosted Docling, compute only</p>
+</td><td colspan="1" rowspan="1"><p>$0.16</p>
+</td><td colspan="1" rowspan="1"><p>$81</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Hybrid: Textract on 5% of pages</p>
+</td><td colspan="1" rowspan="1"><p>$0.75</p>
+</td><td colspan="1" rowspan="1"><p>$375</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Textract OCR only</p>
+</td><td colspan="1" rowspan="1"><p>$1.50</p>
+</td><td colspan="1" rowspan="1"><p>$750</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Textract with tables, every page</p>
+</td><td colspan="1" rowspan="1"><p>$15.00</p>
+</td><td colspan="1" rowspan="1"><p>$7,500</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Google Form Parser, every page</p>
+</td><td colspan="1" rowspan="1"><p>$30.00</p>
+</td><td colspan="1" rowspan="1"><p>$15,000</p>
+</td></tr>
+</table>
+<p>Textract on every page costs about $7,400 more a year than our own compute. At $100 an hour that is about <strong>75 engineer-hours a year</strong>. So buying only wins if keeping our parsers working costs more than that.</p>
+<h2 is-upgraded><strong>Step 7.5 (stretch goal): A second provider, Google Document AI</strong></h2>
+<p>python scripts/gcp_compare.py --call</p>
+<p>Same 3 pages, the same page images (the cache files even have the same hash names as the Textract ones), scored with the same functions. It is outside the DVC pipeline, so no stage changed. Google was between Docling and Textract on text, but it was the only path below 1.0 on table cells: it read <strong>57,467 as 57.467</strong>, and pulled a stray 27 into a table row. That first one is the worst kind of error for a finance company, a valid number a thousand times too small. With twice Textract&#39;s price, it changes nothing in the recommendation.</p>
+<h2 is-upgraded><strong>Step 7.6: Data handling, before sending one client page</strong></h2>
+<p>Which region processes and stores the page, how long AWS keeps it, and whether it can be used to train their models. By default AWS may use content to improve the service, so an account-level opt-out policy is needed first. Details in reports/build_vs_buy.md section 7.</p>
+<p><strong>Recommendation:</strong> dont use Textract for everything. Keep the open-source path as the default and use Textract only as a fallback, for hard scans and pages that fail our quality checks.</p>
+<p><strong>What broke and how we fixed it</strong></p>
+<ul>
+<li><strong>Wrong price:</strong> I first counted Layout as an extra $10 per 1,000 pages, so $0.025 a page. The AWS page says Layout is free with Tables, so it is $0.015. Fixed in the report.</li>
+<li><strong>Trigger too eager:</strong> the first rule fired on 45 of 91 pages, all of them pages with no table at all (score 0.0). Asking for at least 3 numeric rows fixed it: 0 of 91, with a test.</li>
+<li><strong>Fallback that did nothing:</strong> A review found the Textract table never reached the export, and the module ignored the caller&#39;s config. Both fixed, with tests that prove no API call when it is off.</li>
+<li><strong>dvc push 403:</strong> the bucket is in another AWS account. I copied the 6 cache files to the team&#39;s EC2 machine, checked all 6 SHA-256 hashes match, and Lokesh pushed them.</li>
+<li><strong>Google:</strong> the account blocks service account key files, so login is gcloud&#39;s browser login and no key is in the repo. One row looked wrong because of the mapping, not Google, and is fixed in the script.</li>
+</ul>
+<p><strong>Evidence:</strong> src/managed/textract.py, src/tables.py, src/export.py, data/managed.dvc, scripts/gcp_compare.py, reports/gcp/, reports/build_vs_buy.md, tests/test_managed_fallback.py, tests/test_managed_config.py, tests/test_export_managed.py, docs/ai_log/guna.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 8: DVC pipeline and CI" duration="0">
+        <p><strong>Goal:</strong> Reproduce the pipeline on EC2, version generated artifacts in DVC and S3, and validate the deployed explorer.</p>
+<h2 is-upgraded>Step 8.1: Prepare the Linux environment</h2>
+<p>We used Ubuntu 24.04.4 LTS, x86_64, approximately 8 GiB RAM, Python 3.11, and CPU-only PyTorch. Install Tesseract with English data, Poppler, Ghostscript, and Chromium. Run commands from the repository root with the virtual environment activated. Install CPU wheels before the remaining requirements to avoid unnecessary CUDA downloads.</p>
+<p>source .venv/bin/activate<br> python -m pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu<br> python -m pip install -r requirements.txt<br> python -m pip check<br> python -m playwright install --with-deps chromium</p>
+<h2 is-upgraded>Step 8.2: Retrieve versioned artifacts</h2>
+<p>The default remote is lantern-s3 at s3://lantern-team2-dvc-fall-2026/dvc in us-east-1. EC2 uses LanternEC2Role, so no stored access keys are needed. The bucket remains private: another machine needs an authorized AWS identity. The TA accepted a demonstration from our role-backed EC2 instance.</p>
+<p>dvc remote list<br> dvc pull<br> dvc status -c</p>
+<p>The managed Textract cache contains six data files. Its upload transferred seven objects because DVC also stores a directory manifest. This cache is separate from the evaluation ground-truth pages.</p>
+<h2 is-upgraded>Step 8.3: Reproduce and validate</h2>
+<p>set -o pipefail<br> PYTHONUNBUFFERED=1 dvc repro 2&gt;&amp;1 | tee &#34;$HOME/lantern-final-repro.log&#34;<br> dvc status<br> dvc metrics show<br> python -m pytest -q<br> dvc push<br> dvc status -c</p>
+<p>The graph contains download, render, parse_pdfplumber, tables, layout, parse_docling, export, xbrl, evaluate, and bench. DVC reruns changed stages according to tracked code, inputs, and parameters. Keep managed.enabled: false for normal reproduction: cached responses remain usable, but new paid Textract calls are disabled.</p>
+<p>Results: the ten-stage run completed. After the benchmark device fix, 183 tests passed in 24.46 seconds; DVC reported the pipeline up to date. The final upload pushed 50 additional cache objects and reported the S3 remote in sync. These tests preceded the later fixture-test changes in PR #129. The regenerated lockfile and reports are in PR #130. A fresh-cache pull of the final submission snapshot remains pending; the earlier successful 593-object retrieval covered an older snapshot.</p>
+<h2 is-upgraded>Step 8.4: Keep CI independent of AWS</h2>
+<p>The fixture smoke workflow runs on pull requests with Ubuntu 24.04 and Python 3.11. It installs requirements-ci.txt, extracts fixture text and tables, and runs pytest without EDGAR downloads, DVC remote access, or managed API calls. Fixture CI complements the full-corpus reproduction; it does not prove corpus accuracy.</p>
+<p>python src/parse_text.py --params params.yaml --input tests/fixtures --output /tmp/lantern-smoke/parsed<br> python src/tables.py --params params.yaml --input tests/fixtures --output /tmp/lantern-smoke/tables<br> python -m pytest -q</p>
+<h2 is-upgraded>Step 8.5: Open the deployed explorer</h2>
+<p>Public app: <a href="http://184.196.23.157:8501" target="_blank">http://184.196.23.157:8501</a>. Streamlit runs as the ubuntu user under the lantern-streamlit systemd service. The working directory is /home/ubuntu/lantern-streamlit; the shared Python environment is /home/ubuntu/DAMG-7245-Project-Lantern-Team-2/.venv. The public app was confirmed working and the health endpoint returned ok.</p>
+<p>systemctl is-enabled lantern-streamlit<br> systemctl is-active lantern-streamlit<br> curl --fail http://127.0.0.1:8501/_stcore/health</p>
+<p>The service survives SSH disconnection and starts when EC2 boots. The app is unavailable while EC2 is stopped overnight. Keep the Elastic IP associated to retain the URL, and disable the idle-stop action during the presentation. The demo uses HTTP on port 8501; it does not expose AWS credentials to visitors.</p>
+<h2 is-upgraded>What broke and how we fixed it</h2>
+<p>The pinned Playwright build rejected Ubuntu 26.04, so we rebuilt on Ubuntu 24.04. CUDA downloads exhausted temporary storage; CPU-only wheels and disk-backed temporary space resolved setup. pip check alone did not detect missing boto3, so we also checked application imports. Missing DVC objects were resolved by uploading the managed cache and reproducing the integrated pipeline.</p>
+<p>Docling was quiet after loading weights but still used CPU and had available memory; we let it finish. The first benchmark attempted Apple MPS on Linux and failed on all 94 pages. The fix skips unavailable devices, excludes failed timings from cost estimates, and archives prior results. The corrected run records &#34;MPS unavailable on this host&#34;; no GPU performance or cost is claimed.</p>
+<p>Evidence: dvc.yaml, dvc.lock, .dvc/config, .github/workflows/smoke.yml, reports/metrics.json, data/bench after dvc pull, and docs/ai_log/<a href="http://lokesh.md" target="_blank">lokesh.md</a>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 9: Evaluation" duration="0">
+        <p><strong>Goal:</strong> Measure how good both paths really are, against text we typed by hand, and add tests that fail if the parsers get worse.</p>
+<h2 is-upgraded><strong>Step 9.1: Ground truth, typed before looking at any output</strong></h2>
+<p>Typed 18 pages from the 150 DPI page images, spread over the strata (prose, statements, notes, cover, and the scanned and multi-column fixtures), plus two statement tables as CSV: the 10-K income statement and the 10-Q balance sheet. The rules were written down first, in data/ground_truth/CONVENTIONS.md. No parser output and no AI tool was used to type them.</p>
+<ul>
+<li>Both tables add up: p32 reconciles from net sales to net income in all three years, and net income divided by shares gives the printed EPS to the cent. p6 balances in both periods.</li>
+<li>A second teammate typed both tables again on their own: <strong>113 cells compared, 0 differences</strong> (data/ground_truth/double_keyed/).</li>
+<li>The fixture ground truth is also in tests/fixtures/gt/, so CI can use it.</li>
+</ul>
+<h2 is-upgraded><strong>Step 9.2: Run the evaluation</strong></h2>
+<p>dvc repro -s evaluate</p>
+<p>dvc metrics show</p>
+<p>It writes reports/metrics.json and reports/plots/drift.png. The metrics:</p>
+<ul>
+<li><strong>WER and CER</strong> with jiwer, after the same clean-up on both sides (lowercase, spaces, curly quotes, dashes, HTML entities).</li>
+<li><strong>Numeric F1:</strong> do the numbers on the page come out, counting repeats.</li>
+<li><strong>Table cell precision, recall and F1:</strong> cleaned values, and raw cell F1 for printed values.</li>
+</ul>
+<p>Final run on EC2:</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Path</p>
+</td><td colspan="1" rowspan="1"><p>WER</p>
+</td><td colspan="1" rowspan="1"><p>CER</p>
+</td><td colspan="1" rowspan="1"><p>Numeric F1</p>
+</td><td colspan="1" rowspan="1"><p>Table cell F1</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Traditional</p>
+</td><td colspan="1" rowspan="1"><p>0.433</p>
+</td><td colspan="1" rowspan="1"><p>0.406</p>
+</td><td colspan="1" rowspan="1"><p>0.733</p>
+</td><td colspan="1" rowspan="1"><p>1.0</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Docling</p>
+</td><td colspan="1" rowspan="1"><p>0.212</p>
+</td><td colspan="1" rowspan="1"><p>0.211</p>
+</td><td colspan="1" rowspan="1"><p>0.851</p>
+</td><td colspan="1" rowspan="1"><p>1.0</p>
+</td></tr>
+</table>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Stratum</p>
+</td><td colspan="1" rowspan="1"><p>Traditional WER</p>
+</td><td colspan="1" rowspan="1"><p>Docling WER</p>
+</td><td colspan="1" rowspan="1"><p>Traditional numeric F1</p>
+</td><td colspan="1" rowspan="1"><p>Docling numeric F1</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Prose (4 pages)</p>
+</td><td colspan="1" rowspan="1"><p>0.104</p>
+</td><td colspan="1" rowspan="1"><p>0.008</p>
+</td><td colspan="1" rowspan="1"><p>0.628</p>
+</td><td colspan="1" rowspan="1"><p>0.750</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Cover (2)</p>
+</td><td colspan="1" rowspan="1"><p>0.489</p>
+</td><td colspan="1" rowspan="1"><p>0.278</p>
+</td><td colspan="1" rowspan="1"><p>0.685</p>
+</td><td colspan="1" rowspan="1"><p>0.813</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Notes (4)</p>
+</td><td colspan="1" rowspan="1"><p>0.597</p>
+</td><td colspan="1" rowspan="1"><p>0.279</p>
+</td><td colspan="1" rowspan="1"><p>0.532</p>
+</td><td colspan="1" rowspan="1"><p>0.811</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Statements (6)</p>
+</td><td colspan="1" rowspan="1"><p>0.525</p>
+</td><td colspan="1" rowspan="1"><p>0.282</p>
+</td><td colspan="1" rowspan="1"><p>0.953</p>
+</td><td colspan="1" rowspan="1"><p>0.958</p>
+</td></tr>
+</table>
+<h2 is-upgraded><strong>Step 9.3: Why the numbers look like this, and which path is better</strong></h2>
+<ul>
+<li><strong>Statements:</strong> WER is high but tables are perfect. WER cares about word order, and the layout box covered only the number columns, so row labels were exported twice. mostly fixed it in a PR (10-K p32 WER 0.726 to 0.387). Numeric F1 0.95 is the number that matters here.</li>
+<li><strong>Prose:</strong> good, about 10% of words differ on the traditional path, almost nothing on Docling.</li>
+<li><strong>Notes:</strong> low numeric F1 on the traditional path, because pages with stacked tables lose most of their cells (10-Q p16, worst 0.29).</li>
+<li><strong>Which is better:</strong> Docling, on every stratum. Both read every table cell right. So Docling as the main path, traditional as fallback and cross-check.</li>
+</ul>
+<h2 is-upgraded><strong>Step 9.4: Tests that fail on real damage</strong></h2>
+<p>python -m pytest -q tests/test_quality.py tests/test_fixture_quality.py</p>
+<p>python src/evaluate.py --break no-scale</p>
+<p>The gates run evaluate.py fresh every time, they never trust a saved file. Thresholds are in params.yaml, set from the measured baseline:</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Gate</p>
+</td><td colspan="1" rowspan="1"><p>Threshold</p>
+</td><td colspan="1" rowspan="1"><p>Final run</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Table cell F1, each table</p>
+</td><td colspan="1" rowspan="1"><p>at least 0.90</p>
+</td><td colspan="1" rowspan="1"><p>1.0</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Worst prose WER</p>
+</td><td colspan="1" rowspan="1"><p>at most 0.20</p>
+</td><td colspan="1" rowspan="1"><p>0.164</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Mean prose CER</p>
+</td><td colspan="1" rowspan="1"><p>at most 0.12</p>
+</td><td colspan="1" rowspan="1"><p>0.093</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Mean numeric F1</p>
+</td><td colspan="1" rowspan="1"><p>at least 0.65</p>
+</td><td colspan="1" rowspan="1"><p>0.733</p>
+</td></tr>
+</table>
+<p>To prove they have teeth, --break damages the output on purpose. no-scale drops the &#34;in millions&#34; step: table cell F1 falls from 1.0 to 0.105 and 0.0, and the table gates fail. drop-words deletes every fifth word and the prose gates fail. Both failing runs are saved in reports/teeth_check_failing_run.txt and reports/teeth_check_prose_failing_run.txt, and the dvc metrics diff output is in reports/metrics_diff_no_scale.txt. In CI, the fixture gates score the smoke job&#39;s own output (scanned WER 0.023, statement table cell F1 1.0).</p>
+<h2 is-upgraded><strong>Step 9.5: Drift</strong></h2>
+<p>reports/plots/drift.png has three panels. The left one is the drift signal: the length of every text block, traditional (655 blocks) against Docling (856). The other two show mean WER and numeric F1 per stratum for both paths, and Docling is better on every one. Multicolumn and scanned have no bars because they are fixtures, scored in the CI fixture gates, not pages of the two filings. metrics.json also keeps the share of pages sent to OCR: 0 of 60 and 0 of 28 exported pages, and 301 characters per text block on average. If rendering or the OCR trigger changes, these move first. Between pipeline versions, dvc metrics diff from the first evaluation to the final one shows text blocks going from 717 to 655 and mean block length from 283.6 to 301.4 (reports/metrics_diff_versions.md), mostly from the Part 3 fix.</p>
+<p class="image-container"><img src="img/5adf36842f3d987c.png"></p>
+<p><strong>What broke and how we fixed it</strong></p>
+<ul>
+<li><strong>Excel broke the ground truth:</strong> opening and saving a table CSV in Excel rounded every value to 3 digits, and cell F1 came out at exactly 0.0 with no error. A test now checks the values keep full precision.</li>
+<li><strong>Statement pages scored wrong:</strong> the first version compared the whole page against only its headings. Folding the table rows in as tab-separated lines moved numeric F1 from 0.315 to 0.750.</li>
+<li><strong>Review findings:</strong> lost pages were skipped instead of scored as empty, the gates read the committed metrics.json instead of running fresh, repeated numbers counted once, and &amp;amp; was not decoded. All four fixed, each with a test using the reviewer&#39;s own example.</li>
+<li><strong>CI broke once:</strong> jiwer was missing from requirements-ci.txt.</li>
+</ul>
+<p><strong>Evidence:</strong> src/evaluate.py, data/ground_truth/, tests/fixtures/gt/, tests/test_quality.py, tests/test_fixture_quality.py, tests/test_evaluate_missing.py, tests/test_evaluate_metrics.py, reports/eval.md, reports/metrics.json, reports/plots/drift.png, reports/teeth_check_failing_run.txt, docs/ai_log/guna.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 10: Benchmarks and cost" duration="0">
+        <p><strong>Goal:</strong> Measure the speed, memory usage, and failures of each parsing stage, and estimate the cost of running the pipeline compared with a managed service.</p>
+<h2 is-upgraded><strong>Step 10.1: Run the benchmark</strong></h2>
+<p>python src/bench.py --params params.yaml --input data/rendered --output data/bench</p>
+<p>Each stage runs in a separate process across 94 pages, including 61 pages from the 10-K, 30 from the 10-Q, and 3 scanned pages to measure OCR performance. The benchmark measures the same processing steps as the actual pipeline, including output generation.</p>
+<p>Results are saved in data/bench/, with a CSV for each stage, along with summary.csv, cost.csv, and machine.json. The benchmark can also be run through the DVC stage bench using dvc repro bench.</p>
+<h2 is-upgraded><strong>Step 10.2: Observed results on EC2</strong></h2>
+<p>We ran the benchmark on an AWS EC2 m7i-flex.large instance running Ubuntu 24.04.4 LTS, with 2 logical CPUs and 7.6 GiB of reported RAM.  All stages completed with 0 errors.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Stage</p>
+</td><td colspan="1" rowspan="1"><p>Median s/page</p>
+</td><td colspan="1" rowspan="1"><p>p95 s/page</p>
+</td><td colspan="1" rowspan="1"><p>Mean s/page</p>
+</td><td colspan="1" rowspan="1"><p>Cold start (s)</p>
+</td><td colspan="1" rowspan="1"><p>Peak memory (MiB)</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Text (pdfplumber + OCR)</p>
+</td><td colspan="1" rowspan="1"><p>0.113</p>
+</td><td colspan="1" rowspan="1"><p>0.531</p>
+</td><td colspan="1" rowspan="1"><p>0.293</p>
+</td><td colspan="1" rowspan="1"><p>0.27</p>
+</td><td colspan="1" rowspan="1"><p>633</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Tables</p>
+</td><td colspan="1" rowspan="1"><p>0.542</p>
+</td><td colspan="1" rowspan="1"><p>0.994</p>
+</td><td colspan="1" rowspan="1"><p>0.540</p>
+</td><td colspan="1" rowspan="1"><p>0.64</p>
+</td><td colspan="1" rowspan="1"><p>235</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Layout</p>
+</td><td colspan="1" rowspan="1"><p>0.741</p>
+</td><td colspan="1" rowspan="1"><p>2.268</p>
+</td><td colspan="1" rowspan="1"><p>1.021</p>
+</td><td colspan="1" rowspan="1"><p>3.45</p>
+</td><td colspan="1" rowspan="1"><p>1,617</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Docling (CPU)</p>
+</td><td colspan="1" rowspan="1"><p>4.780</p>
+</td><td colspan="1" rowspan="1"><p>16.480</p>
+</td><td colspan="1" rowspan="1"><p>6.503</p>
+</td><td colspan="1" rowspan="1"><p>3.88</p>
+</td><td colspan="1" rowspan="1"><p>1,598</p>
+</td></tr>
+</table>
+<p>Cold start is the one-time setup before the first page (loading the library or AI model), timed separately; the per-page times are warm, measured after setup. For the model stages, cold start is 3.45 s for layout and 3.88 s for Docling, small next to their total page time (96 s and 611 s), so keeping workers warm matters for latency more than for batch cost.</p>
+<p>The traditional pipeline took 1.854 seconds per page, while Docling took 6.503 seconds per page. Docling accounted for most of the processing time, taking 611 seconds out of the total 786 seconds.</p>
+<h2 is-upgraded><strong>Step 10.3: Estimate the cost</strong></h2>
+<p>We estimated the annual cost of processing 500,000 pages using 4 workers and a CPU VM at the configured hourly price. The figures come from the benchmark&#39;s cost.csv.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Option</p>
+</td><td colspan="1" rowspan="1"><p>Cost per year</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Traditional path, CPU VM</p>
+</td><td colspan="1" rowspan="1"><p>~$23</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Docling, CPU VM</p>
+</td><td colspan="1" rowspan="1"><p>~$81</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Textract, OCR only</p>
+</td><td colspan="1" rowspan="1"><p>$750</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Textract, with tables</p>
+</td><td colspan="1" rowspan="1"><p>$7,500</p>
+</td></tr>
+</table>
+<p>These figures are estimates rather than actual billing costs. The performance of 4 workers running in parallel has not been measured, and the VM type used for the cost estimate was not benchmarked.</p>
+<p><strong>Recommendation:</strong> Based on the current measurements, we recommend running the pipeline on CPU. The results do not establish whether using a GPU would improve performance. Since the estimated compute costs are low, the choice between local processing and a managed service should depend mainly on extraction quality and maintenance effort (see reports/build_vs_buy.md). Downloading is limited by EDGAR&#39;s 10 requests per second, roughly 17–25 minutes for 5,000 filings (estimated), so parsing, not downloading, is the bottleneck.</p>
+<h2 is-upgraded><strong>What broke and how we fixed it</strong></h2>
+<ul>
+<li><strong>Incomplete Docling timing:</strong> During a review, we found that the benchmark was not measuring all of Docling&#39;s processing work. We updated it to include the full exports and table normalization.</li>
+<li><strong>Cost calculation errors:</strong> Partial benchmark runs caused the cost calculation to fail. We fixed this by generating cost rows only for stages that completed their runs and added tests.</li>
+<li><strong>CI test failure:</strong> A new test imported psutil, which was not installed in CI. We updated the code to import it only when memory usage is measured.</li>
+<li><strong>Unsupported GPU setting:</strong> The first EC2 run attempted to use the Mac GPU setting (MPS), which was not available on EC2. We updated the benchmark to skip unsupported devices and exclude failed stages from cost estimates.</li>
+</ul>
+<p><strong>Evidence:</strong> src/bench.py, reports/benchmarks.md, reports/ec2_benchmark_observed.csv, tests/test_bench.py, docs/ai_log/shravya.md, docs/ai_log/lokesh.md.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 11: XBRL validation" duration="0">
+        <p><strong>Goal:</strong> In this last part we check every number on the statement pages against the official values Apple tags inside the filing itself (XBRL).</p>
+<h2 is-upgraded>Step 11.1: Pull out the XBRL facts</h2>
+<p>python src/xbrl.py --input data/rendered/manifest.csv --output data/xbrl</p>
+<p>This uses a tool called Arelle to read the XBRL tags in each filing. You should get 1,553 numeric facts in data/xbrl/facts.csv. A quick check: net income for fiscal 2025 should be 112,010,000,000 USD.</p>
+<p>This step needed a few fixes before it worked. The SEC wraps each file in an extra layer, so Arelle found nothing until we unwrapped a temporary copy. The dates also came out one day late, and when a fact appeared twice we were keeping the rounded copy instead of the exact one.</p>
+<h2 is-upgraded>Step 11.2: Match the labels and grade every cell</h2>
+<p>python src/xbrl.py compare --path traditional --tables data/tables</p>
+<p>python src/xbrl.py compare --path docling --tables data/docling/tables</p>
+<p>The PDF says things like &#34;Gross margin&#34;, while XBRL uses names like GrossProfit, so each row label has to be matched to the right XBRL name. We try our own list first (config/label_map.yaml), then Apple&#39;s own label file, and finally a fuzzy match, whose cut-off is set in params.yaml. How close two numbers need to be depends on how precisely Apple reported them: for numbers in millions, a difference of up to 500,000 still counts as a match. Every cell ends up with one status: match, sign, scale, mismatch, pdf_missing or xbrl_missing.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>Path</p>
+</td><td colspan="1" rowspan="1"><p>Income</p>
+</td><td colspan="1" rowspan="1"><p>Balance</p>
+</td><td colspan="1" rowspan="1"><p>Cash flow</p>
+</td><td colspan="1" rowspan="1"><p>All</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Traditional</p>
+</td><td colspan="1" rowspan="1"><p>133/133</p>
+</td><td colspan="1" rowspan="1"><p>110/110</p>
+</td><td colspan="1" rowspan="1"><p>85/145</p>
+</td><td colspan="1" rowspan="1"><p>328/388 (84.5%)</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>Docling</p>
+</td><td colspan="1" rowspan="1"><p>133/133</p>
+</td><td colspan="1" rowspan="1"><p>110/110</p>
+</td><td colspan="1" rowspan="1"><p>82/145</p>
+</td><td colspan="1" rowspan="1"><p>325/388 (83.8%)</p>
+</td></tr>
+</table>
+<p class="image-container"><img src="img/a16f75aceaabe583.png"></p>
+<h2 is-upgraded>Step 11.3: Explain every number that didn&#39;t match</h2>
+<ul>
+<li>None of the non-matches is left unexplained. The 60 &#34;sign&#34; cells are the same 12 cash-flow lines on both paths: Apple prints them in brackets but stores them as positive numbers, and its own presentation file marks exactly those lines as shown negated. So it&#39;s a display choice, not a reading error. The 3 &#34;pdf_missing&#34; cells only happen on the Docling path, because Docling drops the first row of the 10-K cash-flow table, the starting cash balances.</li>
+</ul>
+<p class="image-container"><img src="img/3a6a4ede45ec07da.png"></p>
+<h2 is-upgraded>Step 11.4: One mismatch we found and fixed</h2>
+<p>On the first run, &#34;Intangible assets, net&#34; on the 10-Q balance sheet didn&#39;t match: the PDF said 20,342 million and XBRL said 25,417 million. Searching the facts for 20,342 showed what was going on. We had matched the label to the total, but the balance sheet only shows the non-current part, and Apple reports that under its own custom name, aapl:IntangibleAssetsNetExcludingGoodwillNoncurrent, not a standard one. Once the label list could handle Apple&#39;s own names, it matched, and a test now keeps it that way.</p>
+<p>The lesson for us was that checking whether a name exists can&#39;t catch a wrong match. You only see it when you compare the actual values.</p>
+<p>The full report is in reports/xbrl.md, and the executed notebook is notebooks/xbrl_validation.ipynb.</p>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

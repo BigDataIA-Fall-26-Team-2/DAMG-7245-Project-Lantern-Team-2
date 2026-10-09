@@ -1,0 +1,25 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2026-10-09T14:42:12-04:00",
+  "id": "lantern-case-study-1",
+  "duration": 0,
+  "title": "Project LANTERN: Reproducible Ingestion of SEC Filings",
+  "authors": "Dhruvi, Lokesh, Guna, Shravya",
+  "summary": "Reproducible pipeline that turns Apple’s SEC 10-K and 10-Q filings into a layout-aware, XBRL-validated corpus (DAMG 7245 Case Study 1, Team 2)",
+  "source": "docs/codelab.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "dataengineering"
+  ],
+  "tags": [
+    "web"
+  ],
+  "feedback": "https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues",
+  "url": "lantern-case-study-1"
+}
