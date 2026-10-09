@@ -1,0 +1,33 @@
+# P3 fix: Table box covered only the figure columns (Part 9 eval.md finding 6)
+
+Problem (10-K p32): detected Table bbox [362.04, 105.76, 603.1, 557.99] covers the figures only; the row labels
+were saved again as 7 Text/Title blocks, so the export carried them twice.
+
+Fix (src/layout.py absorb_table_rows): for a Table that routing extracted, the stored bbox is widened to the words on
+its rows (detector box kept as detected_bbox), and Text/List/Title blocks centred in its rows are dropped only if
+>= 80% of their words appear in BOTH the routed table and Part 2's table CSVs for the page (the tables export uses).
+
+10-K p32 after: bbox [7.0, 105.76, 604.45, 557.99] (Docling: 5.5 to 607), 7 blocks absorbed, table text starts with
+"Net sales: | Products $ 307,003 ...".
+
+Words outside every block (lower = better), first version of the fix:
+  10-K 7299 -> 6878, 10-Q 3054 -> 2815
+
+Part 9 evaluation (python src/export.py && python src/evaluate.py, same local data before and after),
+traditional path:
+                      before   after
+  statement WER       0.6759   0.5849
+  notes WER           0.6109   0.6079
+  prose WER           0.1368   0.1368
+  cover WER           0.4860   0.4860
+  overall WER         0.5011   0.4663
+  10-K p32 WER        0.7024   0.4048   (words 204 -> 154, ground truth 168)
+  10-K p36 WER        0.6565   0.4082   (words 429 -> 348, ground truth 294)
+  table cell F1       1.0 / 1.0 unchanged
+
+What broke on the way: the first version (absorb by position only) made 10-Q p11 and p16 worse (WER 0.707 -> 0.766,
+0.751 -> 0.849): absorbed labels were in layout's routed table but not in Part 2's CSVs, which the export uses.
+Requiring the words in both tables fixed it; no page is worse in the final version.
+
+Baseline numbers differ slightly from reports/metrics.json because the PDFs were re-rendered locally;
+before and after use the same data.

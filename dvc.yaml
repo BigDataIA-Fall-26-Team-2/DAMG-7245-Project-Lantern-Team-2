@@ -49,10 +49,11 @@ stages:
       - data/tables
 
   layout:
-    cmd: python src/layout.py --params params.yaml --input data/rendered --output data/layout --figures data/figures --qa reports/layout
+    cmd: python src/layout.py --params params.yaml --input data/rendered --output data/layout --figures data/figures --qa reports/layout --tables data/tables
     deps:
       - src/layout.py
       - src/tables.py
+      - data/tables
       - requirements.txt
       - data/rendered
     params:
