@@ -475,20 +475,32 @@ def write_plot(results, exports, path):
 
 # --- main -----------------------------------------------------------------
 
-def xbrl_match_rates(xbrl_dir):
+XBRL_PATHS = ("traditional", "docling")
+
+
+def xbrl_match_rates(xbrl_dir, paths=XBRL_PATHS):
     """Part 11 results for metrics.json, from the xbrl stage's comparison_{path}.csv files:
-    cells, strict match rate, value agreement (match + sign) and match rate per statement."""
+    cells, strict match rate, value agreement (match + sign) and match rate per statement.
+    Both paths are required; a missing folder, a missing path or an empty comparison raises, so
+    metrics.json can never be written with the XBRL section silently empty or partial."""
+    folder = Path(xbrl_dir)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"XBRL comparison folder {folder} not found: run the xbrl stage before evaluate")
     out = {}
-    for f in sorted(Path(xbrl_dir).glob("comparison_*.csv")):
+    for path in paths:
+        f = folder / f"comparison_{path}.csv"
+        if not f.is_file():
+            raise FileNotFoundError(f"{f} is missing: the xbrl stage must compare every table path "
+                                    f"({', '.join(paths)}) before evaluate")
         with open(f, newline="", encoding="utf-8") as fh:
             rows = list(csv.DictReader(fh))
         if not rows:
-            continue
+            raise ValueError(f"{f} has no comparison rows: the {path} XBRL comparison is empty")
         n = len(rows)
         by_statement = defaultdict(list)
         for r in rows:
             by_statement[r["statement"]].append(r["status"] == "match")
-        out[f.stem.split("_", 1)[1]] = {
+        out[path] = {
             "cells": n,
             "match_rate": round(sum(r["status"] == "match" for r in rows) / n, 4),
             "value_agreement": round(sum(r["status"] in ("match", "sign") for r in rows) / n, 4),
