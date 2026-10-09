@@ -194,6 +194,21 @@ def _bbox_pt(geom, w_pt, h_pt):
             round(y0 + b["Height"] * h_pt, 2)]
 
 
+def fallback_text(pdf_path, page, width, height, params):
+    """Return OCR text and point-space words using the shared page cache."""
+    response, _, from_cache = get_response(pdf_path, page, settings(params))
+    if response is None:
+        return None
+    blocks = response.get("Blocks", [])
+    words = [{"text": b["Text"],
+              "bbox": _bbox_pt(b["Geometry"], width, height),
+              "ocr_conf": float(b["Confidence"])}
+             for b in blocks if b["BlockType"] == "WORD" and b.get("Text", "").strip()]
+    text = "\n".join(b["Text"] for b in blocks
+                     if b["BlockType"] == "LINE" and b.get("Text", "").strip())
+    return text or " ".join(w["text"] for w in words), words, from_cache
+
+
 def _table_payload(table, by_id):
     """TABLE block -> the schema's table object, via its CELL children."""
     cells = {}

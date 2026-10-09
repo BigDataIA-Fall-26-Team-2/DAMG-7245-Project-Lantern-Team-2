@@ -155,3 +155,11 @@
 - How verified: tests/test_app_cache.py reproduces his case (write 1, overwrite with 2, read 2): 2 passed; with the old path-only cache key the CSV test fails (teeth check); tests/test_app.py and the full suite pass (147 passed, 11 skipped).
 - Failure/limitation: My first version only made Records and the layout boxes path-aware, which still mixed paths in Table CSV and Page text, and its caches ignored file changes; both were caught in review.
 - Confidence: High. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issue #82 (stretch) — automated mapping precision without the dictionary
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide.
+- What it contributed: The idea of rerunning compare with an empty label map (same structure, no entries) and scoring it against the verified comparison; src/mapping_precision.py, its test and the report section.
+- How verified: Traditional coverage 342/388 (88.1%), precision 314/342 (91.8%); Docling 339/388 (87.4%), 311/339 (91.7%). Two independent measures agree exactly (same concept as the verified map, and value agreement match + sign). I listed every wrong and unmapped label: 4 labels map to dimension members, 8 are unmapped (share-count label, Total lines, generic Basic/Diluted).
+- Failure/limitation: The first scoring showed 0% precision because empty dims were stored as blank on one side and NaN on the other; fixed by normalising both, now covered by a test. A second company was not attempted.
+- Confidence: High for the reported precision on these two filings. I have reviewed this entry and can explain, rerun, modify and defend every step of it.

@@ -146,3 +146,32 @@ python src/xbrl.py compare --path traditional --tables data/tables
 python src/xbrl.py compare --path docling --tables data/docling/tables
 python -c "import nbformat; from nbclient import NotebookClient; p='notebooks/xbrl_validation.ipynb'; nb=nbformat.read(p, 4); NotebookClient(nb, timeout=180, kernel_name='python3', resources={'metadata': {'path': 'notebooks'}}).execute(); nbformat.write(nb, p)"
 ```
+
+
+## Automated mapping without the dictionary (stretch, #82)
+
+`python src/mapping_precision.py` reruns the comparison with an empty label map (the dictionary's
+structure, no entries), so only the automatic layers map labels: Apple's label linkbase, then fuzzy
+matching. It is scored against the verified comparison above, where all 388 cells per path are
+confirmed by value. Results: `reports/mapping_precision.csv`.
+
+| Path | Cells | Mapped (coverage) | Right concept (precision) |
+|---|---:|---:|---:|
+| Traditional | 388 | 342 (88.1%) | 314 (91.8%) |
+| Docling | 388 | 339 (87.4%) | 311 (91.7%) |
+
+Value agreement gives the same counts (match + sign = 314 and 311), an independent check of the
+precision figure. Every error and gap falls into one of four groups:
+
+- **Wrong (28 cells, 4 labels):** "Products" and "Services" under Net sales and Cost of sales map to
+  the dimension members `ProductMember` / `ServiceMember` instead of revenue or cost broken down by
+  those members.
+- **Not mapped (46 cells, 8 labels; Docling 49, the extra 3 being the row it drops):** the common
+  stock line, whose label embeds share counts that change every period; "Total net sales" and "Total
+  cost of sales"; and the generic "Basic" / "Diluted" under earnings per share and shares used.
+
+These are the cases the 63 dictionary entries in `config/label_map.yaml` exist for: with them, all
+388 cells are mapped and confirmed by value.
+
+Not attempted: running the pipeline on a second company. It needs a full download, render and
+extraction run for a new filing, which was out of scope the night of the code freeze.

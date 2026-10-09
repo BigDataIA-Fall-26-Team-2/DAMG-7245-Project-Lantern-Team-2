@@ -27,10 +27,15 @@ stages:
     cmd: python src/parse_text.py --params params.yaml --input data/rendered --output data/parsed
     deps:
       - src/parse_text.py
+      - src/managed
+      - src/adapters.py
+      - src/schema.py
       - requirements.txt
       - data/rendered
+      - ${managed.cache_dir}
     params:
       - ocr
+      - managed
     outs:
       - data/parsed
 
@@ -44,7 +49,7 @@ stages:
       - requirements.txt
       - data/rendered
       - data/raw
-      - data/managed
+      - ${managed.cache_dir}
     params:
       - tables
       - managed
@@ -104,9 +109,10 @@ stages:
       - src/evaluate.py
       - data/ground_truth
       - data/export
-      - data/managed
+      - ${managed.cache_dir}
     params:
       - evaluate
+      - managed
     metrics:
       - reports/metrics.json:
           cache: false
