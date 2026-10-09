@@ -87,14 +87,15 @@ prompt, a fresh incognito chat (Claude Opus 5.5), measurements in `reports/forma
 | JSONL, Docling path, first run | 449,948 | 112,464 | 604/604 records with page + bbox, 0 table records |
 | JSON (Docling) | 3,658,987 | 914,746 | 775 `page_no` entries (unchanged) |
 
-| Question | Docling JSONL, final | Traditional JSONL, final | Correct |
+| Question | Docling JSONL, final (answered) | Traditional JSONL, final (supplied answer verified) | Result |
 |---|---|---|---|
-| 1. Net income, FY2025, and page | $112,010M, page 32 | $112,010M, page 32 (record `p0032_b901`) | yes, both |
-| 2. Total assets, Sep 27 2025, and page | $359,241M, page 34 | $359,241M, page 34 (record `p0034_b901`) | yes, both |
-| 3. Products and Services net sales, FY2025 | $307,003M and $109,158M (page 32) | $307,003M and $109,158M (page 32) | yes, both |
+| 1. Net income, FY2025, and page | $112,010M, page 32 | $112,010M, page 32 (record `p0032_b901`) | Docling correct; traditional verified |
+| 2. Total assets, Sep 27 2025, and page | $359,241M, page 34 | $359,241M, page 34 (record `p0034_b901`) | Docling correct; traditional verified |
+| 3. Products and Services net sales, FY2025 | $307,003M and $109,158M (page 32) | $307,003M and $109,158M (page 32) | Docling correct; traditional verified |
 
-All answers are correct, and the pages are the rendered-PDF pages taken from each record's `page`
-field; the model noted that it found no printed page number to compare against. That is the
+The Docling run answered all three questions correctly, and the traditional run confirmed all three
+supplied answers against its file. In both, the pages are the rendered-PDF pages taken from each
+record's `page` field; the model noted that it found no printed page number to compare against. That is the
 difference from the first run's TXT and Markdown answers, whose page numbers came from the printed
 footer and the 10-K's contents table.
 
@@ -111,7 +112,8 @@ title lines the layout stage still misses (Codelab, Part 7).
 |---|---:|---|
 | TXT | 3 / 3 | printed footer (printed pages 29, 31) |
 | Markdown | 3 / 3 | the 10-K's contents table |
-| **JSONL, final (Docling and traditional)** | **3 / 3 each** | **the record's own `page` field (PDF pages 32, 34)** |
+| **JSONL, Docling path, final** | **3 / 3 questions answered correctly** | **the record's own `page` field (PDF pages 32, 34)** |
+| **JSONL, traditional path, final** | **3 / 3 supplied answers verified** (not answered blind) | **the record's own `page` field (PDF pages 32, 34)** |
 | JSON | not tested | too large for a chat context |
 
 **The decision is unchanged and now confirmed:** JSONL is the source of truth and feeds Case
