@@ -12,10 +12,10 @@ The inputs are pinned in [params.yaml](params.yaml): Apple 10-K accession `00003
 | Reports and measured results | [Part-to-file map](#part-to-file-map) below |
 | Codelab | Publication pending — [#69](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/69), [#79](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/79) |
 | Demo video | Recording/publication pending — [#76](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/76), [#79](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/79) |
-| Public Streamlit app | Deployment pending — [#67](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/67); local launch below |
-| Final `submission` tag | Pending final reproduction and artifact upload — [#78](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/78) |
+| Public Streamlit app | [LANTERN explorer](http://184.196.23.157:8501) — available while the team EC2 instance is running; [operations](#ec2-deployment-and-operations) |
+| Final `submission` tag | Pending final fresh-cache verification and release — [#78](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/78) |
 
-**Integration status:** the graph contains ten stages. The earlier seven-stage EC2 run and S3 upload succeeded, but they do not establish reproduction of the current graph. The managed cache upload, final ten-stage run, refreshed `dvc.lock`, and fresh-cache retrieval are still required. The OCR managed-fallback hook and related DVC changes are tracked in [PR #125](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/pull/125). Do not interpret the commands below as a claim that final submission validation is complete.
+**Integration status:** the ten-stage EC2 reproduction completed, followed by the corrected CPU benchmark run. The recorded EC2 validation passed 183 tests; DVC reported the pipeline up to date and the S3 cache in sync after upload. The managed cache is uploaded and the refreshed lockfile and evaluation artifacts are committed. See [Lokesh's validation log](docs/ai_log/lokesh.md) and [metrics](reports/metrics.json). This validation preceded the latest fixture-test changes merged from PR #129; it is not a claim of a new test run on every later commit. A fresh-cache retrieval of the final snapshot and the final submission tag remain pending.
 
 ## Architecture
 
@@ -196,16 +196,9 @@ Commit the reviewed lockfile and any changed `.dvc` pointers with the relevant c
 
 ### Expected runtime and evidence limits
 
-[The benchmark report](reports/benchmarks.md) measures 94 pages on an Apple M3 Pro: the 91 filing pages plus the three-page scanned fixture. These are per-page benchmark means, not an EC2 full-pipeline timing guarantee:
+The corrected EC2 CPU benchmark covered 94 pages: the 91 filing pages plus the three-page scanned fixture. CPU-heavy stages can take several minutes without printing progress. MPS is unavailable on this Linux host and was explicitly skipped; no successful GPU timing or GPU cost estimate is claimed.
 
-| Stage | CPU mean seconds/page | Model/setup seconds |
-|---|---:|---:|
-| Text/OCR | 0.114 | 0.16 |
-| Tables | 0.235 | 0.25 |
-| Layout | 0.631 | 1.60 |
-| Docling | 1.332 | 2.26 |
-
-At that measured workload, page processing is approximately 11, 22, 59, and 125 seconds respectively, plus setup (94 times each mean, rounded). Cold downloads, HTML conversion, export, XBRL, evaluation, and the benchmark stage add work; these values must not be added up and presented as the complete EC2 runtime. CPU-heavy stages can take several minutes. Final ten-stage EC2 wall time remains to be recorded. See the report for device comparisons, CSV sources, memory measurements, and explicit cost-model assumptions.
+The versioned `data/bench` artifacts contain the final run's timing, machine, cost, and skipped-device records and can be retrieved with `dvc pull`. [The benchmark report](reports/benchmarks.md) and its transcribed observation CSV still describe the earlier CPU run and need a final refresh. Per-page measurements are not full-pipeline wall time; cold downloads, setup, HTML conversion, export, XBRL, and evaluation add work. Final ten-stage wall time was not recorded.
 
 ## Tests and quality
 
@@ -232,7 +225,31 @@ After retrieving/reproducing the data:
 streamlit run app/app.py -- --data data --reports reports
 ```
 
-[The app](app/app.py) displays filing pages, provenance records, tables, evaluation results, XBRL comparisons, and a net-income walkthrough. It consumes pipeline artifacts; it does not replace reproduction or make the S3 bucket public. Public deployment and logged-out access verification are pending.
+[The app](app/app.py) displays filing pages, provenance records, tables, evaluation results, XBRL comparisons, and a net-income walkthrough. It consumes pipeline artifacts; it does not replace reproduction or make the S3 bucket public. The team confirmed the public deployment works and its health endpoint returns `ok`.
+
+### EC2 deployment and operations
+
+The deployed explorer is available at **[http://184.196.23.157:8501](http://184.196.23.157:8501)**. It uses an Elastic IP and a systemd service named `lantern-streamlit`. The service runs as `ubuntu`, uses `/home/ubuntu/lantern-streamlit` as its working directory, and uses the Python environment at `/home/ubuntu/DAMG-7245-Project-Lantern-Team-2/.venv`. These paths describe the team's deployment, not required paths for another machine.
+
+The instance is stopped outside demonstration hours to reduce compute usage. The app is unavailable while EC2 is stopped. Starting the same instance retains the associated Elastic IP, and the enabled service starts at boot. Keep the Elastic IP associated until the demonstration is complete. Disable the idle-stop alarm's stop action during the presentation window.
+
+After starting EC2, check the service over SSH:
+
+```bash
+systemctl is-enabled lantern-streamlit
+systemctl is-active lantern-streamlit
+curl --fail --retry 10 --retry-connrefused --retry-delay 2 \
+  http://127.0.0.1:8501/_stcore/health
+```
+
+Expected results are `enabled`, `active`, and `ok`. Open the public URL and select a document as an application-level check. For troubleshooting or an intentional restart:
+
+```bash
+sudo journalctl -u lantern-streamlit -n 80 --no-pager
+sudo systemctl restart lantern-streamlit
+```
+
+The service continues after SSH disconnects. It does not automatically fetch Git changes, pull DVC artifacts, or rerun the pipeline; deployments require an explicit update and restart. The public demo uses HTTP on port 8501 without a custom domain or TLS. AWS access remains server-side through the EC2 role; browser visitors do not need AWS credentials.
 
 ### Optional Docling service
 

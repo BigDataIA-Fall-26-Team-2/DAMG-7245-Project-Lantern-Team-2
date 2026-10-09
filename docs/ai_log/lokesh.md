@@ -138,3 +138,20 @@
 - At Lokesh's request, replaced the Mac/MPS benchmark comparisons with the successful EC2 CPU observations supplied in this conversation. Added reports/ec2_benchmark_observed.csv as an explicitly labeled transcription of those terminal summary rows; it is not claimed as a downloaded/generated artifact.
 - Removed unsupported GPU cost/performance conclusions. Cost formulas and configured assumptions remain documented; final numeric cost rows and report refresh await the corrected EC2 rerun. Original Mac data is no longer required to support this report's measurements.
 - Verification: checked the four report rows against the transcribed CSV and original supplied CPU summaries; CSV error counts are zero, each has 94 pages. git diff --check passed. No new execution or final S3 upload claimed.
+
+### Final EC2 reproduction validation
+- Reproduced the pipeline on Ubuntu 24.04 EC2 using CPU execution.
+- Validation: 183 tests passed; DVC reports data and pipelines up to date.
+- Uploaded generated DVC objects to S3; cache and remote are in sync.
+- MPS was explicitly skipped because it is unavailable on this host.
+- GPU cost estimates were omitted because no successful GPU measurement exists.
+- Recorded regenerated metrics, bounding-box fallback evidence, layout previews,
+  and drift plot. Metrics include both improvements and regressions.
+
+### Streamlit deployment README and review handoff
+- Tool: OpenAI Codex. Updated the README with the Elastic IP app URL, systemd operations, overnight stop/start behavior, and the completed reproduction status.
+- Evidence: Lokesh confirmed the public app worked and supplied a health-check response of `ok`; reproduction and S3 validation are recorded above. These are user-run EC2 checks, not a new remote execution by Codex.
+- Integrated main through PR #129 without changing the teammate reports. The earlier 183-test run predates that fixture-test update.
+- Limitation: final fresh-cache retrieval and benchmark-report refresh remain pending; HTTP availability requires EC2 to be running. No TLS or continuous uptime is claimed.
+- Verification: reviewed the documentation diff and ran git diff --check. No application or pipeline code changed in this documentation update.
+- Confidence: high for the documented user-verified deployment; final release validation remains explicit.

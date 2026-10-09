@@ -5,26 +5,26 @@
       "stratum": "cover",
       "page": 1,
       "traditional": {
-        "wer": 0.5465,
-        "cer": 0.5294,
+        "wer": 0.5087,
+        "cer": 0.4913,
         "ref_words": 344,
-        "hyp_words": 161,
+        "hyp_words": 171,
         "numeric": {
-          "precision": 0.6,
-          "recall": 0.3333,
-          "f1": 0.4286,
-          "tp": 15,
+          "precision": 1.0,
+          "recall": 0.3556,
+          "f1": 0.5246,
+          "tp": 16,
           "ref_n": 45,
-          "hyp_n": 25,
+          "hyp_n": 16,
           "ref_tokens": 45,
-          "hyp_tokens": 25
+          "hyp_tokens": 16
         }
       },
       "docling": {
-        "wer": 0.2965,
-        "cer": 0.2793,
+        "wer": 0.3023,
+        "cer": 0.2847,
         "ref_words": 344,
-        "hyp_words": 247,
+        "hyp_words": 245,
         "numeric": {
           "precision": 1.0,
           "recall": 0.6667,
@@ -41,19 +41,19 @@
       "stratum": "prose",
       "page": 5,
       "traditional": {
-        "wer": 0.153,
-        "cer": 0.1564,
+        "wer": 0.1642,
+        "cer": 0.1666,
         "ref_words": 536,
-        "hyp_words": 457,
+        "hyp_words": 464,
         "numeric": {
-          "precision": 1.0,
+          "precision": 0.5,
           "recall": 1.0,
-          "f1": 1.0,
+          "f1": 0.6667,
           "tp": 3,
           "ref_n": 3,
-          "hyp_n": 3,
+          "hyp_n": 6,
           "ref_tokens": 3,
-          "hyp_tokens": 3
+          "hyp_tokens": 6
         }
       },
       "docling": {
@@ -77,10 +77,10 @@
       "stratum": "prose",
       "page": 6,
       "traditional": {
-        "wer": 0.0425,
-        "cer": 0.0413,
+        "wer": 0.072,
+        "cer": 0.0658,
         "ref_words": 847,
-        "hyp_words": 862,
+        "hyp_words": 837,
         "numeric": {
           "precision": 0.0,
           "recall": 0.0,
@@ -113,10 +113,10 @@
       "stratum": "statement",
       "page": 32,
       "traditional": {
-        "wer": 0.7262,
-        "cer": 0.6753,
+        "wer": 0.3869,
+        "cer": 0.3273,
         "ref_words": 168,
-        "hyp_words": 208,
+        "hyp_words": 151,
         "numeric": {
           "precision": 1.0,
           "recall": 0.9048,
@@ -165,15 +165,15 @@
       "stratum": "statement",
       "page": 34,
       "traditional": {
-        "wer": 0.4208,
+        "wer": 0.4109,
         "cer": 0.4182,
         "ref_words": 202,
         "hyp_words": 199,
         "numeric": {
-          "precision": 0.9655,
-          "recall": 0.9032,
-          "f1": 0.9333,
-          "tp": 56,
+          "precision": 1.0,
+          "recall": 0.9355,
+          "f1": 0.9667,
+          "tp": 58,
           "ref_n": 62,
           "hyp_n": 58,
           "ref_tokens": 62,
@@ -201,10 +201,10 @@
       "stratum": "statement",
       "page": 36,
       "traditional": {
-        "wer": 0.7891,
-        "cer": 0.7979,
+        "wer": 0.4082,
+        "cer": 0.4282,
         "ref_words": 294,
-        "hyp_words": 468,
+        "hyp_words": 348,
         "numeric": {
           "precision": 1.0,
           "recall": 0.9348,
@@ -237,10 +237,10 @@
       "stratum": "notes",
       "page": 40,
       "traditional": {
-        "wer": 0.5049,
-        "cer": 0.4524,
+        "wer": 0.501,
+        "cer": 0.4491,
         "ref_words": 515,
-        "hyp_words": 355,
+        "hyp_words": 353,
         "numeric": {
           "precision": 0.8537,
           "recall": 0.5833,
@@ -273,15 +273,15 @@
       "stratum": "notes",
       "page": 43,
       "traditional": {
-        "wer": 0.4383,
-        "cer": 0.4236,
+        "wer": 0.4334,
+        "cer": 0.4302,
         "ref_words": 413,
-        "hyp_words": 261,
+        "hyp_words": 247,
         "numeric": {
-          "precision": 0.9583,
-          "recall": 0.5349,
-          "f1": 0.6866,
-          "tp": 46,
+          "precision": 1.0,
+          "recall": 0.5581,
+          "f1": 0.7164,
+          "tp": 48,
           "ref_n": 86,
           "hyp_n": 48,
           "ref_tokens": 86,
@@ -309,26 +309,26 @@
       "stratum": "cover",
       "page": 1,
       "traditional": {
-        "wer": 0.4512,
-        "cer": 0.4244,
+        "wer": 0.4697,
+        "cer": 0.4274,
         "ref_words": 379,
-        "hyp_words": 215,
+        "hyp_words": 252,
         "numeric": {
-          "precision": 0.9444,
-          "recall": 0.3864,
-          "f1": 0.5484,
-          "tp": 17,
+          "precision": 0.9706,
+          "recall": 0.75,
+          "f1": 0.8462,
+          "tp": 33,
           "ref_n": 44,
-          "hyp_n": 18,
+          "hyp_n": 34,
           "ref_tokens": 44,
-          "hyp_tokens": 18
+          "hyp_tokens": 34
         }
       },
       "docling": {
-        "wer": 0.2639,
-        "cer": 0.2251,
+        "wer": 0.2533,
+        "cer": 0.2285,
         "ref_words": 379,
-        "hyp_words": 294,
+        "hyp_words": 289,
         "numeric": {
           "precision": 1.0,
           "recall": 0.7045,
@@ -381,19 +381,19 @@
       "stratum": "statement",
       "page": 6,
       "traditional": {
-        "wer": 0.8216,
-        "cer": 0.8014,
+        "wer": 0.6761,
+        "cer": 0.6665,
         "ref_words": 213,
-        "hyp_words": 294,
+        "hyp_words": 286,
         "numeric": {
-          "precision": 0.7945,
-          "recall": 0.9062,
-          "f1": 0.8467,
-          "tp": 58,
+          "precision": 0.9091,
+          "recall": 0.9375,
+          "f1": 0.9231,
+          "tp": 60,
           "ref_n": 64,
-          "hyp_n": 73,
+          "hyp_n": 66,
           "ref_tokens": 64,
-          "hyp_tokens": 73
+          "hyp_tokens": 66
         }
       },
       "docling": {
@@ -434,7 +434,7 @@
       "page": 9,
       "traditional": {
         "wer": 0.9202,
-        "cer": 0.9344,
+        "cer": 0.9339,
         "ref_words": 263,
         "hyp_words": 450,
         "numeric": {
@@ -469,19 +469,19 @@
       "stratum": "notes",
       "page": 11,
       "traditional": {
-        "wer": 0.7072,
-        "cer": 0.6209,
+        "wer": 0.7009,
+        "cer": 0.6137,
         "ref_words": 321,
-        "hyp_words": 168,
+        "hyp_words": 167,
         "numeric": {
-          "precision": 0.8919,
+          "precision": 0.8684,
           "recall": 0.2821,
-          "f1": 0.4286,
+          "f1": 0.4258,
           "tp": 33,
           "ref_n": 117,
-          "hyp_n": 37,
+          "hyp_n": 38,
           "ref_tokens": 117,
-          "hyp_tokens": 37
+          "hyp_tokens": 38
         }
       },
       "docling": {
@@ -506,18 +506,18 @@
       "page": 16,
       "traditional": {
         "wer": 0.7506,
-        "cer": 0.6473,
+        "cer": 0.6527,
         "ref_words": 385,
-        "hyp_words": 147,
+        "hyp_words": 139,
         "numeric": {
-          "precision": 0.8065,
-          "recall": 0.1938,
-          "f1": 0.3125,
-          "tp": 25,
+          "precision": 0.8214,
+          "recall": 0.1783,
+          "f1": 0.293,
+          "tp": 23,
           "ref_n": 129,
-          "hyp_n": 31,
+          "hyp_n": 28,
           "ref_tokens": 129,
-          "hyp_tokens": 31
+          "hyp_tokens": 28
         }
       },
       "docling": {
@@ -541,8 +541,8 @@
       "stratum": "prose",
       "page": 17,
       "traditional": {
-        "wer": 0.0931,
-        "cer": 0.082,
+        "wer": 0.0916,
+        "cer": 0.0815,
         "ref_words": 655,
         "hyp_words": 601,
         "numeric": {
@@ -557,10 +557,10 @@
         }
       },
       "docling": {
-        "wer": 0.0427,
-        "cer": 0.0031,
+        "wer": 0.0,
+        "cer": 0.0,
         "ref_words": 655,
-        "hyp_words": 669,
+        "hyp_words": 655,
         "numeric": {
           "precision": 1.0,
           "recall": 1.0,
@@ -577,19 +577,19 @@
       "stratum": "prose",
       "page": 22,
       "traditional": {
-        "wer": 0.0472,
-        "cer": 0.0385,
+        "wer": 0.0892,
+        "cer": 0.0573,
         "ref_words": 572,
-        "hyp_words": 551,
+        "hyp_words": 566,
         "numeric": {
-          "precision": 1.0,
-          "recall": 1.0,
-          "f1": 1.0,
-          "tp": 57,
+          "precision": 0.9655,
+          "recall": 0.9825,
+          "f1": 0.9739,
+          "tp": 56,
           "ref_n": 57,
-          "hyp_n": 57,
+          "hyp_n": 58,
           "ref_tokens": 57,
-          "hyp_tokens": 57
+          "hyp_tokens": 58
         }
       },
       "docling": {
@@ -777,11 +777,11 @@
         ],
         "cell_raw": {
           "precision": 1.0,
-          "recall": 0.9643,
-          "f1": 0.9818,
-          "tp": 54,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
           "ref_n": 56,
-          "hyp_n": 54
+          "hyp_n": 56
         },
         "cell": {
           "precision": 1.0,
@@ -880,51 +880,51 @@
     "traditional": {
       "cover": {
         "n_pages": 2,
-        "wer_mean": 0.4989,
-        "wer_max": 0.5465,
-        "cer_mean": 0.4769,
-        "numeric_f1_mean": 0.4885,
-        "numeric_f1_min": 0.4286
+        "wer_mean": 0.4892,
+        "wer_max": 0.5087,
+        "cer_mean": 0.4594,
+        "numeric_f1_mean": 0.6854,
+        "numeric_f1_min": 0.5246
       },
       "prose": {
         "n_pages": 4,
-        "wer_mean": 0.084,
-        "wer_max": 0.153,
-        "cer_mean": 0.0795,
-        "numeric_f1_mean": 0.7179,
+        "wer_mean": 0.1043,
+        "wer_max": 0.1642,
+        "cer_mean": 0.0928,
+        "numeric_f1_mean": 0.6281,
         "numeric_f1_min": 0.0
       },
       "statement": {
         "n_pages": 6,
-        "wer_mean": 0.6709,
+        "wer_mean": 0.525,
         "wer_max": 0.9202,
-        "cer_mean": 0.6526,
-        "numeric_f1_mean": 0.9344,
-        "numeric_f1_min": 0.8467
+        "cer_mean": 0.5104,
+        "numeric_f1_mean": 0.9527,
+        "numeric_f1_min": 0.9231
       },
       "notes": {
         "n_pages": 4,
-        "wer_mean": 0.6003,
+        "wer_mean": 0.5965,
         "wer_max": 0.7506,
-        "cer_mean": 0.5361,
-        "numeric_f1_mean": 0.5302,
-        "numeric_f1_min": 0.3125
+        "cer_mean": 0.5364,
+        "numeric_f1_mean": 0.5321,
+        "numeric_f1_min": 0.293
       }
     },
     "docling": {
       "cover": {
         "n_pages": 2,
-        "wer_mean": 0.2802,
-        "wer_max": 0.2965,
-        "cer_mean": 0.2522,
+        "wer_mean": 0.2778,
+        "wer_max": 0.3023,
+        "cer_mean": 0.2566,
         "numeric_f1_mean": 0.8134,
         "numeric_f1_min": 0.8
       },
       "prose": {
         "n_pages": 4,
-        "wer_mean": 0.0186,
-        "wer_max": 0.0427,
-        "cer_mean": 0.0013,
+        "wer_mean": 0.0079,
+        "wer_max": 0.0299,
+        "cer_mean": 0.0006,
         "numeric_f1_mean": 0.75,
         "numeric_f1_min": 0.0
       },
@@ -967,14 +967,14 @@
   "by_path": {
     "traditional": {
       "n_pages": 16,
-      "wer_mean": 0.485,
-      "cer_mean": 0.4582,
-      "numeric_f1_mean": 0.7235
+      "wer_mean": 0.4332,
+      "cer_mean": 0.4061,
+      "numeric_f1_mean": 0.733
     },
     "docling": {
       "n_pages": 16,
-      "wer_mean": 0.2149,
-      "cer_mean": 0.2103,
+      "wer_mean": 0.2119,
+      "cer_mean": 0.2107,
       "numeric_f1_mean": 0.8512
     },
     "managed": {
@@ -999,8 +999,8 @@
     "AAPL_10K_20250927_p32": {
       "stratum": "statement",
       "traditional": {
-        "wer": 0.7262,
-        "cer": 0.6753,
+        "wer": 0.3869,
+        "cer": 0.3273,
         "numeric_f1": 0.95
       },
       "docling": {
@@ -1017,9 +1017,9 @@
     "AAPL_10Q_20260627_p6": {
       "stratum": "statement",
       "traditional": {
-        "wer": 0.8216,
-        "cer": 0.8014,
-        "numeric_f1": 0.8467
+        "wer": 0.6761,
+        "cer": 0.6665,
+        "numeric_f1": 0.9231
       },
       "docling": {
         "wer": 0.2535,
@@ -1056,7 +1056,7 @@
     },
     "AAPL_10Q_20260627_p6_t1": {
       "traditional": {
-        "cell_raw_f1": 0.9818,
+        "cell_raw_f1": 1.0,
         "tables_found": 1
       },
       "docling": {
@@ -1082,7 +1082,7 @@
         "ocr_share": 0.0
       }
     },
-    "chunk_chars_mean": 283.6,
-    "chunk_chars_n": 717
+    "chunk_chars_mean": 301.4,
+    "chunk_chars_n": 655
   }
 }
