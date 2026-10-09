@@ -70,3 +70,47 @@
 - Changes: One line in block_from_layout_record. Prefers the stage's own extractor_version if Part 3 ever populates it.
 - Failure/limitation: The analogous table-side bug was found in review a day earlier and the text side was not checked at the same time.
 - Confidence: High. I have reviewed this entry and can explain, rerun and defend every step of it.
+
+## Part 7: Textract module, cache and side-by-side (src/managed/textract.py, data/managed/)
+
+- Tool/model: Claude (Opus) in claude.ai chat. I ran every command, made the 3 paid API calls myself, and checked each output before the next step.
+- What it contributed: Wrote the Textract module (render the page with pdftoppm, cache by sha256 of the page image, map Textract's block graph into the Appendix B schema), the raw cell F1 metric so Textract is scored on reading and not on scale normalisation it never does, and the first draft of reports/build_vs_buy.md. Looked up the pricing and data-privacy terms on aws.amazon.com and quoted them with the date.
+- How verified: 3 pages sent (10-K p32, 10-Q p6, scanned fixture), 30 schema-valid records. Every re-run after that came from cache, no second paid call. Scored against my hand-keyed ground truth: raw cell F1 1.0 on both tables.
+- Changes: The tool first told me the cost was $0.025 per page, adding a $10/1k Layout charge. That was wrong, the AWS pricing page says Layout is free with Tables, so it is $0.015. Corrected in the report. It also first explained the big WER gap between paths as "the table is one block plus section prefixes". The Docling comparison later proved that wrong: the real cause is the layout Table box covering only the number columns (eval.md finding 6). The report now says this openly.
+- Failure/limitation: Only 3 pages and one provider. The scanned page is a clean scan, so harder scans were not tested.
+- Confidence: High on the numbers, they are measured and re-run in CI. Medium on how far they generalise. I have reviewed this entry and can explain, rerun and defend every step of it.
+
+## Part 7: fallback inside the tables stage, DVC tracking, review fixes on #116 (src/tables.py, src/export.py, dvc.yaml, tests/)
+
+- Tool/model: Claude (Opus) in claude.ai chat. Dhruvi owns src/tables.py, I asked her before changing it. dvc.yaml is Lokesh's file, I told him what I added.
+- What it contributed: Wrote managed_fallback() in tables.py and its tests, the dvc add data/managed step and the new deps on the tables and evaluate stages, and after review on #116 the three fixes: the managed table now replaces the low-score Part 2 table in the export (logged in reports/export_managed_tables.csv), textract.py takes the caller's params and reads no params file on import, boto3 is pinned and the real error is kept in a fallback_error column.
+- How verified: Full tables stage after the change: same 32 tables, same winners. dvc repro -s tables with managed.enabled: false runs clean. Mocked tests prove no API call when the passed config says enabled: false, even if another params file says true, also through the real boundary tables.managed_fallback() into the real module. A forced low-score page with a cache hit changes the export and ends with exactly one table. 151 tests passing.
+- Changes: The first trigger rule fired on 45 of 91 pages. I checked the log: all 45 had score 0.0 and no numeric rows, they were pages with no table at all. Fixed by asking for 3 numeric rows, now 0 of 91 trigger, and a regression test guards it. The first version of the fallback also never reached the export and ignored the caller's config. I did not catch these two myself, the reviewer on #116 did.
+- Failure/limitation: dvc push of data/managed gives 403 on the team bucket, waiting for access from the Part 8 owner. Until then a fresh clone cant dvc pull the cache. Only the table side of the trigger is wired, the OCR side in parse_text.py (#47) is separate work.
+- Confidence: High that the fallback is off by default, never fails the stage, and never duplicates a table. I have reviewed this entry and can explain, rerun and defend every step of it.
+
+## Part 9: review fixes on #111 and fixture gates in CI (src/evaluate.py, tests/, params.yaml, reports/eval.md)
+
+- Tool/model: Claude (Opus) in claude.ai chat. Every point came from reviews on #111 and from Shravya's comment, not from me or the tool.
+- What it contributed: Wrote the fixes and their tests: lost pages scored as empty and listed as missing (not skipped), quality gates that run evaluate.py fresh instead of reading the committed metrics.json, Counter matching so repeated numbers count, html.unescape before scoring, fixture gates that score the outputs the CI smoke job already makes, the drop-words break mode for the text gates, the evaluate stage in dvc.yaml with the metrics diff evidence, and the double-keying reconciliation files (#27). It also rewrote both reports in simpler English on my request, numbers and terms unchanged.
+- How verified: Each review case is a test with the reviewer's own example (two pages with output for one, 100 100 100 vs 100, &amp;). drop-words makes both prose gates fail and nothing else. dvc metrics diff shows only the table scores moving under no-scale. Fixture results in CI: scanned WER 0.0225 (Tesseract), statement WER 0.0714, statement table cell F1 1.0, multicolumn WER 0.9255. 133 tests passing. Double-keying: 113 cells compared, 0 value disagreements.
+- Changes: Counting repeats lowered numeric F1 (traditional 0.7497 to 0.7235, 10-Q p6 traditional 0.9412 to 0.8467). The report uses the new numbers everywhere and says why. This also supersedes the limitations in my earlier Part 9 entry: text gates are proven now, Docling table F1 is reported, dvc repro evaluate and dvc metrics diff work.
+- Failure/limitation: My first push of the new tests broke CI, because requirements-ci.txt had no jiwer. Fixed. Multicolumn raw text is bad (finding 10), the gate only stops it getting worse. Ground truth stays in git and not DVC, because there is no remote access yet and moving it would leave everyone else without it.
+- Confidence: High that every metric is computed the same way on both sides and that the gates fail on real damage. I have reviewed this entry and can explain, rerun and defend every step of it.
+
+## Part 5: Docling tables in the export (src/export.py, src/adapters.py)
+
+- Tool/model: Claude (Opus) in claude.ai chat. The bug was found by Shravya in review on #111, not by me or the tool.
+- What it contributed: My export skipped every Docling Table record and never read data/docling/tables/. The tool changed the export to read the Docling table CSVs with the same function that reads Part 2's, so both paths reach the schema the same way.
+- How verified: 54 Docling tables now in the export. Docling cell F1 1.0 on both ground truth tables (57/57, 56/56), numeric F1 0.345 to 0.851. Traditional numbers did not move, so the change only added the missing tables. I also checked the WER gap with a block-by-block look at 10-K p32, which is how finding 6 was found.
+- Changes: My earlier finding blamed Docling for having no tables. That was wrong, it was my export. Rewritten in eval.md finding 3 with credit to Shravya.
+- Failure/limitation: 6 of the 54 Docling tables have a union bbox, logged like the traditional ones.
+- Confidence: High. I have reviewed this entry and can explain, rerun and defend every step of it.
+
+## Part 1 and Part 4: UTF-8 file encoding (src/parse_text.py, src/docling_parse.py)
+
+- Tool/model: Claude (Opus) in claude.ai chat. Both files belong to teammates, Lokesh and Shravya agreed before I changed them, and they reviewed the PR.
+- What it contributed: Listed every text read and write without encoding="utf-8" (9 lines) and wrote a one-time script that changed exactly those lines, only if each matched once, keeping the line endings so the diff was 9 lines.
+- How verified: git diff showed 9 insertions and 9 deletions in 2 files. Tests passed. Later the same bug showed up live while I measured the fixtures on Windows (a cp1252 apostrophe in the OCR output), and after the PR merged it was gone.
+- Failure/limitation: Only these two files were checked, other files were not audited.
+- Confidence: High. I have reviewed this entry and can explain, rerun and defend every step of it.
