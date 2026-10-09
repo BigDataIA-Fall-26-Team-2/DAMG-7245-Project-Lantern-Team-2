@@ -35,19 +35,33 @@ def parse_args():
     return args
 
 
+def stamp(path):
+    """(size, modification time): part of every cache key, so a rerun of the pipeline is picked up."""
+    info = Path(path).stat()
+    return info.st_size, info.st_mtime_ns
+
+
 @st.cache_data
-def read_csv(path):
+def _read_csv(path, file_stamp):
     return pd.read_csv(path)
 
 
+def read_csv(path):
+    return _read_csv(str(path), stamp(path))
+
+
 @st.cache_data
-def read_jsonl(path):
+def _read_jsonl(path, file_stamp):
     with open(path) as fh:
         return [json.loads(line) for line in fh if line.strip()]
 
 
+def read_jsonl(path):
+    return _read_jsonl(str(path), stamp(path))
+
+
 @st.cache_data
-def page_count(pdf_path):
+def page_count(pdf_path, file_stamp=None):
     with pdfplumber.open(pdf_path) as pdf:
         return len(pdf.pages)
 
@@ -83,7 +97,7 @@ def cell_key(row):
 
 
 @st.cache_data
-def locate_cell(pdf_path, page_no, label, raw):
+def locate_cell(pdf_path, page_no, label, raw, file_stamp=None):
     """Box of a table value on the page: its text on the same line as its row label."""
     text = str(raw).replace("$", "").strip()
     if not text or text.lower() == "nan":
@@ -107,7 +121,7 @@ def locate_cell(pdf_path, page_no, label, raw):
 
 
 @st.cache_data
-def page_image(pdf_path, page_no, dpi, boxes):
+def page_image(pdf_path, page_no, dpi, boxes, file_stamp=None):
     """Page picture with boxes drawn; boxes = ((x0, top, x1, bottom), colour, width), PDF points."""
     with pdfplumber.open(pdf_path) as pdf:
         im = pdf.pages[page_no - 1].to_image(resolution=dpi)
@@ -159,7 +173,7 @@ def main():
         stem = st.selectbox("Filing", manifest.stem.tolist(), key="stem")
         info = manifest.set_index("stem").loc[stem]
         pdf_path = str(info.pdf_path)
-        n_pages = page_count(pdf_path)
+        n_pages = page_count(pdf_path, stamp(pdf_path))
         if st.session_state.get("page", 1) > n_pages:
             st.session_state["page"] = n_pages
         page_no = int(st.number_input("Page", min_value=1, max_value=n_pages, step=1, key="page"))
@@ -213,7 +227,7 @@ def main():
                             st.caption(f"Arelle fact: {f.prefix}:{f.concept} = {value} {f.unit}, "
                                        f"{f.period_type} {f.start if f.period_type == 'duration' else ''}"
                                        f"→{f.end}, decimals {f.decimals}")
-                    bbox = locate_cell(pdf_path, page_no, row.pdf_label, row.pdf_raw)
+                    bbox = locate_cell(pdf_path, page_no, row.pdf_label, row.pdf_raw, stamp(pdf_path))
                     if bbox:
                         boxes.append((bbox, CELL_COLOUR, 3))
                         notes.append("Pink box: the selected cell, found by its text on the same "
@@ -247,24 +261,41 @@ def main():
                     st.json(rec, expanded=False)
 
         with tab_table:
-            tables = sorted((data / "tables").glob(f"{stem}_p{page_no:04d}_t*.csv"))
+            pattern = f"{stem}_p{page_no:04d}_t*.csv"
+            order = by_path(data / "tables", data / "docling" / "tables")
+            found = [(d, sorted(t for t in d.glob(pattern) if not t.name.endswith("_raw.csv")))
+                     for d in order]
+            source, tables = next(((d, ts) for d, ts in found if ts), (None, []))
             if not tables:
-                st.caption("No table CSV for this page (data/tables).")
+                st.caption(f"No table CSV for this page ({order[0]} or {order[1]}).")
+            else:
+                st.caption(f"Tables from {source}" + ("" if source == order[0] else
+                           f" (fallback: none in {order[0]} for this page)"))
             for t in tables:
                 st.caption(t.name)
                 st.dataframe(read_csv(str(t)), hide_index=True, width="stretch")
 
         with tab_text:
-            txt = data / "parsed" / f"{stem}_p{page_no:04d}.txt"
+            parsed = data / "parsed" / f"{stem}_p{page_no:04d}.txt"
             baseline = data / "export" / f"{stem}.txt"
-            if txt.exists():
-                st.text(txt.read_text())
-            elif baseline.exists():
-                pages = baseline.read_text().split("\f")
-                st.caption(f"From the TXT baseline {baseline.name} ({txt.name} not produced yet)")
-                st.text(pages[page_no - 1].strip() if page_no <= len(pages) else "")
+            docling_md = data / "docling" / f"{stem}_p{page_no:04d}.md"
+            sources = ([docling_md, parsed, baseline] if st.session_state.get("path") == "docling"
+                       else [parsed, baseline, docling_md])
+            source = first_existing(*sources)
+            if source is None:
+                missing(f"Page text ({sources[0]})",
+                        "parse_docling" if sources[0] == docling_md else "parse_pdfplumber")
             else:
-                missing(f"Page text ({txt})", "parse_pdfplumber")
+                text = source.read_text()
+                if source == baseline:
+                    pages = text.split("\f")
+                    text = pages[page_no - 1].strip() if page_no <= len(pages) else ""
+                kind = ("Docling page Markdown" if source == docling_md else
+                        "traditional TXT baseline (pdfplumber)" if source == baseline else
+                        "traditional page text (pdfplumber)")
+                st.caption(f"Page text from {source} ({kind})" + ("" if source == sources[0] else
+                           f"; fallback: {sources[0].name} not produced yet"))
+                st.text(text)
 
     with left:
         layout_blocks = data / "layout" / f"{stem}.blocks.jsonl"
@@ -280,7 +311,7 @@ def main():
                                 f"{blocks_path.name}, coloured by type.")
             else:
                 notes.insert(0, f"Layout blocks not produced yet ({layout_blocks}): run the `layout` stage.")
-        st.image(page_image(pdf_path, page_no, args.dpi, tuple(boxes)),
+        st.image(page_image(pdf_path, page_no, args.dpi, tuple(boxes), stamp(pdf_path)),
                  caption=f"{stem} · page {page_no}", width="stretch")
         for note in notes:
             st.caption(note)
@@ -305,4 +336,5 @@ def main():
             missing("reports/metrics.json", "evaluate")
 
 
-main()
+if __name__ == "__main__":
+    main()
