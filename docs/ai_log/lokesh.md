@@ -132,3 +132,9 @@
 - Guna identified that deleting stale MPS files could remove the Mac CSV evidence still quoted in the report. Added a content-addressed archive of all existing top-level benchmark CSV/JSON files before main() modifies outputs, including machine metadata, summaries, and costs. Archives remain within the DVC-managed data/bench directory and are excluded from current-run aggregation.
 - Added the review-requested persistent tests for unavailable-device subprocess prevention, byte-for-byte preservation, all-skipped empty summaries, and failed/zero-page cost exclusion with successful CPU retention. Existing and new benchmark tests: 4 passed; git diff --check passed.
 - Limitation: this preserves available prior files, not evidence absent from EC2. The original Mac bundle must still be obtained from its author if it was never transferred. No regenerated EC2 artifacts or recovered Mac data are claimed.
+
+### EC2-only reporting follow-up
+
+- At Lokesh's request, replaced the Mac/MPS benchmark comparisons with the successful EC2 CPU observations supplied in this conversation. Added reports/ec2_benchmark_observed.csv as an explicitly labeled transcription of those terminal summary rows; it is not claimed as a downloaded/generated artifact.
+- Removed unsupported GPU cost/performance conclusions. Cost formulas and configured assumptions remain documented; final numeric cost rows and report refresh await the corrected EC2 rerun. Original Mac data is no longer required to support this report's measurements.
+- Verification: checked the four report rows against the transcribed CSV and original supplied CPU summaries; CSV error counts are zero, each has 94 pages. git diff --check passed. No new execution or final S3 upload claimed.
