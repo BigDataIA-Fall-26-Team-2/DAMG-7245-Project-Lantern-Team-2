@@ -126,3 +126,23 @@ stages:
       - xbrl
     outs:
       - data/xbrl
+
+  bench:
+    cmd: python src/bench.py --params params.yaml --input data/rendered --output data/bench
+    deps:
+      - src/bench.py
+      - src/parse_text.py
+      - src/tables.py
+      - src/layout.py
+      - src/docling_parse.py
+      - requirements.txt
+      - tests/fixtures/scanned.pdf
+      - data/rendered
+    params:
+      - bench
+      - ocr
+      - tables
+      - layout
+      - docling
+    outs:
+      - data/bench
