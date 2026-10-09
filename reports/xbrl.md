@@ -175,3 +175,5 @@ These are the cases the 63 dictionary entries in `config/label_map.yaml` exist f
 
 Not attempted: running the pipeline on a second company. It needs a full download, render and
 extraction run for a new filing, which was out of scope the night of the code freeze.
+
+A snapshot of the final results, readable without DVC or AWS access, is in [reports/xbrl/](xbrl/README.md); `tests/test_xbrl_snapshot.py` checks in CI that it reproduces the numbers above.

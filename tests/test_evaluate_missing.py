@@ -33,6 +33,7 @@ def run_evaluate(tmp_path, export_pages):
     params = {
         "evaluate": {
             "gt_dir": str(gt), "export_dir": str(exp),
+            "xbrl_dir": str(tmp_path / "xbrl"),
             "metrics_out": str(tmp_path / "metrics.json"),
             "plot_out": str(tmp_path / "drift.png"),
             "stems": ["DOC"],
@@ -40,6 +41,14 @@ def run_evaluate(tmp_path, export_pages):
         },
         "managed": {"cache_dir": str(tmp_path / "managed")},
     }
+    xbrl = tmp_path / "xbrl"
+    xbrl.mkdir()
+    row = "DOC,income,1,tr,rev,100,100,match,match,0,0\n"
+    for path in ("traditional", "docling"):
+        (xbrl / f"comparison_{path}.csv").write_text(
+            "filing,statement,row,col,tag,xbrl_value,extracted,status,kind,abs_error,pct_error\n" + row,
+            encoding="utf-8",
+        )
     pfile = tmp_path / "params.yaml"
     pfile.write_text(yaml.safe_dump(params), encoding="utf-8")
     subprocess.run([sys.executable, str(ROOT / "src" / "evaluate.py"),

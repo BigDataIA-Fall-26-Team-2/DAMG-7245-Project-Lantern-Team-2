@@ -475,6 +475,40 @@ def write_plot(results, exports, path):
 
 # --- main -----------------------------------------------------------------
 
+XBRL_PATHS = ("traditional", "docling")
+
+
+def xbrl_match_rates(xbrl_dir, paths=XBRL_PATHS):
+    """Part 11 results for metrics.json, from the xbrl stage's comparison_{path}.csv files:
+    cells, strict match rate, value agreement (match + sign) and match rate per statement.
+    Both paths are required; a missing folder, a missing path or an empty comparison raises, so
+    metrics.json can never be written with the XBRL section silently empty or partial."""
+    folder = Path(xbrl_dir)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"XBRL comparison folder {folder} not found: run the xbrl stage before evaluate")
+    out = {}
+    for path in paths:
+        f = folder / f"comparison_{path}.csv"
+        if not f.is_file():
+            raise FileNotFoundError(f"{f} is missing: the xbrl stage must compare every table path "
+                                    f"({', '.join(paths)}) before evaluate")
+        with open(f, newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+        if not rows:
+            raise ValueError(f"{f} has no comparison rows: the {path} XBRL comparison is empty")
+        n = len(rows)
+        by_statement = defaultdict(list)
+        for r in rows:
+            by_statement[r["statement"]].append(r["status"] == "match")
+        out[path] = {
+            "cells": n,
+            "match_rate": round(sum(r["status"] == "match" for r in rows) / n, 4),
+            "value_agreement": round(sum(r["status"] in ("match", "sign") for r in rows) / n, 4),
+            "by_statement": {s: round(sum(v) / len(v), 4) for s, v in sorted(by_statement.items())},
+        }
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--params", default="params.yaml")
@@ -667,6 +701,8 @@ def main():
         "chunk_chars_mean": round(sum(lens) / len(lens), 1) if lens else 0.0,
         "chunk_chars_n": len(lens),
     }
+
+    results["xbrl"] = xbrl_match_rates(Path(cfg.get("xbrl_dir", "data/xbrl")))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(results, indent=2), encoding="utf-8")

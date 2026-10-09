@@ -163,3 +163,11 @@
 - How verified: Traditional coverage 342/388 (88.1%), precision 314/342 (91.8%); Docling 339/388 (87.4%), 311/339 (91.7%). Two independent measures agree exactly (same concept as the verified map, and value agreement match + sign). I listed every wrong and unmapped label: 4 labels map to dimension members, 8 are unmapped (share-count label, Total lines, generic Basic/Diluted).
 - Failure/limitation: The first scoring showed 0% precision because empty dims were stored as blank on one side and NaN on the other; fixed by normalising both, now covered by a test. A second company was not attempted.
 - Confidence: High for the reported precision on these two filings. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issue #58 (P6 review fix) — retest on the final export
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide; the three questions were asked by me in a fresh incognito chat.
+- What it contributed: The plan for the retest and the new section of reports/format_decision.md.
+- How verified: Rebuilt the export on current main: the Docling JSONL now has 635 records, 31 of them tables, all with page and bbox (first run: 604 records, 0 tables; 152,247 against 112,464 approximate tokens). After Lokesh's review on #137 he sent the traditional JSONL from the EC2 reproduction: 455 records, 19 tables, all with page and bbox, 114,724 approximate tokens. Both answered or confirmed 3 of 3 with the exact PDF pages (32, 34) from their page field; I also found the three values directly in records p0032_b901 and p0034_b901.
+- Failure/limitation: The first run tested the Docling export before #111 added its tables, which the review rightly called obsolete, and my first version of this PR left the traditional JSONL untested while calling the decision confirmed, which Lokesh caught. In the traditional JSONL's chat the earlier answers were in the prompt, so it verified them rather than answering blind; the report says so.
+- Confidence: High for the retest on the Docling JSONL. I have reviewed this entry and can explain, rerun, modify and defend every step of it.

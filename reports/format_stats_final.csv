@@ -1,0 +1,6 @@
+format,path,bytes,chars,approx_tokens,records,page_provenance
+md,data/docling/AAPL_10K_20250927.md,277739,277650,69412,,2 provenance comments
+jsonl,data/export/AAPL_10K_20250927.docling.jsonl,609136,608991,152247,635,635/635 records with page + bbox
+json,data/docling/AAPL_10K_20250927.json,3658987,3658987,914746,,775 page_no entries (page + bbox per item)
+txt,data/export/AAPL_10K_20250927.txt,207983,206238,51559,,"61 pages separated by form feeds, no positions"
+jsonl,data/export/AAPL_10K_20250927.jsonl,460139,458897,114724,455,455/455 records with page + bbox
