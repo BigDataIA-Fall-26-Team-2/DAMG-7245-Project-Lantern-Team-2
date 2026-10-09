@@ -121,17 +121,17 @@ stages:
       nfiles: 3
     - path: requirements.txt
       hash: md5
-      md5: 76ed4cfb309f8e05c86c1a6fce804803
-      size: 4930
+      md5: a32b6939d3391ae6e9c2030e5bd2a8c1
+      size: 4945
     - path: src/managed
       hash: md5
-      md5: 4bcfa82d6836e148f9b30769f87cc569.dir
-      size: 35295
+      md5: 89252d934f09e8dfb17d89d41a150d23.dir
+      size: 38191
       nfiles: 4
     - path: src/tables.py
       hash: md5
-      md5: a64c84070f1ad1eb57d6ac0278beba36
-      size: 27864
+      md5: db6681df96d0169fd1439996ed724aea
+      size: 28403
     params:
       params.yaml:
         managed:
@@ -162,8 +162,8 @@ stages:
     outs:
     - path: data/tables
       hash: md5
-      md5: 6d7ac67f783d3878cea215835e614813.dir
-      size: 146247
+      md5: 7b6c0380db5239e493cee2275285ed15.dir
+      size: 146353
       nfiles: 33
   layout:
     cmd: python src/layout.py --params params.yaml --input data/rendered 
@@ -347,8 +347,8 @@ stages:
       nfiles: 6
     - path: src/evaluate.py
       hash: md5
-      md5: d4532580889e88330df994e8b95e49db
-      size: 21893
+      md5: 6cd06d785838b345a668ab54ac32c78d
+      size: 24542
     params:
       params.yaml:
         evaluate:
@@ -386,12 +386,15 @@ stages:
             min_numeric_f1: 0.65
             min_table_cell_f1: 0.9
             min_table_value_recall: 0.9
+            allow_unmeasured:
+            - multicol_p1
+            - scanned_p1
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 9973aa235fd710927f9db773e6c6b878
-      size: 24257
+      md5: 49e391e9a82b42f0b2da021f09cab036
+      size: 24484
     - path: reports/plots/drift.png
       hash: md5
-      md5: f3ce3781b371dd480cea9ec2dd509ca8
-      size: 76807
+      md5: 86721bc7b86518a2fc9871415b6f4cf8
+      size: 76806

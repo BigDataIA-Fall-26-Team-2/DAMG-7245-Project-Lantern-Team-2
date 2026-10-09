@@ -14,6 +14,12 @@ The cache key is the sha256 of the rendered page image, not the file name or
 page number. A re-render that produces identical pixels is a cache hit and
 costs nothing; a re-render that genuinely changes the page is a miss, which is
 the behaviour you want from a paid API.
+
+Configuration always comes from the caller. A stage that was run with
+--params passes its own params dict to fallback_blocks(); nothing here reads
+params.yaml on import, so the switch the caller passed is the switch that
+applies. Only the command line entry point reads a params file, and it takes
+--params too.
 """
 
 import argparse
@@ -31,15 +37,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from schema import Block  # noqa: E402
 
-PARAMS = yaml.safe_load(open("params.yaml", encoding="utf-8"))
-CFG = PARAMS.get("managed", {}) or {}
-
-CACHE_DIR = Path(CFG.get("cache_dir", "data/managed"))
-REGION = CFG.get("region", "us-east-1")
-FEATURES = list(CFG.get("features", ["TABLES", "LAYOUT"]))
-DPI = int(CFG.get("dpi", 150))
-ENABLED = bool(CFG.get("enabled", False))
 RENDERED = Path("data/rendered")
+
+
+def load_params(path="params.yaml"):
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def settings(params):
+    """The managed.* settings from the params dict the caller passed."""
+    cfg = (params or {}).get("managed", {}) or {}
+    return {
+        "cfg": cfg,
+        "cache_dir": Path(cfg.get("cache_dir", "data/managed")),
+        "region": cfg.get("region", "us-east-1"),
+        "features": list(cfg.get("features", ["TABLES", "LAYOUT"])),
+        "dpi": int(cfg.get("dpi", 150)),
+        # off unless the passed config explicitly turns it on
+        "enabled": bool(cfg.get("enabled", False)),
+    }
 
 # Textract LAYOUT block types mapped onto the Appendix B vocabulary.
 LAYOUT_TO_BLOCK_TYPE = {
@@ -58,7 +75,7 @@ LAYOUT_TO_BLOCK_TYPE = {
 
 # --- page rendering and hashing ------------------------------------------
 
-def render_page_png(pdf_path, page, dpi=DPI):
+def render_page_png(pdf_path, page, dpi=150):
     """One page of a PDF as PNG bytes, via pdftoppm.
 
     Textract's synchronous AnalyzeDocument takes a single page, so the page is
@@ -91,53 +108,55 @@ def page_size_pt(pdf_path, page):
 
 # --- cache ----------------------------------------------------------------
 
-def cache_path(h):
-    return CACHE_DIR / f"{h}.json"
+def cache_path(h, cache_dir):
+    return Path(cache_dir) / f"{h}.json"
 
 
-def cached(h):
-    p = cache_path(h)
+def cached(h, cache_dir):
+    p = cache_path(h, cache_dir)
     if p.exists():
         return json.loads(p.read_text(encoding="utf-8"))
     return None
 
 
-def store(h, response, meta):
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+def store(h, response, meta, cache_dir):
+    Path(cache_dir).mkdir(parents=True, exist_ok=True)
     payload = {"meta": meta, "response": response}
-    cache_path(h).write_text(json.dumps(payload), encoding="utf-8")
+    cache_path(h, cache_dir).write_text(json.dumps(payload), encoding="utf-8")
 
 
 # --- the API call ---------------------------------------------------------
 
-def analyze(image_bytes):
+def analyze(image_bytes, region, features):
     """Call Textract. Only reached on a cache miss with managed.enabled true."""
     import boto3
-    client = boto3.client("textract", region_name=REGION)
+    client = boto3.client("textract", region_name=region)
     return client.analyze_document(
         Document={"Bytes": image_bytes},
-        FeatureTypes=FEATURES,
+        FeatureTypes=features,
     )
 
 
-def get_response(pdf_path, page, enabled=None):
+def get_response(pdf_path, page, s, enabled=None):
     """Cache-first. Returns (response, hash, from_cache) or (None, hash, False).
 
-    Never calls the API when disabled, so a run without credentials still
-    produces every record that is already cached.
+    s is settings(params) from the caller. Never calls the API when the passed
+    config is disabled, so a run without credentials still produces every
+    record that is already cached.
     """
     if enabled is None:
-        enabled = ENABLED
-    img = render_page_png(pdf_path, page)
+        enabled = s["enabled"]
+    img = render_page_png(pdf_path, page, s["dpi"])
     h = page_hash(img)
-    hit = cached(h)
+    hit = cached(h, s["cache_dir"])
     if hit is not None:
         return hit["response"], h, True
     if not enabled:
         return None, h, False
-    resp = analyze(img)
-    store(h, resp, {"source": str(pdf_path), "page": page, "dpi": DPI,
-                    "features": FEATURES, "region": REGION})
+    resp = analyze(img, s["region"], s["features"])
+    store(h, resp, {"source": str(pdf_path), "page": page, "dpi": s["dpi"],
+                    "features": s["features"], "region": s["region"]},
+          s["cache_dir"])
     return resp, h, False
 
 
@@ -270,7 +289,7 @@ def service_version():
 
 # --- the hook a parsing or table stage calls -----------------------------
 
-def fallback_blocks(manifest_row, pdf_path, page, reason=""):
+def fallback_blocks(manifest_row, pdf_path, page, reason="", params=None):
     """Managed fallback for one page. Returns [] when there is nothing to give.
 
     Call site contract, for Parts 1 and 2: fire this when your own confidence
@@ -279,8 +298,12 @@ def fallback_blocks(manifest_row, pdf_path, page, reason=""):
     Blocks, or an empty list if the page is not cached and the service is
     disabled. It never raises on a missing cache and never calls the API
     unless managed.enabled is true, so it is safe to leave wired in.
+
+    params is the caller's own params dict (the one its --params loaded). It
+    decides the switch, the cache folder and the API settings. If no params
+    are passed the service stays off.
     """
-    resp, h, from_cache = get_response(pdf_path, page)
+    resp, h, from_cache = get_response(pdf_path, page, settings(params))
     if resp is None:
         return []
     w_pt, h_pt = page_size_pt(pdf_path, page)
@@ -291,14 +314,14 @@ def fallback_blocks(manifest_row, pdf_path, page, reason=""):
 
 # --- CLI ------------------------------------------------------------------
 
-def load_manifest():
+def load_manifest(params=None, path="data/rendered/manifest.csv"):
     import csv
     rows = {}
-    with open("data/rendered/manifest.csv", newline="", encoding="utf-8") as f:
+    company_by_ticker = ((params or {}).get("export", {}) or {}).get(
+        "company_by_ticker", {})
+    with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             form, period = row["form"], row["period"]
-            company_by_ticker = (PARAMS.get("export", {}) or {}).get(
-                "company_by_ticker", {})
             rows[row["stem"]] = {
                 "stem": row["stem"],
                 "accession": row["accession"],
@@ -315,22 +338,25 @@ def load_manifest():
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--params", default="params.yaml")
     ap.add_argument("--enable", action="store_true",
                     help="allow API calls on a cache miss (overrides params)")
-    ap.add_argument("--out-dir", default=str(CACHE_DIR))
+    ap.add_argument("--out-dir", default=None)
     args = ap.parse_args()
 
-    manifest = load_manifest()
-    pages = CFG.get("pages", {}) or {}
-    fixtures = CFG.get("fixture_pages", {}) or {}
-    enabled = True if args.enable else ENABLED
+    params = load_params(args.params)
+    s = settings(params)
+    manifest = load_manifest(params)
+    pages = s["cfg"].get("pages", {}) or {}
+    fixtures = s["cfg"].get("fixture_pages", {}) or {}
+    enabled = True if args.enable else s["enabled"]
 
     by_stem = {}
     rows = []
 
     def run(stem, row, pdf, page_list):
         for page in page_list:
-            resp, h, hit = get_response(pdf, page, enabled)
+            resp, h, hit = get_response(pdf, page, s, enabled)
             if resp is None:
                 rows.append((stem, page, "miss", h))
                 continue
@@ -364,7 +390,7 @@ def main():
 
     # one file per document, named like the export stage's, so the evaluate
     # stage can read the managed path the same way it reads the others
-    out_dir = Path(args.out_dir)
+    out_dir = Path(args.out_dir or s["cache_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
     total = 0
     for stem, blocks in by_stem.items():

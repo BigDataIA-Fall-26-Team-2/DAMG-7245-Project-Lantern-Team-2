@@ -54,16 +54,18 @@ because they are not reading errors:
 |---|---|---|---|---|---|
 | 10-K p32 | Traditional | 0.7262 | 0.6753 | 0.9500 | 1.0000 |
 | | Docling | 0.2083 | 0.1947 | 0.9500 | 1.0000 |
-| | Textract | 0.0476 | 0.0284 | 0.9844 | 1.0000 |
-| 10-Q p6 | Traditional | 0.8216 | 0.8014 | 0.9412 | 0.9818 |
-| | Docling | 0.2535 | 0.3035 | 0.9748 | 1.0000 |
-| | Textract | 0.0423 | 0.0210 | 0.9839 | 1.0000 |
-| Scanned p1 | Textract | 0.0188 | 0.0101 | 0.9600 | n/a |
+| | Textract | 0.0476 | 0.0284 | 0.9767 | 1.0000 |
+| 10-Q p6 | Traditional | 0.8216 | 0.8014 | 0.8467 | 0.9818 |
+| | Docling | 0.2535 | 0.3035 | 0.9677 | 1.0000 |
+| | Textract | 0.0423 | 0.0210 | 0.9697 | 1.0000 |
+| Scanned p1 | Textract | 0.0188 | 0.0101 | 0.9333 | n/a |
 
 Docling numbers include its tables. An earlier version of this table showed
 Docling at 0.0 numeric F1, because the export was dropping Docling's tables.
 That got fixed in #111 (`reports/eval.md`, finding 3), and now Docling scores
-1.0 raw and scaled cell F1 on both statement tables.
+1.0 raw and scaled cell F1 on both statement tables. Numeric F1 counts repeated
+numbers (`reports/eval.md`, finding 8), so it is a bit lower than in earlier
+versions for every path.
 
 ### How to read this table
 
@@ -78,9 +80,12 @@ labels (`Net sales: Products`), both open-source paths have it and Textract
 dont. We did not measure that split.
 
 The reading metrics show the real story. Numeric F1 on p32 is 0.950 for both
-open-source paths and 0.984 for Textract. On p6 it is 0.941 traditional, 0.975
-Docling and 0.984 Textract. So the gap is only about one to four points, and
-raw cell F1 is perfect for all three paths on p32.
+open-source paths and 0.977 for Textract. On p6 it is 0.847 traditional, 0.968
+Docling and 0.970 Textract. So Docling is within about three points of Textract
+on both pages (only 0.2 on p6). The traditional path is 12 points behind on p6,
+because it loses some of the figures that the page prints more than once
+(`reports/eval.md`, finding 8). Raw cell F1 is perfect for all three paths on
+p32.
 
 ### Errors Textract fixes
 
@@ -112,7 +117,7 @@ raw cell F1 is perfect for all three paths on p32.
 
 ### The scanned page
 
-Textract reads the scanned fixture almost perfect: 0.019 WER, 0.010 CER, 0.96
+Textract reads the scanned fixture almost perfect: 0.019 WER, 0.010 CER, 0.93
 numeric F1. **We did not measure the open-source comparison on this page**: the
 scanned fixture was not run through Part 1's Tesseract stage before the
 deadline. This is the comparison that matters most for the decision, because a
@@ -158,7 +163,7 @@ The result of every check is saved in a new `fallback` column at the end of
 | Value | Meaning |
 |---|---|
 | empty | No check needed: no real table, or the table scored well |
-| `used` | The managed answer was used, written to `data/tables/managed/<stem>_p<page>.blocks.jsonl` |
+| `used` | The managed answer was used, written to `data/tables/managed/<stem>_p<page>.blocks.jsonl`, and the export puts it in the final output |
 | `miss` | Nothing cached and `managed.enabled` is false, so the open-source result is kept |
 | `error` | The check could not run (for example, no `pdftoppm`), the stage continues |
 
@@ -168,6 +173,43 @@ fallback disabled. Part 2's own outputs are not touched: the full stage still
 writes the same 32 tables with the same winning methods.
 `tests/test_managed_fallback.py` covers the five cases: no table, an empty
 candidate, a good score, a cache miss, and a check that fails.
+
+Three things changed after review on #116:
+
+1. **The Textract table now reaches the final output, and replaces the bad
+   one.** Before, the tables stage wrote it to `data/tables/managed/` and said
+   `used`, but the export never read that folder, so a successful fallback
+   changed nothing in the exported data. The rule now: a page with a managed
+   answer is a page where Part 2's own table scored below the trigger, so Part
+   2's table there is the low-quality result and the Textract table replaces
+   it. Never both, so the same table never comes two times. If Part 2 wrote no
+   table on that page, the Textract one fills the gap. This is in
+   `managed_table_blocks()` and `merge_managed_tables()` in `src/export.py`,
+   and every replaced page is logged in `reports/export_managed_tables.csv`
+   (stem, page, which block was replaced, which managed block came in), so the
+   provenance is visible outside the records also. `tests/test_export_managed.py`
+   forces a low-score page with a cache hit and checks the export changes and
+   the page ends with exactly one table. The tables stage also deletes an old
+   managed answer for a page before checking it again, same like it does for
+   its own CSVs.
+2. **The config the caller passes is the config that applies.** Before,
+   `tables.py` took `--params` but `textract.py` read the root `params.yaml` by
+   itself on import, so a caller could pass `managed.enabled: false` and still
+   get an API call. Now `tables.py` passes its own params into
+   `fallback_blocks()`, and the switch, cache folder, region, features and DPI
+   all come from there. `textract.py` dont read any params file on import, if
+   nothing is passed the service stays off. Tests mock the API and check that no
+   call happens when the passed config says `enabled: false` even if another
+   params file says `true`, once directly on `textract.py`
+   (`tests/test_managed_config.py`) and once through the real boundary,
+   `tables.managed_fallback()` into the real module
+   (`tests/test_managed_fallback.py`).
+3. **`boto3` is pinned and failures are not hidden.** `boto3==1.43.106` is now
+   in `requirements.txt` (it matches the `botocore` that `dvc-s3` installs). The
+   live call path is tested with a mocked `boto3` client, no AWS calls. And when
+   a check fails, the real exception (for example a missing module) is saved in
+   a new `fallback_error` column in `tables_log.csv`, not just the word
+   `error`.
 
 The OCR-confidence side of the trigger, inside Part 1's parsing stage, is not
 wired. On these two filings only the table side is used.
@@ -316,16 +358,18 @@ trigger. Thats where it clearly does better, and where the open-source path has
 no text layer to read.
 
 **Where it dont belong:** born-digital filings, which is almost all of
-FinTrust's volume. There the text layer is exact, the open-source paths read
-statement figures within about one to four points of Textract (Docling within
-one point on p6, and it reads the clipped parentheses that the traditional path
-loses), and Textract adds OCR errors the text layer never had.
+FinTrust's volume. There the text layer is exact, Docling reads statement
+figures within about three points of Textract (0.2 points on p6, and it reads
+the clipped parentheses that the traditional path loses), and Textract adds OCR
+errors the text layer never had. The traditional path is behind on p6 (12
+points), but thats a Part 2 problem with repeated figures that Docling, also
+free, already avoids, so it is not a reason to pay for Textract.
 
 **Lina's question, "Why not just use Textract for everything?", in five
-sentences.** On accuracy, the gap on digital statement pages is only about one
-to four points of numeric F1, Docling already fixes the one reading error
-Textract fixed, and Textract adds errors there by OCRing text the PDF already
-has exactly. On cost, Textract on every page is about $7,500 a year at
+sentences.** On accuracy, our free Docling path is within about three points of
+Textract's numeric F1 on digital statement pages, it already avoids the reading
+errors Textract fixed, and Textract adds errors there by OCRing text the PDF
+already has exactly. On cost, Textract on every page is about $7,500 a year at
 FinTrust's volume vs under $100 of compute, so it wins only if maintaining our
 parsers costs more than about 74 engineer-hours a year. On lock-in, its output
 is a provider-specific block graph that still needs mapping, scale

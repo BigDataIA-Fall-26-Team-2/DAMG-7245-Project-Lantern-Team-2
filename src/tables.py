@@ -29,7 +29,7 @@ import yaml
 COLUMNS = ["row_label", "col_label", "raw", "value", "scale"]
 LOG_FIELDS = ["stem", "page", "table", "accepted", "method", "score", "label_ratio", "coverage",
               "numeric_rows", "skipped_rows", "v_rulings", "lattice_tried", "candidates",
-              "runner_up", "runner_up_score", "errors", "fallback"]
+              "runner_up", "runner_up_score", "errors", "fallback", "fallback_error"]
 PRIORITY = {"camelot-lattice": 0, "camelot-stream": 1, "pdfplumber-text": 2, "camelot-network": 3}
 NUMBER = re.compile(r"^\(?-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?\)?$")
 DASHES = {"-", "\u2014", "\u2013", "\u2212"}
@@ -530,26 +530,34 @@ def managed_fallback(pdf_path, page_no, log, out, params):
 
     Returns "" when no check was needed, "used" when the managed answer was used,
     "miss" when nothing is cached and managed.enabled is false, and "error" when
-    the check could not run. It never raises, so this stage never fails because of it.
+    the check could not run. It never raises, so this stage never fails because of it,
+    but on "error" the real exception is kept in log["fallback_error"] (and so in
+    tables_log.csv), so a failure stays diagnosable.
     """
     cfg = params.get("managed", {}) or {}
     min_score = float((cfg.get("trigger", {}) or {}).get("min_table_score", 0.5))
     min_rows = int((params.get("tables", {}) or {}).get("min_numeric_rows", 3))
+    dest = Path(out) / "managed" / f"{pdf_path.stem}_p{page_no:04d}.blocks.jsonl"
+    if dest.exists():
+        dest.unlink()  # never keep this page's managed answer from an earlier run
     if not log.get("method") or int(log.get("numeric_rows") or 0) < min_rows:
         return ""  # no real table on this page, nothing for a managed service to fix
     if float(log.get("score") or 0) >= min_score:
         return ""
     try:
         from managed import textract
-        row = textract.load_manifest().get(pdf_path.stem)
+        # the params this stage was run with (--params), never the root file
+        row = textract.load_manifest(params).get(pdf_path.stem)
         if row is None:
+            log["fallback_error"] = f"{pdf_path.stem} not in manifest"
             return "error"
-        blocks = textract.fallback_blocks(row, pdf_path, page_no, reason="low table score")
-    except Exception:
+        blocks = textract.fallback_blocks(row, pdf_path, page_no,
+                                          reason="low table score", params=params)
+    except Exception as e:
+        log["fallback_error"] = f"{type(e).__name__}: {e}"
         return "error"
     if not blocks:
         return "miss"
-    dest = Path(out) / "managed" / f"{pdf_path.stem}_p{page_no:04d}.blocks.jsonl"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text("".join(b.to_jsonl() + "\n" for b in blocks), encoding="utf-8")
     return "used"

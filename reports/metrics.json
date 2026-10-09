@@ -615,7 +615,23 @@
     },
     "scanned_p1": {
       "stratum": "scanned",
-      "page": 1
+      "page": 1,
+      "managed": {
+        "wer": 0.0188,
+        "cer": 0.0101,
+        "ref_words": 533,
+        "hyp_words": 541,
+        "numeric": {
+          "precision": 0.875,
+          "recall": 1.0,
+          "f1": 0.9333,
+          "tp": 21,
+          "ref_n": 21,
+          "hyp_n": 24,
+          "ref_tokens": 21,
+          "hyp_tokens": 24
+        }
+      }
     }
   },
   "tables": {
@@ -937,6 +953,14 @@
         "cer_mean": 0.0247,
         "numeric_f1_mean": 0.9732,
         "numeric_f1_min": 0.9697
+      },
+      "scanned": {
+        "n_pages": 1,
+        "wer_mean": 0.0188,
+        "wer_max": 0.0188,
+        "cer_mean": 0.0101,
+        "numeric_f1_mean": 0.9333,
+        "numeric_f1_min": 0.9333
       }
     }
   },
@@ -954,10 +978,10 @@
       "numeric_f1_mean": 0.8512
     },
     "managed": {
-      "n_pages": 2,
-      "wer_mean": 0.045,
-      "cer_mean": 0.0247,
-      "numeric_f1_mean": 0.9732
+      "n_pages": 3,
+      "wer_mean": 0.0362,
+      "cer_mean": 0.0198,
+      "numeric_f1_mean": 0.9599
     }
   },
   "missing": {},
@@ -1006,6 +1030,14 @@
         "wer": 0.0423,
         "cer": 0.021,
         "numeric_f1": 0.9697
+      }
+    },
+    "scanned_p1": {
+      "stratum": "scanned",
+      "managed": {
+        "wer": 0.0188,
+        "cer": 0.0101,
+        "numeric_f1": 0.9333
       }
     },
     "AAPL_10K_20250927_p32_t1": {
