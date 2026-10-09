@@ -75,6 +75,16 @@ def normalize(raw, scale=1.0):
     return round((-number if negative else number) * scale, 6)
 
 
+
+def close_paren(raw, page_text):
+    """Restore a ')' cut off past a table's right edge (pdfplumber-text, last column), only when the
+    closed form is printed on the page: '(14,264' -> '(14,264)'. The value is unchanged."""
+    core = clean_token(raw)
+    if (core.startswith("(") and ")" not in core and NUMBER.match(core)
+            and core + ")" in str(page_text).replace(" ", "")):
+        return str(raw).rstrip() + ")"
+    return raw
+
 # ---------- scoring and method choice (#29) ----------
 def parse_rows(df):
     """Each row -> (label fragments, number cells); lone '$' cells are dropped."""
@@ -498,7 +508,7 @@ def to_long(df, page_text, words=None):
         col_units = units.get(block) or [None] * n_cols
         for k, raw in enumerate(numbers):
             scale = col_units[k] if col_units[k] is not None else row_scale
-            out.append([row_label, col_labels[k], raw, normalize(raw, scale), scale])
+            out.append([row_label, col_labels[k], close_paren(raw, page_text), normalize(raw, scale), scale])
         if norm(full).startswith("total"):
             section = ""
     return out, skipped
