@@ -147,6 +147,64 @@ def route_table(pdf_path, page, bbox, pad, params_path):
 
 COLORS = {"Text": "blue", "Title": "red", "List": "green", "Table": "orange", "Figure": "purple"}
 
+TOKEN = re.compile(r"[A-Za-z0-9]+")
+
+
+def in_table(bbox, words, table_tokens, pad, share=0.8):
+    """True if at least `share` of the words inside bbox appear in the extracted table's cells, i.e. the block
+    duplicates the table. Blocks the extraction did not capture are kept, so absorbing never loses text."""
+    x0, top, x1, bottom = bbox
+    toks = [tok.lower() for w in words
+            if x0 - pad <= (w["x0"] + w["x1"]) / 2 <= x1 + pad and top <= (w["top"] + w["bottom"]) / 2 <= bottom
+            for tok in TOKEN.findall(w["text"])]
+    return bool(toks) and sum(tok in table_tokens for tok in toks) / len(toks) >= share
+
+
+def page_table_tokens(tables_dir, stem, n):
+    """Words in Part 2's table CSVs for this page: the tables the export actually uses."""
+    toks = set()
+    for path in sorted(Path(tables_dir).glob(f"{stem}_p{n:04d}_t*.csv")):
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                toks |= {tok.lower() for v in row.values() if v for tok in TOKEN.findall(v)}
+    return toks
+
+
+def absorb_table_rows(pdf_path, page, recs, params, params_path, p2_tokens):
+    """Route every Table block, then fold its row labels into each extracted table.
+
+    The detector's Table box often covers only the figure columns, so the row labels sat outside it and were saved
+    again as separate Text/List/Title blocks (found by Part 9, eval.md finding 6). For a table that routing extracted,
+    the stored bbox is widened to the words on its rows (labels included; the detector's box is kept as detected_bbox)
+    and text blocks centred inside its rows are dropped when their words appear in both the routed table and Part 2's table CSVs for the page. Tables that did not extract are left untouched, so no text is lost."""
+    routed = [route_table(pdf_path, page, r["bbox"], params["pad_pt"], params_path) if r["block_type"] == "Table"
+              else None for r in recs]
+    words = page.extract_words()
+    absorbed = set()
+    for j, r in enumerate(recs):
+        if routed[j] is None or routed[j][0] is None:
+            continue
+        x0, top, x1, bottom = r["bbox"]
+        row_words = [w for w in words if top <= (w["top"] + w["bottom"]) / 2 <= bottom]
+        if row_words:
+            x0 = min(x0, min(w["x0"] for w in row_words))
+            x1 = max(x1, max(w["x1"] for w in row_words))
+        table_tokens = {tok.lower() for row in routed[j][0] for v in row.values() if isinstance(v, str)
+                        for tok in TOKEN.findall(v)}
+        n = 0
+        for k, o in enumerate(recs):
+            if (k != j and o["block_type"] in ("Text", "List", "Title")
+                    and top <= (o["bbox"][1] + o["bbox"][3]) / 2 <= bottom
+                    and in_table(o["bbox"], words, table_tokens, params["text_pad_pt"])
+                    and in_table(o["bbox"], words, p2_tokens, params["text_pad_pt"])):
+                absorbed.add(k)
+                n += 1
+        recs[j] = {**r, "bbox": [round(x0, 2), top, round(x1, 2), bottom], "detected_bbox": r["bbox"]}
+        routed[j] = (routed[j][0], {**routed[j][1], "absorbed_blocks": n})
+    keep = [k for k in range(len(recs)) if k not in absorbed]
+    return [recs[k] for k in keep], [routed[k] for k in keep]
+
+
 def draw(img, layout):
     """Draw boxes with type and score (replaces lp.draw_box, which breaks on new Pillow)."""
     out = img.copy()
@@ -163,7 +221,7 @@ def load_params(path="params.yaml"):
     return yaml.safe_load(Path(path).read_text())
 
 
-def main(params_path, input_dir, output, qa_dir, figures_dir):
+def main(params_path, input_dir, output, qa_dir, figures_dir, tables_dir="data/tables"):
     all_params = load_params(params_path)
     params = all_params["layout"]
     ocr_dpi = all_params["ocr"]["dpi"]          # reuse Lokesh's OCR resolution (Part 1)
@@ -191,14 +249,14 @@ def main(params_path, input_dir, output, qa_dir, figures_dir):
                 n = page.page_number
                 img, kept, recs = detect_page(model, page, params)
                 recs = reading_order(recs, params["column_gap_pt"])
-                for i, r in enumerate(recs, start=1):     # ids follow reading order
+                p2_tokens = page_table_tokens(tables_dir, stem, n)   # Part 2's tables, which the export uses
+                recs, routed = absorb_table_rows(pdf_path, page, recs, params, params_path, p2_tokens)
+                for i, (r, routed_result) in enumerate(zip(recs, routed), start=1):     # ids follow reading order
                     block_id = f"p{n:04d}_b{i:03d}"
                     text, used_ocr = None, False
                     if r["block_type"] in TEXT_TYPES:
                         text, used_ocr = block_text(page, r["bbox"], ocr_dpi, params["text_pad_pt"])
-                    table, table_info = None, None
-                    if r["block_type"] == "Table":
-                        table, table_info = route_table(pdf_path, page, r["bbox"], params["pad_pt"], params_path)
+                    table, table_info = routed_result if routed_result else (None, None)
                     if table is not None:
                         extractor, version = table_info["method"], table_info["extractor_version"]
                     elif text is not None:
@@ -241,5 +299,6 @@ if __name__ == "__main__":
     ap.add_argument("--output", default="data/layout")
     ap.add_argument("--qa", default="reports/layout")
     ap.add_argument("--figures", default="data/figures")
+    ap.add_argument("--tables", default="data/tables", help="Part 2 table CSVs; labels are absorbed only if they are in them")
     a = ap.parse_args()
-    main(a.params, a.input, a.output, a.qa, a.figures)
+    main(a.params, a.input, a.output, a.qa, a.figures, a.tables)

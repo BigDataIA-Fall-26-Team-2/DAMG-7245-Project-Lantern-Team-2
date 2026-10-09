@@ -54,3 +54,11 @@
 - Changes: `serve_url` defaults to empty, so the library path and every teammate's run are unchanged; the image is pinned by digest, not `latest`; a failed conversion raises instead of writing outputs; tests use a fake `requests.post`, so they run in CI without Docker.
 - Limitation: the server runs Docling 2.132.0 vs the library's 2.134.0 (same models); raw table headers join levels with "." instead of " - ", which does not reach the team-format tables. Server was ~1.8x slower on my Mac (Docker VM, CPU only); not measured on Linux.
 - Confidence: high that the HTTP path produces the same outputs on these filings. I can explain, modify, rerun and defend this work.
+
+## P3 fix: Table boxes widened to their row labels (eval.md finding 6)
+
+- Tool: Claude (Anthropic), claude.ai chat. Drafted `absorb_table_rows`, `in_table`, `page_table_tokens`, the `--tables` option, the tests and the audit note.
+- Verification: measured with Guna's own evaluation before and after on the same local data (statement WER 0.676 -> 0.585, overall 0.501 -> 0.466, cell F1 unchanged) and checked page by page; checked that the widened boxes cover more words, not fewer; tests cover the absorb and keep cases. Full suite: 152 passed; the one failure (prose CER 0.1233 vs 0.12) is identical before and after, from my re-rendered local PDFs.
+- Changes: the first version absorbed blocks by position only and made 10-Q p11 and p16 worse; the page-by-page check showed the absorbed labels were in layout's routed table but not in Part 2's CSVs, which the export uses, so blocks are now absorbed only if their words are in both. Measurement runs rewrote Guna's report files; I reverted them so he regenerates them after merge.
+- Limitation: statement titles and units lines the detector never boxes are still missing from the traditional path; the 80% overlap threshold is a judgement call, not tuned.
+- Confidence: high that no page got worse on the 16 ground-truth pages. I can explain, modify, rerun and defend this work.

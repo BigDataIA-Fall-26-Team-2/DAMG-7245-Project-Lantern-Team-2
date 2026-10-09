@@ -158,3 +158,19 @@ signatures are unboxed.
 - A few boxes are offset by more than 8 pt and still clip a letter.
 - Multiple tables under one Table box (10-K p50) can only yield the single best table.
 - These failure modes are the comparison baseline for Docling (Part 4).
+
+## 8. Fix: Table boxes widened to their row labels (after Part 9, eval.md finding 6)
+
+Part 9 showed the cost of the narrow Table boxes from section 3: on statement pages the row labels sat outside the box
+and were exported twice (once inside the table, once as Text blocks). `absorb_table_rows` in `src/layout.py` now
+widens the stored box of every extracted table to the words on its rows (the detector's box is kept as
+`detected_bbox`) and drops a Text/List/Title block in those rows only when at least 80% of its words appear in both
+the routed table and Part 2's table CSVs for the page, which are the tables the export uses. Tables that did not
+extract are left alone, so no text is lost.
+
+10-K p32: Table box x 362 -> 7 (Docling 5.5), 7 label blocks absorbed. Part 9 evaluation, traditional path, same
+local data: statement WER 0.676 -> 0.585 (p32 0.702 -> 0.405, p36 0.657 -> 0.408), notes 0.611 -> 0.608, prose and
+cover unchanged, overall 0.501 -> 0.466; cell F1 still 1.0. A first version that absorbed by position alone made
+10-Q p11 and p16 worse, because those labels were not in Part 2's CSVs; checking both tables fixed it.
+Evidence: `prototyping/shravya/table_box_fix.txt`. Still open: lines the detector never boxes (statement titles,
+units lines) remain missing from the traditional path.
