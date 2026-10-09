@@ -15,10 +15,11 @@ comfortable number. See reports/eval.md.
 
 import argparse
 import csv
+import html
 import json
 import re
 import unicodedata
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import jiwer
@@ -54,6 +55,11 @@ BREAK_MODES = ("none", "no-scale", "drop-parens", "no-ocr", "strip-prefix",
                "drop-words")
 
 def apply_conventions(s):
+    # HTML entities first (the brief requires html.unescape): an exporter that
+    # writes "&amp;" has not misread "&". Applied to reference and hypothesis
+    # alike, and before numeric tokens are taken, since every metric goes
+    # through this function.
+    s = html.unescape(s)
     s = unicodedata.normalize("NFKC", s)
     for a, b in _SUBS:
         s = s.replace(a, b)
@@ -98,6 +104,25 @@ def to_number(raw):
 
 # --- metric primitives ----------------------------------------------------
 
+def prf_counts(ref_items, hyp_items):
+    """Precision, recall and F1 that count repeats.
+
+    A statement page prints the same figure several times (a subtotal that
+    is also a total, the same number in two columns). Matching on sets would
+    let one printed "100" stand in for three, so a hypothesis that lost two of
+    them would still score 1.0. Counter intersection matches each occurrence
+    at most once.
+    """
+    ref_c, hyp_c = Counter(ref_items), Counter(hyp_items)
+    tp = sum((ref_c & hyp_c).values())
+    n_ref, n_hyp = sum(ref_c.values()), sum(hyp_c.values())
+    p = tp / n_hyp if n_hyp else 0.0
+    r = tp / n_ref if n_ref else 0.0
+    f = 2 * p * r / (p + r) if (p + r) else 0.0
+    return {"precision": round(p, 4), "recall": round(r, 4), "f1": round(f, 4),
+            "tp": tp, "ref_n": n_ref, "hyp_n": n_hyp}
+
+
 def prf(ref_set, hyp_set):
     tp = len(ref_set & hyp_set)
     p = tp / len(hyp_set) if hyp_set else 0.0
@@ -111,14 +136,16 @@ def text_metrics(ref, hyp):
     r, h = normalise(ref), normalise(hyp)
     if not r:
         return None
+    # an empty hypothesis is a page the parser lost completely: every
+    # reference word is a deletion, so WER and CER are 1.0 by definition
     out = {
-        "wer": round(jiwer.wer(r, h), 4),
-        "cer": round(jiwer.cer(r, h), 4),
+        "wer": round(jiwer.wer(r, h), 4) if h else 1.0,
+        "cer": round(jiwer.cer(r, h), 4) if h else 1.0,
         "ref_words": len(r.split()),
         "hyp_words": len(h.split()),
     }
     rn, hn = numeric_tokens(ref), numeric_tokens(hyp)
-    out["numeric"] = prf(set(rn), set(hn))
+    out["numeric"] = prf_counts(rn, hn)
     out["numeric"]["ref_tokens"] = len(rn)
     out["numeric"]["hyp_tokens"] = len(hn)
     return out
@@ -401,7 +428,11 @@ def main():
     strata = cfg["strata"]
 
     results = {"break_mode": args.break_mode, "pages": {}, "tables": {},
-               "by_stratum": {}, "by_path": {}}
+               "by_stratum": {}, "by_path": {},
+               # missing: the path has an export for this filing but no output
+               # for a ground truth page, scored as an empty page, never skipped.
+               # unmeasured: the path has no export for that document at all.
+               "missing": {}, "unmeasured": {}}
 
     managed_cfg = (yaml.safe_load(open(args.params, encoding="utf-8"))
                    .get("managed", {}) or {})
@@ -434,10 +465,23 @@ def main():
         entry = {"stratum": stratum, "page": page}
         for path_name in PATHS:
             by_page = exports.get(stem, {}).get(path_name)
-            if not by_page or page not in by_page:
+            if path_name == "managed":
+                # Part 7 is scored only on the pages that were sent to it
+                if not by_page or page not in by_page:
+                    continue
+                hyp = page_text(by_page[page])
+            elif not by_page:
+                results["unmeasured"].setdefault(path_name, []).append(key)
                 continue
-            m = text_metrics(ref, page_text(by_page[page]))
+            elif page not in by_page:
+                results["missing"].setdefault(path_name, []).append(key)
+                hyp = ""
+            else:
+                hyp = page_text(by_page[page])
+            m = text_metrics(ref, hyp)
             if m:
+                if path_name != "managed" and page not in by_page:
+                    m["missing"] = True
                 entry[path_name] = m
         results["pages"][key] = entry
 
@@ -452,7 +496,14 @@ def main():
             by_page = exports.get(stem, {}).get(path_name, {})
             found = table_records(by_page.get(page, []))
             if not found:
-                continue
+                if path_name == "managed":
+                    continue
+                if not by_page:
+                    results["unmeasured"].setdefault(path_name, []).append(key)
+                    continue
+                # the filing was exported but this table is not in it: score it
+                # as zero cells found, so a lost table fails the gate
+                results["missing"].setdefault(path_name, []).append(key)
             hc, hcr, hv = set(), set(), set()
             for rec in found:
                 c, cr, v = parser_table_cells(rec, gt["headings"])

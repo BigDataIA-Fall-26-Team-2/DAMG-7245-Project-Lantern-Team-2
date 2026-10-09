@@ -86,11 +86,12 @@ Baseline, `reports/metrics.json`, break mode `none`.
 
 | Path | mean WER | mean CER | mean numeric-token F1 |
 |---|---|---|---|
-| Traditional (pdfplumber + Camelot + layout) | 0.4850 | 0.4582 | 0.7497 |
-| Docling | 0.2149 | 0.2103 | 0.8633 |
+| Traditional (pdfplumber + Camelot + layout) | 0.4850 | 0.4582 | 0.7235 |
+| Docling | 0.2149 | 0.2103 | 0.8512 |
 
 Docling numbers are after the fix in finding 3. Before the fix the Docling
-export had no tables and it scored 0.5314 WER and 0.3453 numeric F1. The managed
+export had no tables and it scored 0.5314 WER and 0.3453 numeric F1 (that
+0.3453 was measured with the old set-based numeric metric, see finding 8). The managed
 path (AWS Textract, Part 7) is scored only on the pages we sent to it, it is in
 `reports/build_vs_buy.md`.
 
@@ -98,14 +99,14 @@ path (AWS Textract, Part 7) is scored only on the pages we sent to it, it is in
 
 | Stratum | pages | mean WER | worst WER | mean CER | mean numeric F1 | worst numeric F1 |
 |---|---|---|---|---|---|---|
-| Prose | 4 | 0.0840 | 0.1530 | 0.0795 | 0.7500 | 0.0000 |
-| Cover | 2 | 0.4989 | 0.5465 | 0.4769 | 0.4916 | 0.4615 |
-| Notes | 4 | 0.6003 | 0.7506 | 0.5361 | 0.5728 | 0.3357 |
-| Statements | 6 | 0.6709 | 0.9202 | 0.6526 | 0.9536 | 0.9310 |
+| Prose | 4 | 0.0840 | 0.1530 | 0.0795 | 0.7179 | 0.0000 |
+| Cover | 2 | 0.4989 | 0.5465 | 0.4769 | 0.4885 | 0.4286 |
+| Notes | 4 | 0.6003 | 0.7506 | 0.5361 | 0.5302 | 0.3125 |
+| Statements | 6 | 0.6709 | 0.9202 | 0.6526 | 0.9344 | 0.8467 |
 
 ### The main result
 
-Statement pages score **0.954 numeric-token F1** and **0.671 WER** at the same
+Statement pages score **0.934 numeric-token F1** and **0.671 WER** at the same
 time. These two numbers are not fighting each other, they measure different
 things.
 
@@ -125,14 +126,14 @@ is one block and because of the section prefixes. The Docling comparison proved
 that wrong, because Docling also has both and still scores much lower.
 
 Numeric-token F1 dont care about order, so on the same pages it shows what we
-actually want: 95% of the figures on the primary financial statements are read
+actually want: 93% of the figures on the primary financial statements are read
 correctly, and the hand-keyed cell comparison on p32 and p6 gives **precision,
 recall and F1 all 1.0** (57/57 and 56/56 cells).
 
 So the conclusion is: **WER is the right tool for prose, and numeric-token F1
 plus table cell F1 are the right tools for tables.** The 0.485 overall average
 dont describe any of them, thats why every number above is per stratum. If we
-reported only the average, both the 0.084 prose result and the 0.954 statement
+reported only the average, both the 0.084 prose result and the 0.934 statement
 figure result would be hidden.
 
 ### Notes on some numbers
@@ -143,7 +144,7 @@ figure result would be hidden.
 - Cover pages get 0.50 WER mostly because of page furniture: the
   securities-registered table and the checkbox grid. The `[X]` folding on both
   sides is very important here, without it every checkbox line would mismatch.
-- Notes worst numeric F1 of 0.336 is under-extraction, not misreading, see
+- Notes worst numeric F1 of 0.3125 is under-extraction, not misreading, see
   finding 2.
 
 ## 3. Regression gates and the failing run
@@ -153,16 +154,35 @@ baseline with some headroom, and each one writes in `params.yaml` the baseline
 it came from, so if someone changes it later it is a visible decision and not
 silent drift.
 
+The accuracy gates run `evaluate.py` themselves on the export that is on disk
+now, into a temp file. They dont read the committed `reports/metrics.json`, so
+an old or edited metrics file cant make them pass. If there is no exported
+filing in `data/export`, they skip with a message, they dont pass.
+`LANTERN_METRICS` is used only to record the failing runs below.
+
 | Gate | Threshold | Baseline |
 |---|---|---|
 | Worst prose WER | <= 0.20 | 0.153 |
 | Mean prose CER | <= 0.12 | 0.0795 |
-| Mean numeric-token F1, all pages | >= 0.65 | 0.750 |
+| Mean numeric-token F1, all pages | >= 0.65 | 0.7235 |
 | Table cell F1, every GT table | >= 0.90 | 1.000 |
 | Table value recall, every GT table | >= 0.90 | 1.000 |
+| Ground truth pages missing from an export | 0 | 0 |
+| Unmeasured pages, if not in `allow_unmeasured` | 0 | 0 |
 
 Two gates are regression tests for real bugs Part 9 found, not imaginary ones:
 `test_no_placeholder_table_bbox` and `test_table_extractor_matches_tables_log`.
+
+Two more came from review on #111. Before, if a page had ground truth but no
+output, the scorer just skipped it, so a lost page looked perfect: two
+reference pages with output for only one gave WER 0 and numeric F1 1. Now a
+lost page is scored as an empty page (WER 1.0, numeric F1 0, a lost table gets
+cell F1 0) and it is listed in `metrics.json` under `missing`, and
+`test_no_sampled_page_missing_from_the_export` fails on it. A document with no
+export at all is listed under `unmeasured`, and
+`test_only_allowed_pages_are_unmeasured` fails unless it is declared in
+`params.yaml` under `evaluate.thresholds.allow_unmeasured`.
+`tests/test_evaluate_missing.py` reproduces the reviewer's exact case.
 
 ### Proving the gates actually work
 
@@ -171,15 +191,15 @@ scoring. Run on the same inputs:
 
 | Mode | p32 cell F1 | p6 cell F1 | statement numeric F1 | statement mean WER |
 |---|---|---|---|---|
-| `none` (baseline) | 1.0000 | 1.0000 | 0.9536 | 0.6709 |
-| `no-scale` | 0.1053 | 0.0000 | 0.9536 | 0.6709 |
-| `drop-parens` | 0.9474 | 0.9643 | 0.7671 | 0.7295 |
-| `drop-words` | 1.0000 | 1.0000 | 0.9536 | 0.6283 |
+| `none` (baseline) | 1.0000 | 1.0000 | 0.9344 | 0.6709 |
+| `no-scale` | 0.1053 | 0.0000 | 0.9344 | 0.6709 |
+| `drop-parens` | 0.9474 | 0.9643 | 0.7506 | 0.7295 |
+| `drop-words` | 1.0000 | 1.0000 | 0.9365 | 0.6283 |
 
 `no-scale` acts like we forgot the per-row scale and carried the printed figure
 as if it is already in full units. Table cell metric falls to 0.105 and 0.000.
 `drop-parens` acts like we lost the parentheses-as-negative rule, statement
-numeric F1 falls from 0.954 to 0.767 and the worst statement WER goes above
+numeric F1 falls from 0.934 to 0.751 and the worst statement WER goes above
 1.0, which is possible because of insertions.
 
 Note that `no-scale` dont change WER or numeric F1, because that break only
@@ -204,7 +224,9 @@ instead of 0.097.
 Statement-page WER actually *goes down* with `drop-words`, from 0.6709 to
 0.6283. Deleting words can make the hypothesis closer to the reference only if
 it had extra words, so this separately confirms finding 6: the traditional
-statement pages have their row labels two times.
+statement pages have their row labels two times. Statement numeric F1 also goes
+a little up (0.9344 to 0.9365), same reason: some deleted tokens were extra
+copies.
 
 The table failing run is saved in `reports/`:
 
@@ -322,7 +344,7 @@ provenance claim, not the scores.
 **2. Under-extraction on stacked-table pages.** 10-Q p11 and p16 each give only
 one table block of four rows. p16 has four stacked seven-column segment tables,
 so most of its cells are never extracted. This is the worst notes numeric F1,
-0.336. The cause is before the export, in table detection, raised with Part 2.
+0.3125. The cause is before the export, in table detection, raised with Part 2.
 
 **3. The Docling export dropped every Docling table (fixed, found in review).**
 Part 4 writes Docling tables to `data/docling/tables/` in the same contract CSV
@@ -338,7 +360,7 @@ on same kind of input. The effect:
 | Docling path | before | after |
 |---|---|---|
 | mean WER | 0.5314 | 0.2149 |
-| mean numeric-token F1 | 0.3453 | 0.8633 |
+| mean numeric-token F1 | 0.3453 | 0.8512 |
 | raw cell F1, 10-K p32 | not scored | 1.0000 |
 | raw cell F1, 10-Q p6 | not scored | 1.0000 |
 
@@ -382,6 +404,28 @@ at 0.9818. It depends on the extractor: that page went through pdfplumber-text,
 and p32's `(565)` in same position went through Camelot and was fine. Docling
 and Textract both read the two cells correctly.
 
+**8. Numeric F1 was ignoring repeated numbers (fixed, found in review).** The
+numeric metric compared sets, so a number printed three times counted as one.
+Reviewer's example: reference `100 100 100` vs hypothesis `100` gave precision,
+recall and F1 all 1.0, but two of the three are missing. Statement pages print
+the same figure many times (a subtotal that is also a total, same number in two
+columns), so this was hiding real losses. Now matching counts repeats, with
+`Counter` intersection. Every numeric F1 in this report is the new number. The
+biggest change is 10-Q p6 traditional, 0.9412 before and 0.8467 now: that page
+loses some repeated figures and the set metric hid it. Overall traditional went
+from 0.7497 to 0.7235 and Docling from 0.8633 to 0.8512. WER, CER and table
+cell F1 did not change. `tests/test_evaluate_metrics.py` has the reviewer's
+example.
+
+**9. HTML entities were not decoded (fixed, found in review).** The brief asks
+for `html.unescape`. Without it `Research &amp; Development` vs
+`Research & Development` gave WER 0.3333 for the same content. Now
+`html.unescape` runs first inside `apply_conventions`, which every metric goes
+through, so it applies to reference and hypothesis alike and also before the
+numeric tokens are taken. No current score moved because of this one, our
+exports dont have entities, but now an exporter that writes them is not
+punished. Also tested in `tests/test_evaluate_metrics.py`.
+
 ## 7. Scope and what these numbers dont claim
 
 ### Scope we chose
@@ -391,10 +435,12 @@ and Textract both read the two cells correctly.
   not saying this is general accuracy.
 - 16 of the 20 sample slots are scored. The multi-column and scanned fixture
   pages have hand-made ground truth but no pipeline output, because the fixtures
-  were not run through the stages. So these two strata are not measured, and
-  the CI gates in `tests/test_quality.py` run on local data and not on the
-  committed fixtures. To close this, the fixtures need to be run through the
-  stages.
+  were not run through the stages. So these two strata are not measured. They
+  are declared openly in `params.yaml` (`allow_unmeasured: [multicol_p1,
+  scanned_p1]`) and listed in `metrics.json` under `unmeasured`, so they cant
+  disappear silently. The CI gates in `tests/test_quality.py` run on local
+  data and not on the committed fixtures. To close this, the fixtures need to
+  be run through the stages.
 - Table ground truth is two tables out of 32 extracted from the 10-K and 23
   from the 10-Q, which is the brief's minimum. Cell F1 of 1.0 is measured on two
   statement tables, it is not a number for the whole pipeline.

@@ -1,4 +1,4 @@
-.....FF......                                                            [100%]
+.....FF........                                                          [100%]
 ================================== FAILURES ===================================
 _______________________ test_prose_wer_within_threshold _______________________
 
@@ -16,7 +16,7 @@ thresholds = {'min_gt_pages': 16, 'min_gt_tables': 2, 'max_wer_prose': 0.2, 'max
 E       AssertionError: {'n_pages': 4, 'wer_mean': 0.2597, 'wer_max': 0.3153, 'cer_mean': 0.2571, ...}
 E       assert 0.3153 <= 0.2
 
-tests\test_quality.py:101: AssertionError
+tests\test_quality.py:115: AssertionError
 _______________________ test_prose_cer_within_threshold _______________________
 
 metrics = {'break_mode': 'drop-words', 'pages': {'AAPL_10K_20250927_p1': {'stratum': 'cover', 'page': 1, 'traditional': {'wer': ... ...}}, 'managed': {'statement': {'n_pages': 2, 'wer_mean': 0.0579, 'wer_max': 0.0595, 'cer_mean': 0.0372, ...}}}, ...}
@@ -28,8 +28,8 @@ thresholds = {'min_gt_pages': 16, 'min_gt_tables': 2, 'max_wer_prose': 0.2, 'max
 E       AssertionError: {'n_pages': 4, 'wer_mean': 0.2597, 'wer_max': 0.3153, 'cer_mean': 0.2571, ...}
 E       assert 0.2571 <= 0.12
 
-tests\test_quality.py:106: AssertionError
+tests\test_quality.py:120: AssertionError
 =========================== short test summary info ===========================
 FAILED tests/test_quality.py::test_prose_wer_within_threshold - AssertionErro...
 FAILED tests/test_quality.py::test_prose_cer_within_threshold - AssertionErro...
-2 failed, 11 passed in 0.26s
+2 failed, 13 passed in 0.23s
