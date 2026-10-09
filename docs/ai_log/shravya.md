@@ -46,3 +46,11 @@
 - Changes: measured on my own machine (Apple M3 Pro, 11 cores, 18 GB). Each stage runs in its own process so one stage's models don't inflate another's peak memory. Added the scanned fixture to the batch so OCR cost is measured, since Apple pages never need OCR. Added `docling.device` (auto/cpu/mps) so Docling's CPU and GPU timings are measured separately rather than mixed.
 - Limitation: AI claims I corrected: it first said my Mac had no GPU for these models (MPS is available and Docling uses it on `auto`), and it guessed Docling's 3 empty pages were the 3 scanned pages (actually the blank 10-Q p7 plus scanned p1 and p3; scanned p2 had layout regions). Worker count per VM and the Mac-GPU-as-T4 proxy are stated assumptions, not measurements; one run per stage, no variance.
 - Confidence: high for the measured per-stage timings and memory on this machine; moderate for the cloud cost estimates, which depend on the stated assumptions. I can explain, modify, rerun and defend every part of this work.
+
+## P4 stretch: docling-serve over HTTP (#83)
+
+- Tool: Claude (Anthropic), claude.ai chat. Suggested running docling-serve as a pinned Docker container (so no packages go into requirements.txt), drafted `convert_via_serve()`, the `serve_url` switch, the tests and the report section.
+- Verification: listed the server's endpoints from its own openapi.json and read /version instead of assuming them; converted the statement fixture by hand first; then ran the real stage through the server on both filings and compared with the library: same table and block counts, same HTML conversion, `diff -rq` shows all 54 team-format CSVs identical. Full suite 95 passed.
+- Changes: `serve_url` defaults to empty, so the library path and every teammate's run are unchanged; the image is pinned by digest, not `latest`; a failed conversion raises instead of writing outputs; tests use a fake `requests.post`, so they run in CI without Docker.
+- Limitation: the server runs Docling 2.132.0 vs the library's 2.134.0 (same models); raw table headers join levels with "." instead of " - ", which does not reach the team-format tables. Server was ~1.8x slower on my Mac (Docker VM, CPU only); not measured on Linux.
+- Confidence: high that the HTTP path produces the same outputs on these filings. I can explain, modify, rerun and defend this work.
