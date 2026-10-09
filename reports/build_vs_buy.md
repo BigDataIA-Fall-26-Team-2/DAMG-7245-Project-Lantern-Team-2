@@ -271,8 +271,6 @@ Free tier: three months for new customers, including 100 pages a month of
 **Measured spend for this part:** three pages, so $0.045 at list price, and
 nothing if the account is still in its free tier window.
 
-> TO FILL: Cost Explorer figure for Amazon Textract, October 2026, and the date
-> it was checked (Cost Explorer lags by several hours).
 
 ## 6. Cost at FinTrust's volume
 
