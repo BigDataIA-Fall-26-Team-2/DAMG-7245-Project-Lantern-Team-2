@@ -14,7 +14,7 @@ from pdf2image import convert_from_path
 
 JUNK = re.compile(r"\(cid:\d+\)|\ufffd")
 LOG_FIELDS = ["doc_id", "stem", "page", "ocr", "reason", "char_count", "junk_ratio",
-              "engine", "mean_confidence", "text_chars"]
+              "engine", "mean_confidence", "text_chars", "managed_status"]
 
 
 def ocr_reason(text, params):
@@ -56,17 +56,46 @@ def ocr_page(pdf_path, number, width, height, params):
         image.close()
 
 
-def extract_page_text(pdf_path, ocr_params=None):
+def managed_fallback(pdf_path, number, width, height, confidence, params):
+    """Escalate low-confidence Tesseract pages, including empty OCR results."""
+    threshold = params.get("managed", {}).get("trigger", {}).get("min_ocr_conf")
+    if threshold is None:
+        return None, "not_configured"
+    if not 0 <= threshold <= 1:
+        raise ValueError("managed.trigger.min_ocr_conf must be in [0, 1]")
+    if confidence is not None and confidence / 100 >= threshold:
+        return None, "not_needed"
+    from managed.textract import fallback_text
+    result = fallback_text(pdf_path, number, width, height, params)
+    if result is None:
+        return None, "disabled_cache_miss"
+    text, words, from_cache = result
+    if not text.strip() or not words:
+        return None, "empty_response"
+    return (text, words, mean(w["ocr_conf"] for w in words)), "cache_hit" if from_cache else "api"
+
+
+def extract_page_text(pdf_path, ocr_params=None, managed_params=None):
     """Yield page text, top-left point boxes, and the native/OCR decision."""
     if ocr_params is None:
-        ocr_params = yaml.safe_load(Path("params.yaml").read_text())["ocr"]
+        config = yaml.safe_load(Path("params.yaml").read_text())
+        ocr_params = config["ocr"]
+        if managed_params is None:
+            managed_params = config
     with pdfplumber.open(pdf_path) as pdf:
         for number, page in enumerate(pdf.pages, 1):
             text = page.extract_text() or ""
             reason, chars, junk_ratio = ocr_reason(text, ocr_params)
             confidence = None
+            managed_status = "not_needed"
+            engine = "tesseract" if reason else "pdfplumber"
             if reason:
                 text, words, confidence = ocr_page(pdf_path, number, page.width, page.height, ocr_params)
+                replacement, managed_status = managed_fallback(
+                    pdf_path, number, page.width, page.height, confidence, managed_params or {})
+                if replacement is not None:
+                    text, words, confidence = replacement
+                    engine = "aws_textract"
             else:
                 x0, top = page.bbox[:2]
                 words = [{"text": w["text"], "bbox": [w["x0"] - x0, w["top"] - top,
@@ -74,12 +103,13 @@ def extract_page_text(pdf_path, ocr_params=None):
                          for w in page.extract_words()]
             yield {"page": number, "text": text, "words": words, "ocr": bool(reason),
                    "reason": reason or "native_text", "char_count": chars,
-                   "junk_ratio": junk_ratio, "engine": "tesseract" if reason else "pdfplumber",
+                   "junk_ratio": junk_ratio, "engine": engine, "managed_status": managed_status,
                    "mean_confidence": confidence, "text_chars": len(text.strip())}
 
 
 def main(params_path, input_dir, output_dir):
-    params = yaml.safe_load(Path(params_path).read_text())["ocr"]
+    config = yaml.safe_load(Path(params_path).read_text())
+    params = config["ocr"]
     if params["dpi"] <= 0 or params["min_chars"] < 0 or not 0 <= params["junk_ratio"] <= 1:
         raise ValueError("OCR requires positive DPI, nonnegative min_chars, and junk_ratio in [0, 1]")
     source, output = Path(input_dir), Path(output_dir)
@@ -105,14 +135,14 @@ def main(params_path, input_dir, output_dir):
             for pdf in pdfs:
                 doc_id = doc_ids.get(pdf.stem)
                 with (staged / f"{pdf.stem}.words.jsonl").open("w", encoding="utf-8") as words_file:
-                    for page in extract_page_text(pdf, params):
+                    for page in extract_page_text(pdf, params, config):
                         (staged / f"{pdf.stem}_p{page['page']:04d}.txt").write_text(page["text"] + "\n", encoding="utf-8")
                         for word in page["words"]:
                             record = {"doc_id": doc_id, "page": page["page"], **word, "ocr": page["ocr"]}
                             words_file.write(json.dumps(record, ensure_ascii=False) + "\n")
                         writer.writerow({"doc_id": doc_id, "stem": pdf.stem,
                                          **{key: page[key] for key in LOG_FIELDS if key in page}})
-                        print(f"{pdf.stem} page {page['page']}: {page['engine']} ({page['reason']}), {page['text_chars']} chars")
+                        print(f"{pdf.stem} page {page['page']}: {page['engine']} ({page['reason']}), {page['text_chars']} chars; managed={page['managed_status']}")
         current_files = {artifact.name for artifact in staged.iterdir()}
         for artifact in staged.iterdir():
             artifact.replace(output / artifact.name)
