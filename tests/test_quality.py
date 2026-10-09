@@ -5,32 +5,46 @@ rather than chosen to pass. Every threshold has a comment saying what the
 baseline actually was, so a later tightening or loosening is a visible
 decision rather than a silent drift.
 
-Run the evaluate stage first: python src/evaluate.py
+The accuracy gates score the export that is on disk now: the metrics fixture
+runs src/evaluate.py itself into a temporary file. They never read the
+committed reports/metrics.json, so a stale or hand-edited metrics file cannot
+make them pass. With no exported filings on disk they are skipped, not passed.
 """
 
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
-# LANTERN_METRICS points the gates at a different metrics file. Used to record
-# the failing run required by Part 9: the thresholds must reject a degraded
-# pipeline, not merely accept a healthy one.
-METRICS = Path(os.environ.get("LANTERN_METRICS", "reports/metrics.json"))
+# LANTERN_METRICS points the gates at a given metrics file instead of a fresh
+# run. Used only to record the failing runs required by Part 9 (the break
+# modes): the thresholds must reject a degraded pipeline, not merely accept a
+# healthy one.
+LANTERN_METRICS = os.environ.get("LANTERN_METRICS")
 GT_DIR = Path("data/ground_truth")
 EXPORT_DIR = Path("data/export")
 
-pytestmark = pytest.mark.skipif(
-    not METRICS.exists(),
-    reason="reports/metrics.json missing; run python src/evaluate.py first",
-)
+
+def exported_filings():
+    return [p for p in EXPORT_DIR.glob("*.jsonl")
+            if not p.name.endswith(".docling.jsonl")]
 
 
 @pytest.fixture(scope="module")
-def metrics():
-    return json.loads(METRICS.read_text(encoding="utf-8"))
+def metrics(tmp_path_factory):
+    if LANTERN_METRICS:
+        return json.loads(Path(LANTERN_METRICS).read_text(encoding="utf-8"))
+    if not exported_filings():
+        pytest.skip("no exported filings in data/export; run the pipeline "
+                    "(dvc repro export) before the accuracy gates")
+    out = tmp_path_factory.mktemp("metrics") / "metrics.json"
+    subprocess.run([sys.executable, "src/evaluate.py", "--out", str(out),
+                    "--no-plot"], check=True, capture_output=True)
+    return json.loads(out.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
@@ -109,7 +123,8 @@ def test_prose_cer_within_threshold(metrics, thresholds):
 def test_numeric_token_f1_above_threshold(metrics, thresholds):
     """Order-insensitive, so this is the fair reading metric on table pages.
 
-    Baseline: 0.7497 mean across all 16 sampled pages, traditional path.
+    Baseline: 0.7235 mean across all 16 sampled pages, traditional path
+    (repeated numbers counted).
     """
     v = metrics["by_path"]["traditional"]["numeric_f1_mean"]
     assert v >= thresholds["min_numeric_f1"], v
@@ -126,6 +141,32 @@ def test_table_value_recall_above_threshold(metrics, thresholds):
     for key, t in metrics["tables"].items():
         assert t["value"]["recall"] >= thresholds["min_table_value_recall"], (
             key, t)
+
+
+def test_no_sampled_page_missing_from_the_export(metrics):
+    """A ground truth page with no output must fail, not vanish.
+
+    Regression test for a review finding: a page the parser lost was skipped
+    by the scorer, so two reference pages with output for only one scored a
+    perfect WER of 0. Lost pages are now scored as empty and listed here.
+    """
+    for path_name in ("traditional", "docling"):
+        lost = metrics.get("missing", {}).get(path_name, [])
+        assert not lost, f"{path_name} lost ground truth pages: {lost}"
+
+
+def test_only_allowed_pages_are_unmeasured(metrics, thresholds):
+    """Pages with ground truth but no export at all must be declared.
+
+    The allowed list lives in params.yaml with the reason, so an unmeasured
+    stratum is a visible decision and not a silent gap.
+    """
+    allowed = set(thresholds.get("allow_unmeasured", []))
+    for path_name in ("traditional", "docling"):
+        got = set(metrics.get("unmeasured", {}).get(path_name, []))
+        assert got <= allowed, (
+            f"{path_name} has unmeasured ground truth not declared in "
+            f"params.yaml evaluate.thresholds.allow_unmeasured: {got - allowed}")
 
 
 def test_every_stratum_has_at_least_one_scored_page(metrics):
@@ -146,6 +187,8 @@ def test_no_placeholder_table_bbox():
     detected no Table region. The record was schema valid and the provenance
     claim was false, which is exactly the gap the schema cannot close.
     """
+    if not exported_filings():
+        pytest.skip("no exported filings in data/export")
     bad = []
     for p in EXPORT_DIR.glob("*.jsonl"):
         for line in p.read_text(encoding="utf-8").splitlines():
@@ -165,8 +208,8 @@ def test_table_extractor_matches_tables_log():
     camelot even though the log shows 15 of 32 were read by pdfplumber."""
     import csv
     log = Path("data/tables/log/tables_log.csv")
-    if not log.exists():
-        pytest.skip("tables log not present")
+    if not log.exists() or not exported_filings():
+        pytest.skip("tables log or exported filings not present")
     expected = {}
     for row in csv.DictReader(open(log, encoding="utf-8-sig", newline="")):
         if str(row.get("accepted", "")).strip().lower() in ("true", "1", "yes"):
