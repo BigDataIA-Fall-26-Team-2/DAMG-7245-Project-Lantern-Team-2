@@ -266,7 +266,7 @@ Then run `dvc repro parse_docling`. The [Docling comparison](reports/docling_com
 
 | Part | Implementation / outputs | Report or evidence |
 |---|---|---|
-| P0 — ingestion and rendering | [download.py](src/download.py), [render.py](src/render.py), `data/raw`, `data/rendered/manifest.csv` | [Test fixtures](tests/fixtures) |
+| P0 — ingestion and rendering | [download.py](src/download.py), [render.py](src/render.py), `data/raw`, `data/rendered/manifest.csv` | [Fixture provenance and preparation](tests/fixtures/README.md) |
 | P1 — text and OCR | [parse_text.py](src/parse_text.py), `data/parsed` | [OCR tests](tests/test_parse_text.py), per-page `ocr_log.csv` |
 | P2 — table extraction | [tables.py](src/tables.py), `data/tables` | [Table methods](reports/tables_method.md) |
 | P3 — layout | [layout.py](src/layout.py), `data/layout`, `data/figures` | [Layout audit](reports/layout_audit.md), [QA images](reports/layout) |
