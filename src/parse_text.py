@@ -95,7 +95,7 @@ def extract_page_text(pdf_path, ocr_params=None, managed_params=None):
                     pdf_path, number, page.width, page.height, confidence, managed_params or {})
                 if replacement is not None:
                     text, words, confidence = replacement
-                    engine = "aws_textract"
+                    engine = "aws-textract"
             else:
                 x0, top = page.bbox[:2]
                 words = [{"text": w["text"], "bbox": [w["x0"] - x0, w["top"] - top,
