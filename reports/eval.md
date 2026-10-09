@@ -80,14 +80,19 @@ message at all, and now `test_ground_truth_values_are_full_precision` guards it.
 
 ## 2. Measured accuracy
 
-Baseline, `reports/metrics.json`, break mode `none`.
+Baseline, `reports/metrics.json`, break mode `none`. These are the numbers of
+the final full reproduction on the team's EC2 machine (Ubuntu 24.04), after the
+Part 2 and Part 3 fixes for findings 6 and 7. The same run on a Windows laptop
+gives slightly different numbers (for example traditional WER 0.4382 vs 0.4332),
+because the rendered text differs a little by machine. The report uses EC2,
+because that is the run the committed `dvc.lock` comes from.
 
 ### By path, 16 scoreable pages
 
 | Path | mean WER | mean CER | mean numeric-token F1 |
 |---|---|---|---|
-| Traditional (pdfplumber + Camelot + layout) | 0.4850 | 0.4582 | 0.7235 |
-| Docling | 0.2149 | 0.2103 | 0.8512 |
+| Traditional (pdfplumber + Camelot + layout) | 0.4332 | 0.4061 | 0.7330 |
+| Docling | 0.2119 | 0.2107 | 0.8512 |
 
 Docling numbers are after the fix in finding 3. Before the fix the Docling
 export had no tables and it scored 0.5314 WER and 0.3453 numeric F1 (that
@@ -99,41 +104,56 @@ path (AWS Textract, Part 7) is scored only on the pages we sent to it, it is in
 
 | Stratum | pages | mean WER | worst WER | mean CER | mean numeric F1 | worst numeric F1 |
 |---|---|---|---|---|---|---|
-| Prose | 4 | 0.0840 | 0.1530 | 0.0795 | 0.7179 | 0.0000 |
-| Cover | 2 | 0.4989 | 0.5465 | 0.4769 | 0.4885 | 0.4286 |
-| Notes | 4 | 0.6003 | 0.7506 | 0.5361 | 0.5302 | 0.3125 |
-| Statements | 6 | 0.6709 | 0.9202 | 0.6526 | 0.9344 | 0.8467 |
+| Prose | 4 | 0.1043 | 0.1642 | 0.0928 | 0.6281 | 0.0000 |
+| Cover | 2 | 0.4892 | 0.5087 | 0.4594 | 0.6854 | 0.5246 |
+| Notes | 4 | 0.5965 | 0.7506 | 0.5364 | 0.5321 | 0.2930 |
+| Statements | 6 | 0.5250 | 0.9202 | 0.5104 | 0.9527 | 0.9231 |
+
+### By stratum, Docling path
+
+| Stratum | pages | mean WER | worst WER | mean CER | mean numeric F1 | worst numeric F1 |
+|---|---|---|---|---|---|---|
+| Prose | 4 | 0.0079 | 0.0299 | 0.0006 | 0.7500 | 0.0000 |
+| Cover | 2 | 0.2778 | 0.3023 | 0.2566 | 0.8134 | 0.8000 |
+| Notes | 4 | 0.2786 | 0.4299 | 0.2626 | 0.8107 | 0.5304 |
+| Statements | 6 | 0.2815 | 0.3912 | 0.3008 | 0.9583 | 0.9486 |
+
+Docling is ahead on every stratum. The biggest gap is the notes pages (numeric
+F1 0.81 vs 0.53), which is where the traditional path loses stacked tables
+(finding 2), so for notes pages Docling is the path to prefer.
 
 ### The main result
 
-Statement pages score **0.934 numeric-token F1** and **0.671 WER** at the same
+Statement pages score **0.953 numeric-token F1** and **0.525 WER** at the same
 time. These two numbers are not fighting each other, they measure different
 things.
 
 WER and CER care about order, so on a statement page they measure how much the
 hypothesis follows the reading order of the page, not only if the words are
-right. The high statement WER of the traditional path is mostly not a reading
-error. It comes from the layout stage (finding 6): on 10-K p32 the layout Table
-box covers only the figure columns, so the row labels on its left get exported
-one more time as normal text blocks, and the statement title and units line
-are lost.
+right. The high statement WER of the traditional path was mostly not a reading
+error. It came from the layout stage (finding 6): the layout Table box covered
+only the figure columns, so the row labels on its left got exported one more
+time as normal text blocks. Part 3 fixed most of this in #124. On 10-K p32 the
+WER went from 0.726 to 0.387 and the statement mean from 0.671 to 0.525. What
+is still left: the statement title and units line are never boxed by the
+detector, so they are still missing from the traditional path.
 
 Docling path shows this clearly. On p32 its table rows are exactly same as
-traditional path, prefixes also same, but its WER is 0.208 and traditional is
-0.726. So the table content is same, only the page structure around it is
-different. An earlier version of this report said the gap is because the table
-is one block and because of the section prefixes. The Docling comparison proved
-that wrong, because Docling also has both and still scores much lower.
+traditional path, prefixes also same, and its WER is 0.208. So the table content
+is same, only the page structure around it is different. An earlier version of
+this report said the gap is because the table is one block and because of the
+section prefixes. The Docling comparison proved that wrong, because Docling also
+has both and still scores much lower.
 
 Numeric-token F1 dont care about order, so on the same pages it shows what we
-actually want: 93% of the figures on the primary financial statements are read
+actually want: 95% of the figures on the primary financial statements are read
 correctly, and the hand-keyed cell comparison on p32 and p6 gives **precision,
 recall and F1 all 1.0** (57/57 and 56/56 cells).
 
 So the conclusion is: **WER is the right tool for prose, and numeric-token F1
-plus table cell F1 are the right tools for tables.** The 0.485 overall average
+plus table cell F1 are the right tools for tables.** The 0.433 overall average
 dont describe any of them, thats why every number above is per stratum. If we
-reported only the average, both the 0.084 prose result and the 0.934 statement
+reported only the average, both the 0.104 prose result and the 0.953 statement
 figure result would be hidden.
 
 ### Notes on some numbers
@@ -144,7 +164,7 @@ figure result would be hidden.
 - Cover pages get 0.50 WER mostly because of page furniture: the
   securities-registered table and the checkbox grid. The `[X]` folding on both
   sides is very important here, without it every checkbox line would mismatch.
-- Notes worst numeric F1 of 0.3125 is under-extraction, not misreading, see
+- Notes worst numeric F1 of 0.293 is under-extraction, not misreading, see
   finding 2.
 
 ## 3. Regression gates and the failing run
@@ -162,9 +182,9 @@ filing in `data/export`, they skip with a message, they dont pass.
 
 | Gate | Threshold | Baseline |
 |---|---|---|
-| Worst prose WER | <= 0.20 | 0.153 |
-| Mean prose CER | <= 0.12 | 0.0795 |
-| Mean numeric-token F1, all pages | >= 0.65 | 0.7235 |
+| Worst prose WER | <= 0.20 | 0.1642 |
+| Mean prose CER | <= 0.12 | 0.0928 |
+| Mean numeric-token F1, all pages | >= 0.65 | 0.7330 |
 | Table cell F1, every GT table | >= 0.90 | 1.000 |
 | Table value recall, every GT table | >= 0.90 | 1.000 |
 | Ground truth pages missing from an export | 0 | 0 |
@@ -206,13 +226,19 @@ A gate also fails if any fixture ground truth has no output at all. The
 multicolumn gate is very loose on a bad result on purpose: it only stops it
 getting worse, the result itself is finding 10. The statement fixture is a
 copy of 10-K p32, and its raw text scores 0.0714 WER while the export of the
-same page scores 0.7262, which confirms again that the export's high WER comes
-from the layout step and not from reading (finding 6).
+same page scores 0.387 (0.726 before the Part 3 fix), which confirms again that
+the export's high WER comes from the layout step and not from reading (finding
+6). These fixture numbers were measured on the development laptop. CI measures
+them again on every PR.
 
 ### Proving the gates actually work
 
 `src/evaluate.py --break <mode>` damages the hypothesis in one named way before
-scoring. Run on the same inputs:
+scoring. These break runs (and the `dvc metrics diff` in section 5) were recorded
+on the development laptop, before the findings 6 and 7 fixes, so their baseline
+row is that laptop's and not the EC2 numbers above. What they prove does not
+depend on the machine: each break moves exactly the metrics its gate guards.
+Run on the same inputs:
 
 | Mode | p32 cell F1 | p6 cell F1 | statement numeric F1 | statement mean WER |
 |---|---|---|---|---|
@@ -243,8 +269,8 @@ nothing else. The run is saved in `reports/teeth_check_prose_failing_run.txt`.
 We did two separate things to the text gates, dont mix them. The break mode is
 what proves they work: the old loose gates (0.25 and 0.20) also would have
 failed on it. Tightening to 0.20 and 0.12 is a separate change, it makes them
-catch smaller damage, the headroom over the worst prose page is now 0.047
-instead of 0.097.
+catch smaller damage, the headroom over the worst prose page was 0.047 instead
+of 0.097 on the laptop baseline, and is 0.036 on the EC2 baseline.
 
 Statement-page WER actually *goes down* with `drop-words`, from 0.6709 to
 0.6283. Deleting words can make the hypothesis closer to the reference only if
@@ -285,7 +311,8 @@ set LANTERN_METRICS=
 
 `reports/metrics.json` also saves, per filing, the share of pages sent to OCR.
 This is the drift signal that moves first if the rendering or the OCR trigger
-changes.
+changes. In the final run it is 0 of 60 and 0 of 28 exported pages, and the mean
+text block is 301.4 characters over 655 blocks.
 
 ## 5. Reproducibility and metrics diff
 
@@ -388,7 +415,10 @@ provenance claim, not the scores.
 **2. Under-extraction on stacked-table pages.** 10-Q p11 and p16 each give only
 one table block of four rows. p16 has four stacked seven-column segment tables,
 so most of its cells are never extracted. This is the worst notes numeric F1,
-0.3125. The cause is before the export, in table detection, raised with Part 2.
+0.293. The cause is before the export, in table detection, raised with Part 2.
+Part 2 wrote it in `reports/tables_method.md` as a known limitation, not fixed
+before the freeze. For these pages Docling is the better path (notes numeric F1
+0.81 vs 0.53, section 2).
 
 **3. The Docling export dropped every Docling table (fixed, found in review).**
 Part 4 writes Docling tables to `data/docling/tables/` in the same contract CSV
@@ -403,7 +433,7 @@ on same kind of input. The effect:
 
 | Docling path | before | after |
 |---|---|---|
-| mean WER | 0.5314 | 0.2149 |
+| mean WER | 0.5314 | 0.2119 |
 | mean numeric-token F1 | 0.3453 | 0.8512 |
 | raw cell F1, 10-K p32 | not scored | 1.0000 |
 | raw cell F1, 10-Q p6 | not scored | 1.0000 |
@@ -427,26 +457,39 @@ adapter was falling back to `model`, which is a version string of a different
 tool. Same bug on the table side was caught in review, this one was caught
 here. Fixed in f7e3ae2, now it reports the installed pdfplumber version.
 
-**6. The layout Table box covers only the figure columns (raised with Part 3).**
-On 10-K p32 the traditional Table box goes from x = 362 to x = 603 on a page
-about 612 points wide, so it covers the figures but not the row labels. The
-labels are outside it and get exported again as List and Text blocks at x = 6
-to 12 (`Net sales: Products Services Total net sales...`), and the statement
-title and the units line (`In millions, except...`) are missing. Docling's box
-for the same table goes from x = 5.5 to x = 607 and has none of these
-duplicates. This is the main reason for the traditional statement WER (section
-2). It is a layout detection issue, not a reading or export error, and it also
-matters later: a chunk with a column of row labels and no figures is just noise
-for retrieval.
+**6. The layout Table box covered only the figure columns (mostly fixed by
+Part 3 in #124).** On 10-K p32 the traditional Table box went from x = 362 to
+x = 603 on a page about 612 points wide, so it covered the figures but not the
+row labels. The labels were outside it and got exported again as List and Text
+blocks at x = 6 to 12 (`Net sales: Products Services Total net sales...`).
+Docling's box for the same table goes from x = 5.5 to x = 607 and has none of
+these duplicates. It is a layout detection issue, not a reading or export
+error, and it also matters later: a chunk with a column of row labels and no
+figures is just noise for retrieval.
 
-**7. Clipped closing parentheses on 10-Q p6 (raised with Part 2).** Rows 24 and
-25 of the p6 table have `raw_cells` `(14,264` and `(5,571`: the closing
+Shravya fixed it in #124 (`absorb_table_rows` in `src/layout.py`, details in
+`reports/layout_audit.md` section 8): the table box is widened to the words on
+its rows (now x = 7 on p32), and a text block in those rows is dropped only when
+at least 80% of its words are in the table, so no text is lost. In the final
+run: 10-K p32 WER 0.726 to 0.387, statement mean 0.671 to 0.525, and table cell
+F1 still 1.0. Still open: the statement title and units line (`In millions,
+except...`) are never boxed by the detector, so they stay missing from the
+traditional path.
+
+**7. Clipped closing parentheses (fixed by Part 2 in #123).** Rows 24 and 25 of
+the 10-Q p6 table had `raw_cells` `(14,264` and `(5,571`: the closing
 parenthesis, which is just past the rightmost column, got cut off. The
 normaliser still gave the correct negative values, so the scaled cell F1 was
 1.0 and hid it. The raw cell metric, which compares printed figures, caught it
-at 0.9818. It depends on the extractor: that page went through pdfplumber-text,
+at 0.9818. It depended on the extractor: that page went through pdfplumber-text,
 and p32's `(565)` in same position went through Camelot and was fine. Docling
 and Textract both read the two cells correctly.
+
+Dhruvi fixed it in #123 (`close_paren()` in `src/tables.py`): the `)` is put back
+only when the closed form is printed on the page, so a bracket is never
+invented, and the value is unchanged. Her rerun found the same cut in 9 cells
+across both filings, not only the 2 in this ground truth. In the final run the
+p6 raw cell F1 is 1.0, and p6 numeric F1 went from 0.8467 to 0.9231.
 
 **8. Numeric F1 was ignoring repeated numbers (fixed, found in review).** The
 numeric metric compared sets, so a number printed three times counted as one.
@@ -456,8 +499,9 @@ the same figure many times (a subtotal that is also a total, same number in two
 columns), so this was hiding real losses. Now matching counts repeats, with
 `Counter` intersection. Every numeric F1 in this report is the new number. The
 biggest change is 10-Q p6 traditional, 0.9412 before and 0.8467 now: that page
-loses some repeated figures and the set metric hid it. Overall traditional went
-from 0.7497 to 0.7235 and Docling from 0.8633 to 0.8512. WER, CER and table
+loses some repeated figures and the set metric hid it (it is 0.9231 now, after
+the finding 7 fix). At the time of the change, traditional went from 0.7497 to
+0.7235 and Docling from 0.8633 to 0.8512, on the laptop. WER, CER and table
 cell F1 did not change. `tests/test_evaluate_metrics.py` has the reviewer's
 example.
 
@@ -509,9 +553,11 @@ directly gets the mixed order.
   deliverable list. When we committed it DVC was not there on this machine. It
   is hand-keyed source material and not regenerable output, so git is ok, but
   it is not what was asked.
-- **Layout Table boxes** (finding 6), **clipped parentheses** (finding 7) and
-  **multi-column reading order** (finding 10) are raised with Parts 3, 2 and 1,
-  not fixed here.
+- **Clipped parentheses** (finding 7) is fixed by Part 2 (#123), and the
+  **layout Table boxes** (finding 6) are mostly fixed by Part 3 (#124), with
+  titles and units lines still missing. **Stacked tables** (finding 2) and
+  **multi-column reading order** (finding 10) are still open, raised with Parts
+  2 and 1.
 - The 18 pages are typed by one person. The two statement tables are
   double-keyed as per the Lab 9 protocol (#27): keyed separately by Guna and
   Dhruvi, 113 cells compared, 0 value disagreements.

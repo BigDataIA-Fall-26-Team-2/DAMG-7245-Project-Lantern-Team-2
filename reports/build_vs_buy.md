@@ -52,10 +52,10 @@ because they are not reading errors:
 
 | Page | Path | WER | CER | Numeric F1 | Raw cell F1 |
 |---|---|---|---|---|---|
-| 10-K p32 | Traditional | 0.7262 | 0.6753 | 0.9500 | 1.0000 |
+| 10-K p32 | Traditional | 0.3869 | 0.3273 | 0.9500 | 1.0000 |
 | | Docling | 0.2083 | 0.1947 | 0.9500 | 1.0000 |
 | | Textract | 0.0476 | 0.0284 | 0.9767 | 1.0000 |
-| 10-Q p6 | Traditional | 0.8216 | 0.8014 | 0.8467 | 0.9818 |
+| 10-Q p6 | Traditional | 0.6761 | 0.6665 | 0.9231 | 1.0000 |
 | | Docling | 0.2535 | 0.3035 | 0.9677 | 1.0000 |
 | | Textract | 0.0423 | 0.0210 | 0.9697 | 1.0000 |
 | Scanned p1 | Tesseract (Part 1) | 0.0225 | 0.0107 | 0.9333 | n/a |
@@ -66,27 +66,28 @@ Docling at 0.0 numeric F1, because the export was dropping Docling's tables.
 That got fixed in #111 (`reports/eval.md`, finding 3), and now Docling scores
 1.0 raw and scaled cell F1 on both statement tables. Numeric F1 counts repeated
 numbers (`reports/eval.md`, finding 8), so it is a bit lower than in earlier
-versions for every path.
+versions for every path. All numbers are from the final EC2 reproduction, after
+the Part 3 layout fix (#124) and the Part 2 bracket fix (#123), which both moved
+the traditional rows.
 
 ### How to read this table
 
 **Dont read the WER column as "Textract is fifteen times more accurate".** Most
-of the traditional WER on these pages is a layout effect, not misreading: its
-layout Table box covers only the figure columns, so the row labels get exported
-one more time as text and the statement title is lost (`reports/eval.md`,
-finding 6). Docling shows this. Its table rows are exactly same as traditional,
-but its WER on p32 is 0.208 and traditional is 0.726. Part of the gap that is
-left to Textract (0.208 vs 0.048) is likely the section prefix on repeated row
-labels (`Net sales: Products`), both open-source paths have it and Textract
-dont. We did not measure that split.
+of the traditional WER on these pages was a layout effect, not misreading: the
+layout Table box covered only the figure columns, so the row labels got exported
+one more time as text (`reports/eval.md`, finding 6). Part 3 fixed most of it in
+#124, and p32 went from 0.726 to 0.387. Docling shows the rest: its table rows
+are exactly same as traditional, and its WER on p32 is 0.208. Part of the gap
+that is left to Textract (0.208 vs 0.048) is likely the section prefix on
+repeated row labels (`Net sales: Products`), both open-source paths have it and
+Textract dont, plus the statement title and units line the layout stage still
+misses. We did not measure that split.
 
 The reading metrics show the real story. Numeric F1 on p32 is 0.950 for both
-open-source paths and 0.977 for Textract. On p6 it is 0.847 traditional, 0.968
+open-source paths and 0.977 for Textract. On p6 it is 0.923 traditional, 0.968
 Docling and 0.970 Textract. So Docling is within about three points of Textract
-on both pages (only 0.2 on p6). The traditional path is 12 points behind on p6,
-because it loses some of the figures that the page prints more than once
-(`reports/eval.md`, finding 8). Raw cell F1 is perfect for all three paths on
-p32.
+on both pages (only 0.2 on p6), and the traditional path within about five. Raw
+cell F1 is now perfect for all three paths on both pages.
 
 ### Errors Textract fixes
 
@@ -97,8 +98,10 @@ p32.
   1.0 and hid it, the raw metric caught it (0.9818). Textract read both cells
   correctly, **and Docling also did** (raw cell F1 1.0), so this error dont need
   a paid service, an open-source path in the same pipeline already avoids it.
-  It depends on the extractor: p32's `(565)` is in same position, went through
-  Camelot and not pdfplumber-text, and it was fine. Raised with Part 2.
+  It depended on the extractor: p32's `(565)` is in same position, went through
+  Camelot and not pdfplumber-text, and it was fine. Part 2 has now fixed it too
+  (#123, `close_paren()`, 9 cells across both filings), so the traditional path
+  reads them correctly as well.
 - **Literal column headers.** On p32 Textract gave the header exactly as
   printed, `September 27, 2025`. The traditional headers on that page are
   normalised (`FY ended 2025-09-27`), and on irregular tables like 10-K p22
@@ -178,8 +181,8 @@ The check never raises. A machine without `pdftoppm` or AWS credentials still
 finishes the tables stage, thats what keeps `dvc repro` working with the
 fallback disabled. Part 2's own outputs are not touched: the full stage still
 writes the same 32 tables with the same winning methods.
-`tests/test_managed_fallback.py` covers the five cases: no table, an empty
-candidate, a good score, a cache miss, and a check that fails.
+`tests/test_managed_fallback.py` covers no table, an empty candidate, a good
+score, a cache miss and a check that fails, plus the review cases below.
 
 Three things changed after review on #116:
 
@@ -218,8 +221,14 @@ Three things changed after review on #116:
    a new `fallback_error` column in `tables_log.csv`, not just the word
    `error`.
 
-The OCR-confidence side of the trigger, inside Part 1's parsing stage, is not
-wired. On these two filings only the table side is used.
+The OCR-confidence side of the trigger is wired too now, by Part 1/8 in #125:
+`managed_fallback()` in `src/parse_text.py` sends a Tesseract page whose mean
+confidence is below `managed.trigger.min_ocr_conf` (0.75), or that came out
+empty, to the same cache-first `fallback_text()` in `src/managed/textract.py`,
+with the parse stage's own params. With `enabled: false` a cache miss keeps the
+Tesseract text, and each decision is logged in the `managed_status` column of
+`data/parsed/ocr_log.csv`. `tests/test_managed_ocr.py` covers the miss, the hit,
+the confidence boundary and the empty response, without AWS calls.
 
 The cache is tracked with `dvc add data/managed` (`data/managed.dvc`).
 `src/managed`, `data/managed` and the `managed` params are dependencies of the
@@ -227,16 +236,18 @@ The cache is tracked with `dvc add data/managed` (`data/managed.dvc`).
 cache, the code or the switch reruns whatever reads them. `dvc repro -s tables`
 with `managed.enabled: false` finishes and writes the same 32 tables.
 
-The team's S3 remote (`lantern-s3`) is there now, but `dvc push
-data/managed.dvc` from this account gives 403 Forbidden: the bucket is in a
-different AWS account from the one used for Textract. Until the cache is
-pushed, a fresh clone cant `dvc pull` it, and because `tables` depends on
-`data/managed`, `dvc repro` there stops at that stage. Pushing it is pending
-with the Part 8 owner.
+The cache is in the team's S3 remote (`lantern-s3`). The push from this account
+got 403 Forbidden, because the bucket is in a different AWS account from the one
+used for Textract, so it went through the team's EC2 machine instead: the 6 files
+were copied there with `scp`, their SHA-256 checked to match the laptop copy
+file by file, and then pushed against the committed `data/managed.dvc` pointer
+(md5 `1d6b381b...dir`, 6 files). So a fresh clone can `dvc pull` it, which is
+what `dvc repro` there needs with `managed.enabled: false`.
 
-One known false trigger to fix before wiring the OCR side: 10-Q p7 is blank and
-wrongly goes to OCR in Part 1. An OCR-confidence trigger built on that routing
-would pay Textract to read a blank page.
+One known false trigger, now that the OCR side is wired: 10-Q p7 is blank and
+wrongly goes to OCR in Part 1, and an empty OCR result counts as a trigger. With
+`enabled: false` it is only a cache miss, but with the API on it would pay
+Textract to read a blank page. A blank-page check before OCR would fix it.
 
 ### A false trigger the table side had, and how we found it
 
@@ -271,7 +282,6 @@ Free tier: three months for new customers, including 100 pages a month of
 **Measured spend for this part:** three pages, so $0.045 at list price, and
 nothing if the account is still in its free tier window.
 
-
 ## 6. Cost at FinTrust's volume
 
 Assumptions, each one written so it can be replaced:
@@ -280,9 +290,13 @@ Assumptions, each one written so it can be replaced:
   **500,000 pages a year**, about 41,700 a month, all inside the first price
   tier. Our two filings average 45.5 pages (61 and 30), so this is a
   conservative upper bound.
-- Self-hosted compute: $0.17 per 1,000 pages, the tutorial's anchor (a $0.40/h
-  VM at 1.5 s per page), engineering time not included. Part 10's measured
-  numbers are in `reports/benchmarks.md` and can replace this.
+- Self-hosted compute, from Part 10's EC2 CPU timings
+  (`reports/ec2_benchmark_observed.csv`): traditional 1.863 s/page (text 0.315 +
+  tables 0.527 + layout 1.021) and Docling 6.536 s/page, with Part 10's
+  assumptions of 4 workers on a $0.357/h CPU VM (`params.yaml: bench`). That is
+  about **$0.05 per 1,000 pages** traditional and **$0.16** Docling. Part 10
+  states these are extrapolations: 4-way scaling and the VM type were not
+  measured. Engineering time is not included.
 - Engineering time: $100 per hour, fully loaded. This is an assumption, not a
   measurement.
 
@@ -290,18 +304,20 @@ Assumptions, each one written so it can be replaced:
 |---|---|---|---|
 | Textract on every page (Tables) | $15.00 | $7,500 | $3,413 |
 | Textract OCR only (no tables) | $1.50 | $750 | $341 |
-| Self-hosted open-source, compute only | $0.17 | $85 | $39 |
+| Self-hosted traditional, compute only | $0.05 | $23 | $11 |
+| Self-hosted Docling, compute only | $0.16 | $81 | $37 |
 | Hybrid: Textract on 5% of pages | $0.75 blended | $375 | $171 |
 | Hybrid: Textract on 1% of pages | $0.15 blended | $75 | $34 |
 
 ### The crossover
 
-At 500,000 pages a year, Textract on every page costs about $7,400 more than
-self-hosted compute. At $100 an hour, that difference buys roughly **74
-engineer-hours a year, around an hour and a half a week**.
+At 500,000 pages a year, Textract on every page costs about $7,400 to $7,480
+more than self-hosted compute ($81 Docling, $23 traditional). At $100 an hour,
+that difference buys roughly **74 to 75 engineer-hours a year, around an hour
+and a half a week**.
 
 So for FinTrust the crossover is in maintenance time, not pages: if keeping the
-open-source parsers working costs more than about 74 hours a year, Textract on
+open-source parsers working costs more than about 75 hours a year, Textract on
 everything is cheaper, if it costs less, building is cheaper. In general,
 managed wins when yearly maintenance cost is more than
 `pages per year x (managed price - self-hosted price)`.
@@ -365,11 +381,9 @@ Textract is for the scans Tesseract cant read, not for every scan.
 
 **Where it dont belong:** born-digital filings, which is almost all of
 FinTrust's volume. There the text layer is exact, Docling reads statement
-figures within about three points of Textract (0.2 points on p6, and it reads
-the clipped parentheses that the traditional path loses), and Textract adds OCR
-errors the text layer never had. The traditional path is behind on p6 (12
-points), but thats a Part 2 problem with repeated figures that Docling, also
-free, already avoids, so it is not a reason to pay for Textract.
+figures within about three points of Textract (0.2 points on p6) and the
+traditional path within about five, all three paths read every table cell
+correctly, and Textract adds OCR errors the text layer never had.
 
 **Lina's question, "Why not just use Textract for everything?", in five
 sentences.** On accuracy, our free Docling path is within about three points of
@@ -377,7 +391,7 @@ Textract's numeric F1 on digital statement pages, it already avoids the reading
 errors Textract fixed, and Textract adds errors there by OCRing text the PDF
 already has exactly. On cost, Textract on every page is about $7,500 a year at
 FinTrust's volume vs under $100 of compute, so it wins only if maintaining our
-parsers costs more than about 74 engineer-hours a year. On lock-in, its output
+parsers costs more than about 75 engineer-hours a year. On lock-in, its output
 is a provider-specific block graph that still needs mapping, scale
 normalisation and section context, so buying it dont remove the engineering, it
 just moves it. On data handling, client documents need an account-level
@@ -393,12 +407,12 @@ matters, and keeps client data at home unless we choose otherwise.
   weak evidence for anything else.
 - The Tesseract vs Textract comparison is one clean scanned page. Harder scans
   were not tested (section 3).
-- The cache is not yet in the team's DVC remote (section 4).
 - One provider only, Google Document AI and Azure were not run (stretch goal).
 - The measured table trigger rate of 0 of 91 comes from one company's clean
   filings. The 5% and 1% fallback rates are scenarios for harder documents, not
   measurements (section 6).
-- Only the table side of the trigger is wired. The OCR-confidence side in Part
-  1 is not (section 4).
+- The OCR-side trigger was wired late (#125) and was not exercised with the API
+  on. Its decisions on the filings are in the `managed_status` column of
+  `data/parsed/ocr_log.csv`, not summarised here.
 - Prices are list prices for the first tier, volume discounts and custom quotes
   are not considered.

@@ -35,8 +35,15 @@ def outputs_dir(tmp_path_factory):
     if given:
         return Path(given)
     out = tmp_path_factory.mktemp("fixtures")
+    # Without the managed section, so a local Textract cache can never replace
+    # Tesseract here: the fixture gates measure the open-source stages, as in CI,
+    # which has no managed cache.
+    cfg = yaml.safe_load(open("params.yaml", encoding="utf-8"))
+    cfg.pop("managed", None)
+    local_params = out / "params_no_managed.yaml"
+    local_params.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     for script, sub in (("src/parse_text.py", "parsed"), ("src/tables.py", "tables")):
-        r = subprocess.run([sys.executable, script, "--params", "params.yaml",
+        r = subprocess.run([sys.executable, script, "--params", str(local_params),
                             "--input", str(FIXTURES), "--output", str(out / sub)],
                            capture_output=True, text=True)
         if r.returncode != 0:
