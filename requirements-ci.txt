@@ -8,6 +8,7 @@ PyYAML
 pytest
 pandas
 pypdf
+streamlit
 # Existing offline download/render tests import these packages (no browser needed).
 sec-edgar-downloader
 playwright

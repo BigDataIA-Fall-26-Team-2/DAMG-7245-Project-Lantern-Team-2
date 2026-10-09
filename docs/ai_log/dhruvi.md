@@ -139,3 +139,19 @@
 - How verified: Every number in the sections comes from an output I re-ran tonight for the screenshots: the p32 table CSV, `format_stats.py` (51,559 / 69,412 / 112,464 / 914,746 approximate tokens) and `xbrl.py compare` (328 of 388, 84.5%); the fourth screenshot is the executed notebook cell showing 0 non-match cells without a cause.
 - Failure/limitation: Copying from the rendered card pasted plain text, so code blocks and tables lost their formatting; re-pasting the raw Markdown with Paste from Markdown fixes it.
 - Confidence: High for the content. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issues #59, #68 — Streamlit app (app/app.py)
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide. I ran every command and checked every panel in the browser myself.
+- What it contributed: The first version (page image with boxes, XBRL cell check with the Arelle fact, records, table CSV, page text, key metrics, the net income end-to-end button) and, after testing it on real data, the fix that makes Records, layout boxes and Page text follow the extraction path and fall back to the other path when one is not produced.
+- How verified: Ran the app on both filings: 10-K p32 shows 57 of 57 income-statement cells matched with the selected cell boxed on the page, and the net income button jumps to 112,010 on p32. Checked that Docling block coordinates are pt with a top-left origin before drawing them. tests/test_app.py passes in .venv.
+- Failure/limitation: The first run showed empty Records and no layout boxes, because they read only traditional-path files that need data/layout, which my machine does not have; one test run failed only because that Terminal used the conda base Python instead of .venv.
+- Confidence: High for the panels I clicked through on my data. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issues #59, #68 (PR #120 review fixes) — path-consistent panels and cache invalidation
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide.
+- What it contributed: The patch for Lokesh's two review points: Table CSV and Page text now follow the docling/traditional switch and always name their source file (labelling any fallback), and every cached reader is keyed on file size and modification time; plus tests/test_app_cache.py.
+- How verified: tests/test_app_cache.py reproduces his case (write 1, overwrite with 2, read 2): 2 passed; with the old path-only cache key the CSV test fails (teeth check); tests/test_app.py and the full suite pass (147 passed, 11 skipped).
+- Failure/limitation: My first version only made Records and the layout boxes path-aware, which still mixed paths in Table CSV and Page text, and its caches ignored file changes; both were caught in review.
+- Confidence: High. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
