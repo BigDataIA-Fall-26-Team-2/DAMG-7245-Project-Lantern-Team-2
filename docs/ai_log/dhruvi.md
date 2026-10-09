@@ -163,3 +163,11 @@
 - How verified: Traditional coverage 342/388 (88.1%), precision 314/342 (91.8%); Docling 339/388 (87.4%), 311/339 (91.7%). Two independent measures agree exactly (same concept as the verified map, and value agreement match + sign). I listed every wrong and unmapped label: 4 labels map to dimension members, 8 are unmapped (share-count label, Total lines, generic Basic/Diluted).
 - Failure/limitation: The first scoring showed 0% precision because empty dims were stored as blank on one side and NaN on the other; fixed by normalising both, now covered by a test. A second company was not attempted.
 - Confidence: High for the reported precision on these two filings. I have reviewed this entry and can explain, rerun, modify and defend every step of it.
+
+## Issue #58 (P6 review fix) — retest on the final export
+
+- Tool/model: Claude (Opus 5.5) in claude.ai chat, used as a step-by-step guide; the three questions were asked by me in a fresh incognito chat.
+- What it contributed: The plan for the retest and the new section of reports/format_decision.md.
+- How verified: Rebuilt the export on current main: the Docling JSONL now has 635 records, 31 of them tables, all with page and bbox (first run: 604 records, 0 tables). format_stats.py measured 152,247 approximate tokens (first run 112,464). The final JSONL answered 3 of 3 questions with the exact PDF pages (32, 34) from its page field.
+- Failure/limitation: The first run tested the Docling export before #111 added its tables, which the review rightly called obsolete. The traditional-path JSONL is still untested because it needs data/layout from the DVC remote.
+- Confidence: High for the retest on the Docling JSONL. I have reviewed this entry and can explain, rerun, modify and defend every step of it.

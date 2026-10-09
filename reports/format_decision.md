@@ -70,3 +70,44 @@ Condition on the decision: the JSONL that feeds Case Study 2 must include tables
 - The model ran code over the attached files (it searched them) rather than reading them end to end, so the test measures what a file contains and exposes, more than how well a model reads long context.
 - The traditional-path JSONL and Markdown were not tested (no `data/layout` yet); the JSONL tested is the Docling export, which is text-only.
 - Tokens are approximated as characters / 4, not counted with a tokenizer.
+
+
+## Retest on the final export (after #111)
+
+Review feedback: the three questions above were asked of the Docling JSONL before #111 added its
+tables, so the final format was never tested. Retested on the final export of the same 10-K: same
+prompt, a fresh incognito chat (Claude Opus 5.5), measurements in `reports/format_stats_final.csv`.
+
+| Format | Bytes | ≈ Tokens | Page provenance |
+|---|---:|---:|---|
+| TXT | 207,983 | 51,559 | 61 pages separated by form feeds, no positions (unchanged) |
+| Markdown | 277,739 | 69,412 | 2 HTML comments (unchanged) |
+| JSONL, final | 609,136 | **152,247** | **635/635** records with page + bbox, **31 table records** |
+| JSONL, first run | 449,948 | 112,464 | 604/604 records with page + bbox, 0 table records |
+| JSON (Docling) | 3,658,987 | 914,746 | 775 `page_no` entries (unchanged) |
+
+| Question | Final JSONL answer | Correct |
+|---|---|---|
+| 1. Net income, FY2025, and page | $112,010M, page 32 | yes |
+| 2. Total assets, Sep 27 2025, and page | $359,241M, page 34 | yes |
+| 3. Products and Services net sales, FY2025 | $307,003M and $109,158M (page 32) | yes |
+
+All three are correct, and the pages are the rendered-PDF pages taken from each record's `page`
+field; the model noted that it found no printed page number to compare against. That is the
+difference from the first run's TXT and Markdown answers, whose page numbers came from the printed
+footer and the 10-K's contents table.
+
+| Format | Values correct | Where the page came from |
+|---|---:|---|
+| TXT | 3 / 3 | printed footer (printed pages 29, 31) |
+| Markdown | 3 / 3 | the 10-K's contents table |
+| **JSONL, final** | **3 / 3** | **the record's own `page` field (PDF pages 32, 34)** |
+| JSON | not tested | too large for a chat context |
+
+**The decision is unchanged and now confirmed:** JSONL is the source of truth and feeds Case
+Study 2. Its condition (the export must carry the tables) is met since #111, and it is the only
+format whose answers locate the page from its own provenance rather than from text that happens to
+be printed. The cost is about 3 times the TXT tokens (152,247 against 51,559).
+
+Not yet retested: the traditional-path JSONL (`data/export/AAPL_10K_20250927.jsonl`), which needs
+`data/layout` from the DVC remote; it will be added here when available.
