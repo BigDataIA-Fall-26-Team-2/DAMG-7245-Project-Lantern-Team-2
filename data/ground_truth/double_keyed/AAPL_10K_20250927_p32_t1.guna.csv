@@ -1,0 +1,73 @@
+row_label,col_label,raw,value
+Net sales:,"September 27, 2025",,
+Net sales:,"September 28, 2024",,
+Net sales:,"September 30, 2023",,
+Net sales: Products,"September 27, 2025","$ 307,003",307003000000
+Net sales: Products,"September 28, 2024","$ 294,866",294866000000
+Net sales: Products,"September 30, 2023","$ 298,085",298085000000
+Net sales: Services,"September 27, 2025","109,158",109158000000
+Net sales: Services,"September 28, 2024","96,169",96169000000
+Net sales: Services,"September 30, 2023","85,200",85200000000
+Net sales: Total net sales,"September 27, 2025","416,161",416161000000
+Net sales: Total net sales,"September 28, 2024","391,035",391035000000
+Net sales: Total net sales,"September 30, 2023","383,285",383285000000
+Cost of sales:,"September 27, 2025",,
+Cost of sales:,"September 28, 2024",,
+Cost of sales:,"September 30, 2023",,
+Cost of sales: Products,"September 27, 2025","194,116",194116000000
+Cost of sales: Products,"September 28, 2024","185,233",185233000000
+Cost of sales: Products,"September 30, 2023","189,282",189282000000
+Cost of sales: Services,"September 27, 2025","26,844",26844000000
+Cost of sales: Services,"September 28, 2024","25,119",25119000000
+Cost of sales: Services,"September 30, 2023","24,855",24855000000
+Cost of sales: Total cost of sales,"September 27, 2025","220,960",220960000000
+Cost of sales: Total cost of sales,"September 28, 2024","210,352",210352000000
+Cost of sales: Total cost of sales,"September 30, 2023","214,137",214137000000
+Gross margin,"September 27, 2025","195,201",195201000000
+Gross margin,"September 28, 2024","180,683",180683000000
+Gross margin,"September 30, 2023","169,148",169148000000
+Operating expenses:,"September 27, 2025",,
+Operating expenses:,"September 28, 2024",,
+Operating expenses:,"September 30, 2023",,
+Operating expenses: Research and development,"September 27, 2025","34,550",34550000000
+Operating expenses: Research and development,"September 28, 2024","31,370",31370000000
+Operating expenses: Research and development,"September 30, 2023","29,915",29915000000
+"Operating expenses: Selling, general and administrative","September 27, 2025","27,601",27601000000
+"Operating expenses: Selling, general and administrative","September 28, 2024","26,097",26097000000
+"Operating expenses: Selling, general and administrative","September 30, 2023","24,932",24932000000
+Operating expenses: Total operating expenses,"September 27, 2025","62,151",62151000000
+Operating expenses: Total operating expenses,"September 28, 2024","57,467",57467000000
+Operating expenses: Total operating expenses,"September 30, 2023","54,847",54847000000
+Operating income,"September 27, 2025","133,050",133050000000
+Operating income,"September 28, 2024","123,216",123216000000
+Operating income,"September 30, 2023","114,301",114301000000
+"Other income/(expense), net","September 27, 2025",(321),-321000000
+"Other income/(expense), net","September 28, 2024",269,269000000
+"Other income/(expense), net","September 30, 2023",(565),-565000000
+Income before provision for income taxes,"September 27, 2025","132,729",132729000000
+Income before provision for income taxes,"September 28, 2024","123,485",123485000000
+Income before provision for income taxes,"September 30, 2023","113,736",113736000000
+Provision for income taxes,"September 27, 2025","20,719",20719000000
+Provision for income taxes,"September 28, 2024","29,749",29749000000
+Provision for income taxes,"September 30, 2023","16,741",16741000000
+Net income,"September 27, 2025","$ 112,010",112010000000
+Net income,"September 28, 2024","$ 93,736",93736000000
+Net income,"September 30, 2023","$ 96,995",96995000000
+Earnings per share:,"September 27, 2025",,
+Earnings per share:,"September 28, 2024",,
+Earnings per share:,"September 30, 2023",,
+Earnings per share: Basic,"September 27, 2025",$ 7.49,7.49
+Earnings per share: Basic,"September 28, 2024",$ 6.11,6.11
+Earnings per share: Basic,"September 30, 2023",$ 6.16,6.16
+Earnings per share: Diluted,"September 27, 2025",$ 7.46,7.46
+Earnings per share: Diluted,"September 28, 2024",$ 6.08,6.08
+Earnings per share: Diluted,"September 30, 2023",$ 6.13,6.13
+Shares used in computing earnings per share:,"September 27, 2025",,
+Shares used in computing earnings per share:,"September 28, 2024",,
+Shares used in computing earnings per share:,"September 30, 2023",,
+Shares used in computing earnings per share: Basic,"September 27, 2025","14,948,500",14948500000
+Shares used in computing earnings per share: Basic,"September 28, 2024","15,343,783",15343783000
+Shares used in computing earnings per share: Basic,"September 30, 2023","15,744,231",15744231000
+Shares used in computing earnings per share: Diluted,"September 27, 2025","15,004,697",15004697000
+Shares used in computing earnings per share: Diluted,"September 28, 2024","15,408,095",15408095000
+Shares used in computing earnings per share: Diluted,"September 30, 2023","15,812,547",15812547000

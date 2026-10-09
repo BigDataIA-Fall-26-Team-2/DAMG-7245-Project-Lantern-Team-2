@@ -1,0 +1,18 @@
+stem,page,block_id,precision,bbox,note
+AAPL_10K_20250927,27,p0027_b901,union,"[216.2, 94.73, 552.55, 575.61]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927,39,p0039_b901,union,"[360.4, 83.94, 603.05, 545.1]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927,42,p0042_b901,union,"[431.5, 85.74, 604.56, 567.16]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927,44,p0044_b901,union,"[346.13, 82.52, 601.64, 503.48]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927,45,p0045_b901,union,"[8.57, 151.24, 600.13, 729.83]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927.docling,27,p0027_b901,union,"[5.56, 92.67, 607.0, 567.04]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927.docling,46,p0046_b902,union,"[5.06, 69.57, 607.04, 565.93]","2 layout Table regions, 1 table CSVs"
+AAPL_10K_20250927.docling,47,p0047_b901,union,"[5.05, 103.31, 607.21, 501.64]","2 layout Table regions, 1 table CSVs"
+AAPL_10Q_20260627,5,p0005_b901,union,"[0.0, 106.04, 606.15, 779.21]","2 layout Table regions, 1 table CSVs"
+AAPL_10Q_20260627,6,p0006_b901,page,"[0.0, 0.0, 612.0, 792.0]",no layout Table region on this page; bbox is the full page
+AAPL_10Q_20260627,9,p0009_b901,page,"[0.0, 0.0, 612.0, 792.0]",no layout Table region on this page; bbox is the full page
+AAPL_10Q_20260627,11,p0011_b901,union,"[168.21, 111.7, 600.79, 611.42]","2 layout Table regions, 1 table CSVs"
+AAPL_10Q_20260627,14,p0014_b901,union,"[432.99, 80.4, 603.11, 457.82]","2 layout Table regions, 1 table CSVs"
+AAPL_10Q_20260627,28,p0028_b901,page,"[0.0, 0.0, 612.0, 792.0]",no layout Table region on this page; bbox is the full page
+AAPL_10Q_20260627.docling,15,p0015_b901,union,"[5.15, 114.28, 607.72, 627.36]","3 layout Table regions, 2 table CSVs"
+AAPL_10Q_20260627.docling,15,p0015_b902,union,"[5.15, 114.28, 607.72, 627.36]","3 layout Table regions, 2 table CSVs"
+AAPL_10Q_20260627.docling,21,p0021_b902,union,"[5.97, 93.64, 606.71, 468.91]","2 layout Table regions, 1 table CSVs"

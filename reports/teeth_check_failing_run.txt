@@ -1,0 +1,33 @@
+........FF.....                                                          [100%]
+================================== FAILURES ===================================
+_____________________ test_table_cell_f1_above_threshold ______________________
+
+metrics = {'break_mode': 'no-scale', 'pages': {'AAPL_10K_20250927_p1': {'stratum': 'cover', 'page': 1, 'traditional': {'wer': 0...., ...}}, 'managed': {'statement': {'n_pages': 2, 'wer_mean': 0.045, 'wer_max': 0.0476, 'cer_mean': 0.0247, ...}}}, ...}
+thresholds = {'min_gt_pages': 16, 'min_gt_tables': 2, 'max_wer_prose': 0.2, 'max_cer_prose': 0.12, ...}
+
+    def test_table_cell_f1_above_threshold(metrics, thresholds):
+        """Baseline: 1.0 on both hand-keyed statement tables."""
+        assert metrics["tables"], "no ground truth tables scored"
+        for key, t in metrics["tables"].items():
+>           assert t["cell"]["f1"] >= thresholds["min_table_cell_f1"], (key, t)
+E           AssertionError: ('AAPL_10K_20250927_p32_t1', {'page': 32, 'gt_columns': ['September 27, 2025', 'September 28, 2024', 'September 30, 20...9-30']], 'extractor': ['docling'], 'cell_raw': {'precision': 1.0, 'recall': 1.0, 'f1': 1.0, 'tp': 57, ...}, ...}, ...})
+E           assert 0.1053 >= 0.9
+
+tests\test_quality.py:136: AssertionError
+___________________ test_table_value_recall_above_threshold ___________________
+
+metrics = {'break_mode': 'no-scale', 'pages': {'AAPL_10K_20250927_p1': {'stratum': 'cover', 'page': 1, 'traditional': {'wer': 0...., ...}}, 'managed': {'statement': {'n_pages': 2, 'wer_mean': 0.045, 'wer_max': 0.0476, 'cer_mean': 0.0247, ...}}}, ...}
+thresholds = {'min_gt_pages': 16, 'min_gt_tables': 2, 'max_wer_prose': 0.2, 'max_cer_prose': 0.12, ...}
+
+    def test_table_value_recall_above_threshold(metrics, thresholds):
+        for key, t in metrics["tables"].items():
+>           assert t["value"]["recall"] >= thresholds["min_table_value_recall"], (
+                key, t)
+E           AssertionError: ('AAPL_10K_20250927_p32_t1', {'page': 32, 'gt_columns': ['September 27, 2025', 'September 28, 2024', 'September 30, 20...9-30']], 'extractor': ['docling'], 'cell_raw': {'precision': 1.0, 'recall': 1.0, 'f1': 1.0, 'tp': 57, ...}, ...}, ...})
+E           assert 0.1053 >= 0.9
+
+tests\test_quality.py:141: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_quality.py::test_table_cell_f1_above_threshold - AssertionE...
+FAILED tests/test_quality.py::test_table_value_recall_above_threshold - Asser...
+2 failed, 13 passed in 0.23s

@@ -89,4 +89,47 @@ managed:
   provider: "aws_textract"
 
 # Owner: Guna (Part 9 - evaluation); thresholds to be set from the measured baseline
-evaluate: {}
+evaluate:
+  gt_dir: data/ground_truth
+  export_dir: data/export
+  metrics_out: reports/metrics.json
+  plot_out: reports/plots/drift.png
+  stems:
+    - AAPL_10K_20250927
+    - AAPL_10Q_20260627
+  # stratum for every sampled page, fixed before any parser output was seen
+  strata:
+    AAPL_10K_20250927_p1: cover
+    AAPL_10K_20250927_p5: prose
+    AAPL_10K_20250927_p6: prose
+    AAPL_10K_20250927_p32: statement
+    AAPL_10K_20250927_p34: statement
+    AAPL_10K_20250927_p36: statement
+    AAPL_10K_20250927_p40: notes
+    AAPL_10K_20250927_p43: notes
+    AAPL_10Q_20260627_p1: cover
+    AAPL_10Q_20260627_p4: statement
+    AAPL_10Q_20260627_p6: statement
+    AAPL_10Q_20260627_p9: statement
+    AAPL_10Q_20260627_p11: notes
+    AAPL_10Q_20260627_p16: notes
+    AAPL_10Q_20260627_p17: prose
+    AAPL_10Q_20260627_p22: prose
+    multicol_p1: multicolumn
+    scanned_p1: scanned
+  # Each threshold records the measured baseline it was set from, so that
+  # tightening or loosening it later is a visible decision.
+  thresholds:
+    min_gt_pages: 16            # 18 transcribed; 16 scoreable (2 fixtures have no export)
+    min_gt_tables: 2            # Lab 9 minimum
+    max_wer_prose: 0.20        # baseline worst prose page 0.153
+    max_cer_prose: 0.12        # baseline prose mean 0.079
+    min_numeric_f1: 0.65       # baseline 0.7235 all pages, traditional (repeats counted)
+    min_table_cell_f1: 0.90     # baseline 1.0 on both hand-keyed tables
+    min_table_value_recall: 0.90  # baseline 1.0
+    allow_unmeasured: [multicol_p1, scanned_p1]    # fixtures have no filing export; scored by tests/test_fixture_quality.py instead
+    fixtures:                     # committed fixtures, scored fresh in CI by tests/test_fixture_quality.py
+      max_wer_multicolumn: 0.95   # baseline 0.9255: Part 1 raw text reads across the columns (eval.md finding 10)
+      max_wer_scanned: 0.05       # baseline 0.0225, Tesseract
+      max_cer_scanned: 0.03       # baseline 0.0107
+      max_wer_statement: 0.12     # baseline 0.0714
