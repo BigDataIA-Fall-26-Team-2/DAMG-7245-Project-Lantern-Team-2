@@ -272,44 +272,49 @@ stages:
     deps:
     - path: data/docling
       hash: md5
-      md5: d3e9bc07ca21fa8a3c357dc16e899250.dir
-      size: 17269111
+      md5: 42884df2fd4674081c0aacf8959a79e0.dir
+      size: 17773411
       nfiles: 293
     - path: data/layout
       hash: md5
-      md5: 73cc263699d48b113b661341bc059232.dir
-      size: 778804
+      md5: fc310ff6feea19021a9323fe86b0b48a.dir
+      size: 789471
       nfiles: 4
+    - path: data/raw
+      hash: md5
+      md5: 340bf7ff02c7e8fc54a1e0c4a8793cb7.dir
+      size: 17999120
+      nfiles: 156
     - path: data/rendered
       hash: md5
-      md5: 291820c8f36318c49884b5c82e1b65cb.dir
-      size: 918632
+      md5: fb8b8f38b62d24672824b884b07ddffb.dir
+      size: 866131
       nfiles: 3
     - path: data/tables
       hash: md5
-      md5: ca1ca962a7272f3e4c1997a24a47b0ed.dir
-      size: 144640
+      md5: 7b6c0380db5239e493cee2275285ed15.dir
+      size: 146353
       nfiles: 33
     - path: requirements.txt
       hash: md5
-      md5: 9a30d9fbc6ecfc115e6b4323f456b355
-      size: 4649
+      md5: a32b6939d3391ae6e9c2030e5bd2a8c1
+      size: 4945
     - path: src/adapters.py
       hash: md5
-      md5: 80a914537f28d1e6d4e28a6777ae509e
-      size: 4276
+      md5: 3551a9578a44cf2be74059f00665e9a5
+      size: 6066
     - path: src/export.py
       hash: md5
-      md5: 22b74d4448ff24d086febe434aed8a6c
-      size: 7564
+      md5: 52a5fc9d728c14be03cdbdc1e293def9
+      size: 17112
     - path: src/export_txt.py
       hash: md5
-      md5: ac1a6f35c78860ed87049e397b833cd5
-      size: 1463
+      md5: 48d74862e1cf948d675a075fcb5c0669
+      size: 1503
     - path: src/schema.py
       hash: md5
-      md5: a6463bd87962bf4101cbc13e6f2a8cb0
-      size: 4339
+      md5: 2c3147dddd3b929dc2aec7fa9fc7a8bf
+      size: 5218
     params:
       params.yaml:
         export:
@@ -324,16 +329,16 @@ stages:
     outs:
     - path: data/export
       hash: md5
-      md5: dc9e3b0dee0febf950198b8a0457a9c5.dir
-      size: 2029111
+      md5: 45595dd103b181f031f32b5a42e3cf45.dir
+      size: 2381008
       nfiles: 8
   evaluate:
     cmd: python src/evaluate.py
     deps:
     - path: data/export
       hash: md5
-      md5: 2915413c3bfab3a70c0e298241f80fb3.dir
-      size: 2156380
+      md5: 45595dd103b181f031f32b5a42e3cf45.dir
+      size: 2381008
       nfiles: 8
     - path: data/ground_truth
       hash: md5

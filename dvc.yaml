@@ -88,6 +88,7 @@ stages:
       - ${export.layout_dir}
       - ${export.tables_dir}
       - ${export.docling_dir}
+      - data/raw
     params:
       - export
     outs:

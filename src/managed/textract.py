@@ -35,6 +35,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from adapters import dei_fiscal, file_sha256, posix_path  # noqa: E402
 from schema import Block  # noqa: E402
 
 RENDERED = Path("data/rendered")
@@ -254,6 +255,8 @@ def blocks_from_response(manifest_row, page, response, w_pt, h_pt, version):
             "extractor_version": version,
             "ocr": True,
             "ocr_conf": None,
+            "source_path": manifest_row["source_path"],
+            "sha256": manifest_row["sha256"],
         }
         return rec
 
@@ -322,6 +325,8 @@ def load_manifest(params=None, path="data/rendered/manifest.csv"):
     with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             form, period = row["form"], row["period"]
+            dei_year, dei_period = dei_fiscal(row["source_file"])
+            pdf = posix_path(row.get("pdf_path") or RENDERED / f"{row['stem']}.pdf")
             rows[row["stem"]] = {
                 "stem": row["stem"],
                 "accession": row["accession"],
@@ -330,8 +335,11 @@ def load_manifest(params=None, path="data/rendered/manifest.csv"):
                 "form": form,
                 "period": period,
                 "company": company_by_ticker.get(row["ticker"], row["ticker"]),
-                "fiscal_year": int(period[:4]),
-                "fiscal_period": "FY" if form.upper().replace("-", "") == "10K" else "Q",
+                "fiscal_year": dei_year or int(period[:4]),
+                "fiscal_period": dei_period or (
+                    "FY" if form.upper().replace("-", "") == "10K" else "Q"),
+                "source_path": pdf,
+                "sha256": file_sha256(pdf),
             }
     return rows
 
@@ -385,7 +393,8 @@ def main():
         row = {"stem": name, "accession": "0000000000-00-000001",
                "cik": "0000000000", "ticker": "FIXT", "form": "10-K",
                "company": "Fixture", "fiscal_year": 2025,
-               "fiscal_period": "FY"}
+               "fiscal_period": "FY", "source_path": posix_path(pdf),
+               "sha256": file_sha256(pdf)}
         run(name, row, pdf, page_list)
 
     # one file per document, named like the export stage's, so the evaluate
