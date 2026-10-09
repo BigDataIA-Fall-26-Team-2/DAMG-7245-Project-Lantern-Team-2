@@ -1,0 +1,23 @@
+Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations
+
+This Item and other sections of this Quarterly Report on Form 10-Q ("Form 10-Q") contain forward-looking statements, within the meaning of the Private Securities Litigation Reform Act of 1995, that involve risks and uncertainties. Forward-looking statements provide current expectations of future events based on certain assumptions and include any statement that does not directly relate to any historical or current fact. For example, statements in this Form 10-Q regarding the potential future impact of macroeconomic conditions and tariffs and other measures on the Company's business and results of operations are forward-looking statements. Forward-looking statements can also be identified by words such as "future," "anticipates," "believes," "estimates," "expects," "intends," "plans," "predicts," "will," "would," "could," "can," "may," and similar terms. Forward-looking statements are not guarantees of future performance and the Company's actual results may differ significantly from the results discussed in the forward-looking statements. Factors that might cause such differences include, but are not limited to, those discussed in Part I, Item 1A of the 2025 Form 10-K and Part II, Item 1A of this Form 10-Q, in each case under the heading "Risk Factors." The Company assumes no obligation to revise or update any forward-looking statements for any reason, except as required by law.
+
+Unless otherwise stated, all information presented herein is based on the Company's fiscal calendar, and references to particular years, quarters, months or periods refer to the Company's fiscal years ended in September and the associated quarters, months and periods of those fiscal years.
+
+The following discussion should be read in conjunction with the 2025 Form 10-K filed with the U.S. Securities and Exchange Commission ("SEC") and the condensed consolidated financial statements and accompanying notes included in Part I, Item 1 of this Form 10-Q.
+
+Available Information
+
+The Company periodically provides certain information for investors on its corporate website, www.apple.com, and its investor relations website, investor.apple.com. This includes press releases and other information about financial performance, information on corporate governance, and details related to the Company's annual meeting of shareholders. The information contained on the websites referenced in this Form 10-Q is not incorporated by reference into this filing. Further, the Company's references to website URLs are intended to be inactive textual references only.
+
+Business Seasonality and Product Introductions
+
+The Company has historically experienced higher net sales in its first quarter compared to other quarters in its fiscal year due in part to seasonal holiday demand. Additionally, new product and service introductions can significantly impact net sales, cost of sales and operating expenses. The timing of product introductions can also impact the Company's net sales to its indirect distribution channels as these channels are filled with new inventory following a product launch, and channel inventory of an older product often declines as the launch of a newer product approaches. Net sales can also be affected when consumers and distributors anticipate a product introduction.
+
+During the third quarter of 2026, the Company announced iOS 27, macOS 27 Golden Gate, iPadOS 27, watchOS 27, visionOS 27 and tvOS 27, and introduced Siri AI.
+
+Macroeconomic Conditions
+
+Macroeconomic conditions, including inflation, interest rates, component pricing and currency fluctuations, have directly and indirectly impacted, and could in the future materially impact, the Company's results of operations and financial condition.
+
+The Company is experiencing a period of supply constraints and increasing costs for components driven by factors such as industry supply-demand imbalances for components, including advanced semiconductors, storage (NAND) and memory (DRAM). The Company expects these trends to intensify, which may materially negatively impact the Company's revenue, costs, gross margin, results of operations and financial condition. Actions, such as price increases, that have been and may in the future be taken by the Company may not effectively mitigate these negative impacts, and may also reduce demand for the Company's products and materially adversely affect the Company's revenue, costs, gross margin, results of operations and financial condition.

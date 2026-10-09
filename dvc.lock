@@ -37,7 +37,7 @@ stages:
       size: 17581141
       nfiles: 156
   render:
-    cmd: python src/render.py --params params.yaml --input data/raw --output
+    cmd: python src/render.py --params params.yaml --input data/raw --output 
       data/rendered
     deps:
     - path: data/raw
@@ -76,7 +76,7 @@ stages:
       size: 918632
       nfiles: 3
   parse_pdfplumber:
-    cmd: python src/parse_text.py --params params.yaml --input data/rendered
+    cmd: python src/parse_text.py --params params.yaml --input data/rendered 
       --output data/parsed
     deps:
     - path: data/rendered
@@ -106,24 +106,54 @@ stages:
       size: 8285619
       nfiles: 94
   tables:
-    cmd: python src/tables.py --params params.yaml --input data/rendered
+    cmd: python src/tables.py --params params.yaml --input data/rendered 
       --output data/tables
     deps:
+    - path: data/managed
+      hash: md5
+      md5: 1d6b381b5f89bf1ca7689c6c117f46fb.dir
+      size: 910483
+      nfiles: 6
     - path: data/rendered
       hash: md5
-      md5: 291820c8f36318c49884b5c82e1b65cb.dir
-      size: 918632
+      md5: fb8b8f38b62d24672824b884b07ddffb.dir
+      size: 866131
       nfiles: 3
     - path: requirements.txt
       hash: md5
-      md5: 9a30d9fbc6ecfc115e6b4323f456b355
-      size: 4649
+      md5: a32b6939d3391ae6e9c2030e5bd2a8c1
+      size: 4945
+    - path: src/managed
+      hash: md5
+      md5: 89252d934f09e8dfb17d89d41a150d23.dir
+      size: 38191
+      nfiles: 4
     - path: src/tables.py
       hash: md5
-      md5: 57864510dc245f765c603dc27195a4c8
-      size: 25680
+      md5: db6681df96d0169fd1439996ed724aea
+      size: 28403
     params:
       params.yaml:
+        managed:
+          provider: aws_textract
+          enabled: false
+          region: us-east-1
+          features:
+          - TABLES
+          - LAYOUT
+          cache_dir: data/managed
+          dpi: 150
+          pages:
+            AAPL_10K_20250927:
+            - 32
+            AAPL_10Q_20260627:
+            - 6
+          fixture_pages:
+            scanned:
+            - 1
+          trigger:
+            min_ocr_conf: 0.75
+            min_table_score: 0.5
         tables:
           min_rulings: 4
           accept_score: 0.6
@@ -132,11 +162,11 @@ stages:
     outs:
     - path: data/tables
       hash: md5
-      md5: ca1ca962a7272f3e4c1997a24a47b0ed.dir
-      size: 144640
+      md5: 7b6c0380db5239e493cee2275285ed15.dir
+      size: 146353
       nfiles: 33
   layout:
-    cmd: python src/layout.py --params params.yaml --input data/rendered
+    cmd: python src/layout.py --params params.yaml --input data/rendered 
       --output data/layout --figures data/figures --qa reports/layout
     deps:
     - path: data/rendered
@@ -199,7 +229,7 @@ stages:
       size: 778804
       nfiles: 4
   parse_docling:
-    cmd: python src/docling_parse.py --params params.yaml --input data/rendered
+    cmd: python src/docling_parse.py --params params.yaml --input data/rendered 
       --output data/docling
     deps:
     - path: data/raw
@@ -297,3 +327,79 @@ stages:
       md5: dc9e3b0dee0febf950198b8a0457a9c5.dir
       size: 2029111
       nfiles: 8
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+    - path: data/export
+      hash: md5
+      md5: 2915413c3bfab3a70c0e298241f80fb3.dir
+      size: 2156380
+      nfiles: 8
+    - path: data/ground_truth
+      hash: md5
+      md5: 7d984b08231443af6cd7f120654f36fc.dir
+      size: 6178685
+      nfiles: 44
+    - path: data/managed
+      hash: md5
+      md5: 1d6b381b5f89bf1ca7689c6c117f46fb.dir
+      size: 910483
+      nfiles: 6
+    - path: src/evaluate.py
+      hash: md5
+      md5: d7757552823c48c8133d7e86dceba476
+      size: 27359
+    params:
+      params.yaml:
+        evaluate:
+          gt_dir: data/ground_truth
+          export_dir: data/export
+          metrics_out: reports/metrics.json
+          plot_out: reports/plots/drift.png
+          stems:
+          - AAPL_10K_20250927
+          - AAPL_10Q_20260627
+          strata:
+            AAPL_10K_20250927_p1: cover
+            AAPL_10K_20250927_p5: prose
+            AAPL_10K_20250927_p6: prose
+            AAPL_10K_20250927_p32: statement
+            AAPL_10K_20250927_p34: statement
+            AAPL_10K_20250927_p36: statement
+            AAPL_10K_20250927_p40: notes
+            AAPL_10K_20250927_p43: notes
+            AAPL_10Q_20260627_p1: cover
+            AAPL_10Q_20260627_p4: statement
+            AAPL_10Q_20260627_p6: statement
+            AAPL_10Q_20260627_p9: statement
+            AAPL_10Q_20260627_p11: notes
+            AAPL_10Q_20260627_p16: notes
+            AAPL_10Q_20260627_p17: prose
+            AAPL_10Q_20260627_p22: prose
+            multicol_p1: multicolumn
+            scanned_p1: scanned
+          thresholds:
+            min_gt_pages: 16
+            min_gt_tables: 2
+            max_wer_prose: 0.2
+            max_cer_prose: 0.12
+            min_numeric_f1: 0.65
+            min_table_cell_f1: 0.9
+            min_table_value_recall: 0.9
+            allow_unmeasured:
+            - multicol_p1
+            - scanned_p1
+            fixtures:
+              max_wer_multicolumn: 0.95
+              max_wer_scanned: 0.05
+              max_cer_scanned: 0.03
+              max_wer_statement: 0.12
+    outs:
+    - path: reports/metrics.json
+      hash: md5
+      md5: 49e391e9a82b42f0b2da021f09cab036
+      size: 24484
+    - path: reports/plots/drift.png
+      hash: md5
+      md5: 86721bc7b86518a2fc9871415b6f4cf8
+      size: 76806

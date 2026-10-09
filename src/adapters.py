@@ -31,7 +31,8 @@ def extractor_version(method):
         return f"{pkg} {version(pkg)}"
     except PackageNotFoundError:
         return pkg
-
+    
+PACKAGE.setdefault("docling", "docling")
 
 def _base_meta(manifest_row):
     return {
@@ -69,7 +70,7 @@ def block_from_layout_record(manifest_row, rec, section):
         text=text,
         table=None,
         extractor="pdfplumber",
-        extractor_version=str(rec.get("model") or "layout"),
+        extractor_version=rec.get("extractor_version") or extractor_version("pdfplumber"),
         ocr=bool(rec.get("ocr", False)),
         ocr_conf=None,
     )
