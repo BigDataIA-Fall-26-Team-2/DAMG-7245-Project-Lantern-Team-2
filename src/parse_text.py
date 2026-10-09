@@ -89,7 +89,7 @@ def main(params_path, input_dir, output_dir):
     manifest = source / "manifest.csv"
     doc_ids = {}
     if manifest.exists():
-        with manifest.open(newline="") as f:
+        with manifest.open(newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 if row["stem"] in doc_ids:
                     raise ValueError(f"duplicate manifest stem: {row['stem']}")
@@ -99,14 +99,14 @@ def main(params_path, input_dir, output_dir):
     output.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix=".parse-", dir=output) as tmp:
         staged = Path(tmp)
-        with (staged / "ocr_log.csv").open("w", newline="") as log:
+        with (staged / "ocr_log.csv").open("w", newline="", encoding="utf-8") as log:
             writer = csv.DictWriter(log, fieldnames=LOG_FIELDS)
             writer.writeheader()
             for pdf in pdfs:
                 doc_id = doc_ids.get(pdf.stem)
-                with (staged / f"{pdf.stem}.words.jsonl").open("w") as words_file:
+                with (staged / f"{pdf.stem}.words.jsonl").open("w", encoding="utf-8") as words_file:
                     for page in extract_page_text(pdf, params):
-                        (staged / f"{pdf.stem}_p{page['page']:04d}.txt").write_text(page["text"] + "\n")
+                        (staged / f"{pdf.stem}_p{page['page']:04d}.txt").write_text(page["text"] + "\n", encoding="utf-8")
                         for word in page["words"]:
                             record = {"doc_id": doc_id, "page": page["page"], **word, "ocr": page["ocr"]}
                             words_file.write(json.dumps(record, ensure_ascii=False) + "\n")

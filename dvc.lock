@@ -72,8 +72,8 @@ stages:
     outs:
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: 291820c8f36318c49884b5c82e1b65cb.dir
+      size: 918632
       nfiles: 3
   parse_pdfplumber:
     cmd: python src/parse_text.py --params params.yaml --input data/rendered 
@@ -81,8 +81,8 @@ stages:
     deps:
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: 291820c8f36318c49884b5c82e1b65cb.dir
+      size: 918632
       nfiles: 3
     - path: requirements.txt
       hash: md5
@@ -102,8 +102,8 @@ stages:
     outs:
     - path: data/parsed
       hash: md5
-      md5: e344d1ebaad76490038211f2daa5542b.dir
-      size: 8288515
+      md5: 4fd9237fa4a22b526236e533b5289233.dir
+      size: 8285619
       nfiles: 94
   tables:
     cmd: python src/tables.py --params params.yaml --input data/rendered 
@@ -111,8 +111,8 @@ stages:
     deps:
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: 291820c8f36318c49884b5c82e1b65cb.dir
+      size: 918632
       nfiles: 3
     - path: requirements.txt
       hash: md5
@@ -132,8 +132,8 @@ stages:
     outs:
     - path: data/tables
       hash: md5
-      md5: bdbe0d97e356f7cb70609dc64b3a61f0.dir
-      size: 144644
+      md5: ca1ca962a7272f3e4c1997a24a47b0ed.dir
+      size: 144640
       nfiles: 33
   layout:
     cmd: python src/layout.py --params params.yaml --input data/rendered 
@@ -141,8 +141,8 @@ stages:
     deps:
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: 291820c8f36318c49884b5c82e1b65cb.dir
+      size: 918632
       nfiles: 3
     - path: requirements.txt
       hash: md5
@@ -190,13 +190,13 @@ stages:
     outs:
     - path: data/figures
       hash: md5
-      md5: 2a9d235ef4e8f3d78bd64cca688aa5c2.dir
-      size: 43451
-      nfiles: 5
+      md5: f9fb6182553fe346d41f16296b52202d.dir
+      size: 39645
+      nfiles: 4
     - path: data/layout
       hash: md5
-      md5: 694cf1d730f814aa8ee3286c1b2342e4.dir
-      size: 773248
+      md5: 73cc263699d48b113b661341bc059232.dir
+      size: 778804
       nfiles: 4
   parse_docling:
     cmd: python src/docling_parse.py --params params.yaml --input data/rendered 
@@ -209,8 +209,8 @@ stages:
       nfiles: 156
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: 291820c8f36318c49884b5c82e1b65cb.dir
+      size: 918632
       nfiles: 3
     - path: requirements.txt
       hash: md5
@@ -234,31 +234,31 @@ stages:
     outs:
     - path: data/docling
       hash: md5
-      md5: 06e5b15f59ed501bc58a1926533e13c3.dir
-      size: 17284521
+      md5: d3e9bc07ca21fa8a3c357dc16e899250.dir
+      size: 17269111
       nfiles: 293
   export:
     cmd: python src/export.py
     deps:
     - path: data/docling
       hash: md5
-      md5: 06e5b15f59ed501bc58a1926533e13c3.dir
-      size: 17284521
+      md5: d3e9bc07ca21fa8a3c357dc16e899250.dir
+      size: 17269111
       nfiles: 293
     - path: data/layout
       hash: md5
-      md5: 694cf1d730f814aa8ee3286c1b2342e4.dir
-      size: 773248
+      md5: 73cc263699d48b113b661341bc059232.dir
+      size: 778804
       nfiles: 4
     - path: data/rendered
       hash: md5
-      md5: bd5a42e923df61662d1e16b8e76c7ff1.dir
-      size: 1076361
+      md5: 291820c8f36318c49884b5c82e1b65cb.dir
+      size: 918632
       nfiles: 3
     - path: data/tables
       hash: md5
-      md5: bdbe0d97e356f7cb70609dc64b3a61f0.dir
-      size: 144644
+      md5: ca1ca962a7272f3e4c1997a24a47b0ed.dir
+      size: 144640
       nfiles: 33
     - path: requirements.txt
       hash: md5
@@ -294,8 +294,8 @@ stages:
     outs:
     - path: data/export
       hash: md5
-      md5: 745eb6dbce0a8f364f5dc77bd5570c4a.dir
-      size: 2058636
+      md5: dc9e3b0dee0febf950198b8a0457a9c5.dir
+      size: 2029111
       nfiles: 8
   evaluate:
     cmd: python src/evaluate.py

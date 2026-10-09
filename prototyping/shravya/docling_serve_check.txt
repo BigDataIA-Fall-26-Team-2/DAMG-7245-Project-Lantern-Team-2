@@ -1,0 +1,21 @@
+# #83: parse_docling via docling-serve over HTTP vs Docling as a library
+
+Server: quay.io/docling-project/docling-serve-cpu@sha256:225c8586e20d5d0fc6811a9e0e044fa602bcc4393f00389009bad42d6787b58f
+  /version: docling-serve 1.36.0, docling 2.132.0, docling-core 2.99.0, docling-ibm-models 4.0.3 (linux aarch64, Docker on Mac)
+Library: docling 2.134.0, docling-core 2.100.0, docling-ibm-models 4.0.3
+Endpoint: POST /v1/convert/file, to_formats=json, do_ocr=false, table_mode=accurate (same settings as params.yaml)
+
+Run: python src/docling_parse.py --params <params with docling.serve_url=http://localhost:5001> --input data/rendered --output /tmp/serve_full
+
+                      library                                   docling-serve (HTTP)
+10-K                  48 tables (31 team format), 55.9 s        48 tables (31 team format), 103.6 s
+10-Q                  30 tables (23 team format), 35.1 s        30 tables (23 team format), 62.7 s
+10-K original HTML    62 tables, 482,061 chars                  62 tables, 482,061 chars
+Blocks per type       identical on both filings
+
+diff -rq data/docling/tables /tmp/serve_full/tables  ->  no differences (all 54 team-format table CSVs identical)
+statement fixture: team-format table CSV identical between the two paths
+
+Note: the server's raw table headers join levels with "." ("Years ended.September 27, 2025") where the library uses " - ";
+team-format tables are unaffected because to_long takes period labels from the page text.
+Server ~1.8x slower here because Docker on macOS runs a Linux VM on CPU only; the library run could use the Mac directly.
