@@ -129,3 +129,17 @@ structural check (no repeated `row_label` per table) is now part of validation a
 python src/tables.py --params params.yaml --input data/rendered --output data/tables
 pytest -q tests/test_tables.py
 ```
+
+
+## Known limitations (found by the Part 9 evaluation, reports/eval.md section 6)
+
+- **Cut-off closing bracket (finding 7, fixed).** On 10-Q p6 the pdfplumber-text path cut the ')' of
+  '(14,264)' and '(5,571)': the words end at x1 = 604.4 while the column's digits end at 601.9, so the
+  bracket fell outside the right-most cell. Values were already correct; only the raw-cell metric
+  caught it (0.9818). `close_paren()` now restores the bracket when the closed form is printed on the
+  page, and never invents one otherwise (tests/test_tables_paren.py).
+- **Stacked tables on one page (finding 2, open).** 10-Q p11 and p16 each yield a single 4-row table,
+  but p16 prints four stacked seven-column tables, so most of their cells are missing; the worst
+  notes numeric F1 is 0.31. The statement pages, which carry the XBRL check, are not affected.
+  Splitting a page into several tables was not attempted the night of the code freeze; the
+  per-path notes F1 in reports/eval.md shows which path to prefer for these pages.
