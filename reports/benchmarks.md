@@ -84,3 +84,19 @@ were benchmarked.
 - One run per stage on one machine; no repeated trials or variance.
 - Peak RSS is sampled after each page, so short spikes inside a page can be missed.
 - Docling per-page timing uses `page_range=(n, n)`, so each page pays a small per-call overhead.
+
+## Reproducing on other hardware
+
+The measurements above are the recorded Mac experiment, not fresh EC2 measurements.
+The benchmark checks PyTorch device availability before launching MPS or CUDA runs.
+Unavailable configured devices are recorded in `data/bench/skipped.json`; their stale
+per-stage CSV/meta files are removed from the current output directory. Preserve a
+previous machine's artifacts through its Git/DVC revision or a separate output directory.
+
+`summary.csv` summarizes only stages requested in the current run. Page failures
+remain visible as error counts, but any stage with errors or no measured pages is
+excluded from `cost.csv`. An all-skipped subset produces an empty summary and only
+the configured managed-service price scenarios. Local-host zero-cost rows exclude
+compute charges; they do not assert that running an EC2 instance is free. VM rows
+remain projections using the configured prices and worker assumptions, not direct
+measurements on the named VM types.

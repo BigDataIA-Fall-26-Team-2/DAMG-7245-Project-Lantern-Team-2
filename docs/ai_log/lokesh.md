@@ -118,3 +118,11 @@
 - Addressed Guna's requested persistent regression coverage: disabled cache miss preserves Tesseract, cached managed text/word boxes replace it, 0–100 confidence threshold boundaries and empty OCR, and empty managed responses preserve local OCR. Tests explicitly forbid AWS calls. These recurring checks were requested in review and authorized by Lokesh's request to address the comments.
 - Standardized the OCR log engine to `aws-textract`, matching the managed records' extractor label.
 - Validation: targeted parser and managed fallback/config suites passed (see review follow-up results). Full integrated EC2 reproduction remains pending; Guna's separate fixture-quality isolation follow-up is not implemented here.
+
+## 2026-10-09 — portable benchmark device selection
+
+- **Tool/model:** OpenAI Codex (GPT-6).
+- **Contribution:** Added availability checks for MPS/CUDA benchmark jobs, explicit skipped.json evidence, cleanup of stale unavailable-device outputs, current-run summary scope, and empty-summary handling. Excluded stages with errors or zero pages from cost projections and replaced hard-coded Mac labels with measurement-host labels. Existing Mac report results are preserved and distinguished from later runs. DVC already tracks src/bench.py and the whole data/bench output directory, so no dependency change is needed.
+- **Verification:** Existing benchmark tests: 2 passed. Temporary mocked checks verified unavailable MPS never launches a subprocess, stale MPS output is removed, an all-skipped run writes an empty summary, a failed 94-page MPS result is excluded from costs, and successful CPU results remain. git diff --check passed. No new recurring tests added.
+- **Failure/limitation:** The EC2 run previously treated 94 failed MPS attempts as fast processing and generated invalid GPU cost estimates. This patch does not regenerate EC2 artifacts; rerun only the bench stage there after integration. VM projections still depend on declared worker/hardware assumptions; zero local-host compute charges are not a claim of free EC2 hosting.
+- **Confidence:** Device routing and cost exclusion verified without model downloads; full corrected benchmark timings require the EC2 rerun.
