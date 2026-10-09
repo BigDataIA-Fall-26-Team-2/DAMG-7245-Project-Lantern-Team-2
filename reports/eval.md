@@ -328,6 +328,25 @@ dvc metrics diff > reports/metrics_diff_no_scale.txt
 python src/evaluate.py
 ```
 
+The main lines of that output, as DVC printed them (full file in
+`reports/metrics_diff_no_scale.txt`):
+
+```
+Path                  Metric                                                       HEAD    workspace    Change
+reports\metrics.json  break_mode                                                   none    no-scale     -
+reports\metrics.json  tables.AAPL_10K_20250927_p32_t1.cell.f1                      1.0     0.1053       -0.8947
+reports\metrics.json  tables.AAPL_10K_20250927_p32_t1.cell.tp                      57      6            -51
+reports\metrics.json  tables.AAPL_10K_20250927_p32_t1.docling.cell.f1              1.0     0.1053       -0.8947
+reports\metrics.json  tables.AAPL_10K_20250927_p32_t1.traditional.cell.f1          1.0     0.1053       -0.8947
+reports\metrics.json  tables.AAPL_10Q_20260627_p6_t1.cell.f1                       1.0     0.0          -1.0
+reports\metrics.json  tables.AAPL_10Q_20260627_p6_t1.cell.tp                       56      0            -56
+reports\metrics.json  tables.AAPL_10Q_20260627_p6_t1.docling.cell.f1               1.0     0.0          -1.0
+reports\metrics.json  tables.AAPL_10Q_20260627_p6_t1.traditional.cell.f1           1.0     0.0          -1.0
+```
+
+No WER, CER or numeric line is in the diff, because `no-scale` only damages the
+scaled table values.
+
 The stage also reads `data/managed` for the Part 7 side-by-side, which is
 tracked on the Part 7 branch, so it is added to this stage's deps there.
 

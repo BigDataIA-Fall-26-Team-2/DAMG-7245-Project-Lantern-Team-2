@@ -22,6 +22,7 @@ BASE = {
     "form": "10-Q", "fiscal_year": 2026, "fiscal_period": "Q",
     "section": None, "units": "pt", "origin": "top-left", "text": None,
     "bbox": [40.0, 100.0, 570.0, 400.0],
+    "source_path": "data/rendered/AAPL_10Q_20260627.pdf", "sha256": "b" * 64,
 }
 TABLE = {"columns": ["", "col1"], "rows": [["Net sales", "94,036"]],
          "raw_cells": [["Net sales", "94,036"]], "scale": None}

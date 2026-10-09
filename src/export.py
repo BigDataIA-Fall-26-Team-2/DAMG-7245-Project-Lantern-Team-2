@@ -9,6 +9,9 @@ from export_txt import main as export_txt
 from adapters import (
     block_from_layout_record,
     block_from_docling_record,
+    dei_fiscal,
+    file_sha256,
+    posix_path,
     table_from_csv_rows,
     table_methods,
 )
@@ -45,6 +48,12 @@ def load_manifest(path=MANIFEST):
         for row in csv.DictReader(f):
             form = row["form"]
             period = row["period"]
+            # fiscal year and period from the filing's own dei facts; the
+            # period-end date is only a fallback when the iXBRL file or a
+            # fact is missing
+            dei_year, dei_period = dei_fiscal(row["source_file"])
+            pdf = posix_path(row.get("pdf_path") or
+                             RENDERED_DIR / f"{row['stem']}.pdf")
             rows[row["stem"]] = {
                 "stem": row["stem"],
                 "accession": row["accession"],
@@ -54,8 +63,12 @@ def load_manifest(path=MANIFEST):
                 "period": period,
                 "source_file": row["source_file"],
                 "company": COMPANY_BY_TICKER.get(row["ticker"], row["ticker"]),
-                "fiscal_year": int(period[:4]),
-                "fiscal_period": "FY" if form.upper().replace("-", "") == "10K" else "Q",
+                "fiscal_year": dei_year or int(period[:4]),
+                "fiscal_period": dei_period or (
+                    "FY" if form.upper().replace("-", "") == "10K" else "Q"),
+                "fiscal_source": "dei" if dei_year and dei_period else "period",
+                "source_path": pdf,
+                "sha256": file_sha256(pdf),
             }
     return rows
 
@@ -72,6 +85,39 @@ def section_for(text, current):
     if text and ITEM_RE.match(text.strip()):
         return text.strip().split(".")[0].strip()
     return current
+
+
+class SectionTracker:
+    """Item heading first, falling back to the nearest Title (Part 5).
+
+    Before the first Item heading (cover page, table of contents) a block gets
+    the nearest preceding Title instead of nothing. Once an Item heading has
+    been seen, it is the section until the next one.
+    """
+
+    def __init__(self):
+        self.item = None
+        self.title = None
+
+    def update(self, rec):
+        text = rec.get("text")
+        self.item = section_for(text, self.item)
+        if rec.get("block_type") == "Title" and text and text.strip():
+            self.title = " ".join(text.split())
+        return self.item or self.title
+
+
+def fill_sections(blocks):
+    """Give section-less blocks (tables) the section of the block before them
+    in reading order, so every record carries one."""
+    out, current = [], None
+    for b in reading_order(blocks):
+        if b.section:
+            current = b.section
+        elif current:
+            b = b.model_copy(update={"section": current})
+        out.append(b)
+    return out
 
 
 def page_sizes(stem, rendered_dir=RENDERED_DIR):
@@ -96,13 +142,13 @@ def page_sizes(stem, rendered_dir=RENDERED_DIR):
 
 def layout_blocks(manifest_row, stem):
     path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
-    blocks, section = [], None
+    blocks, sections = [], SectionTracker()
     table_bbox = {}
     for rec in read_jsonl(path):
         if rec["block_type"] == "Table":
             table_bbox.setdefault(rec["page"], []).append(rec["bbox"])
             continue
-        section = section_for(rec.get("text"), section)
+        section = sections.update(rec)
         b = block_from_layout_record(manifest_row, rec, section)
         if b is not None:
             blocks.append(b)
@@ -241,11 +287,11 @@ def docling_table_boxes(stem):
 
 def docling_blocks(manifest_row, stem):
     path = DOCLING_DIR / f"{stem}.blocks.jsonl"
-    blocks, section = [], None
+    blocks, sections = [], SectionTracker()
     for rec in read_jsonl(path):
         if rec["block_type"] == "Table":
             continue
-        section = section_for(rec.get("text"), section)
+        section = sections.update(rec)
         b = block_from_docling_record(manifest_row, rec, section)
         if b is not None:
             blocks.append(b)
@@ -348,7 +394,7 @@ def main():
             tbl, replaced = merge_managed_tables(stem, tbl,
                                                  managed_table_blocks(stem))
             all_managed += replaced
-            trad += tbl
+            trad = fill_sections(trad + tbl)
             all_fallbacks += fallbacks
             write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
             write_markdown(trad, EXPORT_DIR / f"{stem}.md", row)
@@ -367,7 +413,7 @@ def main():
                                            tables_dir=DOCLING_TABLES_DIR,
                                            method="docling",
                                            log_stem=f"{stem}.docling")
-                doc += dtbl
+                doc = fill_sections(doc + dtbl)
                 all_fallbacks += dfall
                 write_jsonl(doc, EXPORT_DIR / f"{stem}.docling.jsonl")
             else:

@@ -39,8 +39,11 @@ stages:
     deps:
       - src/tables.py
       - src/managed
+      - src/adapters.py
+      - src/schema.py
       - requirements.txt
       - data/rendered
+      - data/raw
       - data/managed
     params:
       - tables
@@ -89,6 +92,7 @@ stages:
       - ${export.layout_dir}
       - ${export.tables_dir}
       - ${export.docling_dir}
+      - data/raw
     params:
       - export
     outs:

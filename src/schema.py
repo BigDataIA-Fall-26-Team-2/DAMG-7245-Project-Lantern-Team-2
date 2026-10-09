@@ -9,6 +9,7 @@ SCHEMA_VERSION = "lantern/1.0"
 ACCESSION_RE = re.compile(r"^\d{10}-\d{2}-\d{6}$")
 CIK_RE = re.compile(r"^\d{10}$")
 BLOCK_ID_RE = re.compile(r"^p\d{4}_b\d{3}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 BlockType = Literal["Text", "Title", "List", "Table", "Figure", "Footnote"]
 
@@ -65,6 +66,12 @@ class Block(BaseModel):
     ocr: bool
     ocr_conf: Optional[float] = None
 
+    # Appendix B: the file this record was extracted from and its hash. The
+    # source is the rendered PDF, because that is the file every page and bbox
+    # points into.
+    source_path: str
+    sha256: str
+
     @field_validator("schema_version")
     @classmethod
     def check_schema_version(cls, v):
@@ -113,6 +120,20 @@ class Block(BaseModel):
                 f"bbox bottom must exceed top in top-left origin, "
                 f"got top={top} bottom={bottom}"
             )
+        return v
+
+    @field_validator("sha256")
+    @classmethod
+    def check_sha256(cls, v):
+        if not SHA256_RE.match(v):
+            raise ValueError(f"sha256 must be 64 lower-case hex characters, got {v}")
+        return v
+
+    @field_validator("source_path")
+    @classmethod
+    def check_source_path(cls, v):
+        if not v or "\\" in v:
+            raise ValueError(f"source_path must be a non-empty forward-slash path, got {v!r}")
         return v
 
     @field_validator("ocr_conf")

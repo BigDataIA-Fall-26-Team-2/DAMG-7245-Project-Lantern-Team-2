@@ -1,7 +1,10 @@
-import json
-from pathlib import Path
 import csv
+import hashlib
+import html
+import json
+import re
 from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
 
 from schema import Block, Table, SCHEMA_VERSION
 
@@ -34,6 +37,49 @@ def extractor_version(method):
     
 PACKAGE.setdefault("docling", "docling")
 
+def posix_path(p):
+    """Manifest paths can be written on Windows; records always use '/'."""
+    return str(p).replace("\\", "/")
+
+
+def file_sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _dei_value(doc, name):
+    m = re.search(r"<ix:nonNumeric\b[^>]*\bname=\"dei:" + name + r"\"[^>]*>(.*?)</ix:nonNumeric>",
+                  doc, re.DOTALL | re.IGNORECASE)
+    if not m:
+        return None
+    text = html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip()
+    return text or None
+
+
+def dei_fiscal(ixbrl_path):
+    """(fiscal_year, fiscal_period) from the filing's own dei facts.
+
+    Part 5 asks for dei:DocumentFiscalYearFocus and
+    dei:DocumentFiscalPeriodFocus, the filer's own statement of the period,
+    rather than a value guessed from the period end date (a 10-Q is then Q3,
+    not just Q). Returns (None, None) when the file or a fact is missing.
+    """
+    path = Path(posix_path(ixbrl_path))
+    if not path.exists():
+        return None, None
+    doc = path.read_text(encoding="utf-8", errors="replace")
+    year = _dei_value(doc, "DocumentFiscalYearFocus")
+    period = _dei_value(doc, "DocumentFiscalPeriodFocus")
+    try:
+        year = int(year) if year else None
+    except ValueError:
+        year = None
+    return year, period
+
+
 def _base_meta(manifest_row):
     return {
         "schema": SCHEMA_VERSION,
@@ -44,6 +90,8 @@ def _base_meta(manifest_row):
         "form": manifest_row["form"],
         "fiscal_year": int(manifest_row["fiscal_year"]),
         "fiscal_period": manifest_row["fiscal_period"],
+        "source_path": manifest_row["source_path"],
+        "sha256": manifest_row["sha256"],
     }
 
 
