@@ -135,6 +135,63 @@ simple layout. We did not test the harder scans where OCR usually breaks
 (skewed or noisy pages, low DPI, tables inside a scan), and thats where
 Textract could still be clearly better.
 
+## 3b. Second provider: Google Document AI (stretch goal)
+
+Same 3 pages and the same 150 DPI page images went through Google's **Form
+Parser** (region us), with `scripts/gcp_compare.py`. It is outside the DVC
+pipeline on purpose: no stage, no `data/managed` and no `dvc.lock` changed. The
+answers are cached by page-image hash in `reports/gcp/`, like the Textract
+cache, so every run after the first one reads the cache and pays nothing. They
+are scored with `evaluate.py`'s own functions against the same ground truth.
+Login is gcloud application default credentials, because the account blocks
+service account key files by default, so no key is anywhere in the repo.
+Scoring again from the cache needs nothing new. Only calling Google again needs
+`pip install -r requirements-gcp.txt` (`google-cloud-documentai==3.16.0`), kept
+out of `requirements.txt` because no pipeline stage imports it.
+
+| Page | Path | WER | CER | Numeric F1 | Raw cell F1 |
+|---|---|---|---|---|---|
+| 10-K p32 | Docling | 0.2083 | 0.1947 | 0.9500 | 1.0000 |
+| | Textract | 0.0476 | 0.0284 | 0.9767 | 1.0000 |
+| | Google Form Parser | 0.1190 | 0.0474 | 0.9612 | 0.9735 |
+| 10-Q p6 | Docling | 0.2535 | 0.3035 | 0.9677 | 1.0000 |
+| | Textract | 0.0423 | 0.0210 | 0.9697 | 1.0000 |
+| | Google Form Parser | 0.1033 | 0.0552 | 0.9697 | 0.9912 |
+| Scanned p1 | Tesseract (Part 1) | 0.0225 | 0.0107 | 0.9333 | n/a |
+| | Textract | 0.0188 | 0.0101 | 0.9333 | n/a |
+| | Google Form Parser | 0.0300 | 0.0261 | 0.9130 | n/a |
+
+Google sits between Docling and Textract on text. On numbers it ties Textract
+on p6 and is a bit lower on p32. But it is the only path, free or paid, that is
+below 1.0 on table cells, and we checked every cell that did not match:
+
+- **10-K p32, Total operating expenses:** `57,467` read as `57.467`, the comma
+  read as a decimal point. This is the worst kind of error for FinTrust,
+  because the result is still a valid number, only a thousand times smaller,
+  so nothing downstream would notice it.
+- **10-Q p6, Assets:** a stray `27` pulled into the table as a third column on
+  a row that has no figures.
+- One more difference was ours, not Google's. On the `Other income/(expense),
+  net` row Google gave one extra cell with no letter or digit in it, and our
+  mapping counted it as a column, so both values (269 and (565), read
+  correctly) landed one column to the right. The script now joins such a cell
+  to the cell before it. That moved p32 from 0.947 to 0.974, from the cache, no
+  new call.
+
+On the clean scan Google is the weakest of the three (0.030 WER against 0.019
+Textract and 0.023 Tesseract).
+
+**Price:** Form Parser is $30 per 1,000 pages for the first 1M pages a month and
+$20 after (https://cloud.google.com/document-ai/pricing, checked 9 October
+2026). That is twice Textract with Tables. Our 3 pages cost $0.09, paid from the
+free trial credit.
+
+**What it changes:** nothing in the recommendation. On these pages Google is
+less accurate than Textract, makes the most dangerous error we saw on any path,
+and costs twice as much. So if a managed fallback is used, Textract stays the
+one. The data handling questions in section 7 would need the same answers from
+Google, we did not research Google's terms.
+
 ## 4. Fallback design
 
 Textract is an optional fallback, same flow as the tutorial: open-source parse
@@ -304,6 +361,7 @@ Assumptions, each one written so it can be replaced:
 |---|---|---|---|
 | Textract on every page (Tables) | $15.00 | $7,500 | $3,413 |
 | Textract OCR only (no tables) | $1.50 | $750 | $341 |
+| Google Form Parser on every page | $30.00 | $15,000 | $6,825 |
 | Self-hosted traditional, compute only | $0.05 | $23 | $11 |
 | Self-hosted Docling, compute only | $0.16 | $81 | $37 |
 | Hybrid: Textract on 5% of pages | $0.75 blended | $375 | $171 |
@@ -379,6 +437,10 @@ pages, behind the flag.
 fixture Tesseract was almost as good (0.023 vs 0.019 WER, same numeric F1), so
 Textract is for the scans Tesseract cant read, not for every scan.
 
+Between the two managed services we tried, Textract stays the fallback: Google's
+Form Parser was less accurate on these pages and costs twice as much (section
+3b).
+
 **Where it dont belong:** born-digital filings, which is almost all of
 FinTrust's volume. There the text layer is exact, Docling reads statement
 figures within about three points of Textract (0.2 points on p6) and the
@@ -407,7 +469,9 @@ matters, and keeps client data at home unless we choose otherwise.
   weak evidence for anything else.
 - The Tesseract vs Textract comparison is one clean scanned page. Harder scans
   were not tested (section 3).
-- One provider only, Google Document AI and Azure were not run (stretch goal).
+- The second provider, Google Document AI, ran on the same 3 pages only, and its
+  data handling terms were not researched. Azure was not run, there was no
+  usable subscription (section 3b).
 - The measured table trigger rate of 0 of 91 comes from one company's clean
   filings. The 5% and 1% fallback rates are scenarios for harder documents, not
   measurements (section 6).
