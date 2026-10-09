@@ -14,3 +14,4 @@ playwright
 
 # Schema validation used by the existing export tests.
 pydantic
+jiwer==4.0.0
