@@ -1,0 +1,49 @@
+Note 3 - Earnings Per Share
+
+The following table shows the computation of basic and diluted earnings per share for the three- and nine-month periods ended June 27, 2026 and June 28, 2025 (net income in millions and shares in thousands):
+
+Three Months Ended
+June 27, 2026
+June 28, 2025
+
+Nine Months Ended
+June 27, 2026
+June 28, 2025
+
+Numerator:
+Net income $ 29,789 $ 23,434 $ 101,464 $ 84,544
+
+Denominator:
+Weighted-average basic shares outstanding 14,656,110 14,902,886 14,692,515 14,992,898
+Effect of dilutive share-based awards 58,566 45,293 57,787 58,828
+Weighted-average diluted shares 14,714,676 14,948,179 14,750,302 15,051,726
+
+Basic earnings per share $ 2.03 $ 1.57 $ 6.91 $ 5.64
+Diluted earnings per share $ 2.02 $ 1.57 $ 6.88 $ 5.62
+
+Note 4 - Financial Instruments
+
+Cash, Cash Equivalents and Marketable Securities
+
+The following tables show the Company's cash, cash equivalents and marketable securities by significant investment category as of June 27, 2026 and September 27, 2025 (in millions):
+
+June 27, 2026
+
+Adjusted Cost Unrealized Gains Unrealized Losses Fair Value Cash and Cash Equivalents Current Marketable Securities Non-Current Marketable Securities
+
+Cash $ 26,777 $ - $ - $ 26,777 $ 26,777 $ - $ -
+Level 1:
+Money market funds 7,840 - - 7,840 7,840 - -
+Mutual funds 873 222 (1) 1,094 - 1,094 -
+Subtotal 8,713 222 (1) 8,934 7,840 1,094 -
+
+Level 2 (1):
+U.S. Treasury securities 20,398 11 (253) 20,156 735 4,034 15,387
+U.S. agency securities 6,176 - (100) 6,076 988 2,898 2,190
+Non-U.S. government securities 5,207 71 (349) 4,929 - 299 4,630
+Certificates of deposit and time deposits 3,025 - - 3,025 2,521 504 -
+Commercial paper 3,828 - - 3,828 683 3,145 -
+Corporate debt securities 49,679 121 (709) 49,091 - 10,808 38,283
+Mortgage- and asset-backed securities 24,828 65 (1,192) 23,701 - 73 23,628
+Subtotal 113,141 268 (2,603) 110,806 4,927 21,761 84,118
+Total $ 148,631 $ 490 $ (2,604) $ 146,517 $ 39,544 $ 22,855 $ 84,118

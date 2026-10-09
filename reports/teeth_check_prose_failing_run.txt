@@ -1,0 +1,35 @@
+.....FF........                                                          [100%]
+================================== FAILURES ===================================
+_______________________ test_prose_wer_within_threshold _______________________
+
+metrics = {'break_mode': 'drop-words', 'pages': {'AAPL_10K_20250927_p1': {'stratum': 'cover', 'page': 1, 'traditional': {'wer': ... ...}}, 'managed': {'statement': {'n_pages': 2, 'wer_mean': 0.0579, 'wer_max': 0.0595, 'cer_mean': 0.0372, ...}}}, ...}
+thresholds = {'min_gt_pages': 16, 'min_gt_tables': 2, 'max_wer_prose': 0.2, 'max_cer_prose': 0.12, ...}
+
+    def test_prose_wer_within_threshold(metrics, thresholds):
+        """Prose is where WER measures reading accuracy.
+    
+        Baseline: 0.043, 0.047, 0.093, 0.153 on the four prose pages.
+        """
+        s = metrics["by_stratum"]["traditional"].get("prose")
+        assert s, "no prose pages scored"
+>       assert s["wer_max"] <= thresholds["max_wer_prose"], s
+E       AssertionError: {'n_pages': 4, 'wer_mean': 0.2597, 'wer_max': 0.3153, 'cer_mean': 0.2571, ...}
+E       assert 0.3153 <= 0.2
+
+tests\test_quality.py:115: AssertionError
+_______________________ test_prose_cer_within_threshold _______________________
+
+metrics = {'break_mode': 'drop-words', 'pages': {'AAPL_10K_20250927_p1': {'stratum': 'cover', 'page': 1, 'traditional': {'wer': ... ...}}, 'managed': {'statement': {'n_pages': 2, 'wer_mean': 0.0579, 'wer_max': 0.0595, 'cer_mean': 0.0372, ...}}}, ...}
+thresholds = {'min_gt_pages': 16, 'min_gt_tables': 2, 'max_wer_prose': 0.2, 'max_cer_prose': 0.12, ...}
+
+    def test_prose_cer_within_threshold(metrics, thresholds):
+        s = metrics["by_stratum"]["traditional"].get("prose")
+>       assert s["cer_mean"] <= thresholds["max_cer_prose"], s
+E       AssertionError: {'n_pages': 4, 'wer_mean': 0.2597, 'wer_max': 0.3153, 'cer_mean': 0.2571, ...}
+E       assert 0.2571 <= 0.12
+
+tests\test_quality.py:120: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_quality.py::test_prose_wer_within_threshold - AssertionErro...
+FAILED tests/test_quality.py::test_prose_cer_within_threshold - AssertionErro...
+2 failed, 13 passed in 0.23s

@@ -1,0 +1,1056 @@
+{
+  "break_mode": "drop-words",
+  "pages": {
+    "AAPL_10K_20250927_p1": {
+      "stratum": "cover",
+      "page": 1,
+      "traditional": {
+        "wer": 0.6308,
+        "cer": 0.6001,
+        "ref_words": 344,
+        "hyp_words": 132,
+        "numeric": {
+          "precision": 0.5833,
+          "recall": 0.3111,
+          "f1": 0.4058,
+          "tp": 14,
+          "ref_n": 45,
+          "hyp_n": 24,
+          "ref_tokens": 45,
+          "hyp_tokens": 24
+        }
+      },
+      "docling": {
+        "wer": 0.4041,
+        "cer": 0.3777,
+        "ref_words": 344,
+        "hyp_words": 210,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.6222,
+          "f1": 0.7671,
+          "tp": 28,
+          "ref_n": 45,
+          "hyp_n": 28,
+          "ref_tokens": 45,
+          "hyp_tokens": 28
+        }
+      }
+    },
+    "AAPL_10K_20250927_p5": {
+      "stratum": "prose",
+      "page": 5,
+      "traditional": {
+        "wer": 0.3153,
+        "cer": 0.3216,
+        "ref_words": 536,
+        "hyp_words": 369,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 3,
+          "ref_n": 3,
+          "hyp_n": 3,
+          "ref_tokens": 3,
+          "hyp_tokens": 3
+        }
+      },
+      "docling": {
+        "wer": 0.2034,
+        "cer": 0.1877,
+        "ref_words": 536,
+        "hyp_words": 441,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 3,
+          "ref_n": 3,
+          "hyp_n": 3,
+          "ref_tokens": 3,
+          "hyp_tokens": 3
+        }
+      }
+    },
+    "AAPL_10K_20250927_p6": {
+      "stratum": "prose",
+      "page": 6,
+      "traditional": {
+        "wer": 0.229,
+        "cer": 0.2235,
+        "ref_words": 847,
+        "hyp_words": 695,
+        "numeric": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "ref_n": 0,
+          "hyp_n": 0,
+          "ref_tokens": 0,
+          "hyp_tokens": 0
+        }
+      },
+      "docling": {
+        "wer": 0.1936,
+        "cer": 0.191,
+        "ref_words": 847,
+        "hyp_words": 683,
+        "numeric": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "ref_n": 0,
+          "hyp_n": 0,
+          "ref_tokens": 0,
+          "hyp_tokens": 0
+        }
+      }
+    },
+    "AAPL_10K_20250927_p32": {
+      "stratum": "statement",
+      "page": 32,
+      "traditional": {
+        "wer": 0.6786,
+        "cer": 0.6107,
+        "ref_words": 168,
+        "hyp_words": 198,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9048,
+          "f1": 0.95,
+          "tp": 57,
+          "ref_n": 63,
+          "hyp_n": 57,
+          "ref_tokens": 63,
+          "hyp_tokens": 57
+        }
+      },
+      "docling": {
+        "wer": 0.2262,
+        "cer": 0.211,
+        "ref_words": 168,
+        "hyp_words": 178,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9048,
+          "f1": 0.95,
+          "tp": 57,
+          "ref_n": 63,
+          "hyp_n": 57,
+          "ref_tokens": 63,
+          "hyp_tokens": 57
+        }
+      },
+      "managed": {
+        "wer": 0.0595,
+        "cer": 0.0396,
+        "ref_words": 168,
+        "hyp_words": 172,
+        "numeric": {
+          "precision": 0.9545,
+          "recall": 1.0,
+          "f1": 0.9767,
+          "tp": 63,
+          "ref_n": 63,
+          "hyp_n": 66,
+          "ref_tokens": 63,
+          "hyp_tokens": 66
+        }
+      }
+    },
+    "AAPL_10K_20250927_p34": {
+      "stratum": "statement",
+      "page": 34,
+      "traditional": {
+        "wer": 0.4208,
+        "cer": 0.4182,
+        "ref_words": 202,
+        "hyp_words": 199,
+        "numeric": {
+          "precision": 0.9655,
+          "recall": 0.9032,
+          "f1": 0.9333,
+          "tp": 56,
+          "ref_n": 62,
+          "hyp_n": 58,
+          "ref_tokens": 62,
+          "hyp_tokens": 58
+        }
+      },
+      "docling": {
+        "wer": 0.2822,
+        "cer": 0.3316,
+        "ref_words": 202,
+        "hyp_words": 225,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9355,
+          "f1": 0.9667,
+          "tp": 58,
+          "ref_n": 62,
+          "hyp_n": 58,
+          "ref_tokens": 62,
+          "hyp_tokens": 58
+        }
+      }
+    },
+    "AAPL_10K_20250927_p36": {
+      "stratum": "statement",
+      "page": 36,
+      "traditional": {
+        "wer": 0.7143,
+        "cer": 0.7284,
+        "ref_words": 294,
+        "hyp_words": 446,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9348,
+          "f1": 0.9663,
+          "tp": 86,
+          "ref_n": 92,
+          "hyp_n": 86,
+          "ref_tokens": 92,
+          "hyp_tokens": 86
+        }
+      },
+      "docling": {
+        "wer": 0.398,
+        "cer": 0.4084,
+        "ref_words": 294,
+        "hyp_words": 352,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9022,
+          "f1": 0.9486,
+          "tp": 83,
+          "ref_n": 92,
+          "hyp_n": 83,
+          "ref_tokens": 92,
+          "hyp_tokens": 83
+        }
+      }
+    },
+    "AAPL_10K_20250927_p40": {
+      "stratum": "notes",
+      "page": 40,
+      "traditional": {
+        "wer": 0.565,
+        "cer": 0.5167,
+        "ref_words": 515,
+        "hyp_words": 324,
+        "numeric": {
+          "precision": 0.8667,
+          "recall": 0.5778,
+          "f1": 0.6933,
+          "tp": 104,
+          "ref_n": 180,
+          "hyp_n": 120,
+          "ref_tokens": 180,
+          "hyp_tokens": 120
+        }
+      },
+      "docling": {
+        "wer": 0.2777,
+        "cer": 0.2645,
+        "ref_words": 515,
+        "hyp_words": 498,
+        "numeric": {
+          "precision": 0.8125,
+          "recall": 0.9389,
+          "f1": 0.8711,
+          "tp": 169,
+          "ref_n": 180,
+          "hyp_n": 208,
+          "ref_tokens": 180,
+          "hyp_tokens": 208
+        }
+      }
+    },
+    "AAPL_10K_20250927_p43": {
+      "stratum": "notes",
+      "page": 43,
+      "traditional": {
+        "wer": 0.5254,
+        "cer": 0.5041,
+        "ref_words": 413,
+        "hyp_words": 223,
+        "numeric": {
+          "precision": 0.9535,
+          "recall": 0.4767,
+          "f1": 0.6357,
+          "tp": 41,
+          "ref_n": 86,
+          "hyp_n": 43,
+          "ref_tokens": 86,
+          "hyp_tokens": 43
+        }
+      },
+      "docling": {
+        "wer": 0.3099,
+        "cer": 0.3041,
+        "ref_words": 413,
+        "hyp_words": 419,
+        "numeric": {
+          "precision": 0.9277,
+          "recall": 0.8953,
+          "f1": 0.9112,
+          "tp": 77,
+          "ref_n": 86,
+          "hyp_n": 83,
+          "ref_tokens": 86,
+          "hyp_tokens": 83
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p1": {
+      "stratum": "cover",
+      "page": 1,
+      "traditional": {
+        "wer": 0.5488,
+        "cer": 0.5215,
+        "ref_words": 379,
+        "hyp_words": 176,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.3864,
+          "f1": 0.5574,
+          "tp": 17,
+          "ref_n": 44,
+          "hyp_n": 17,
+          "ref_tokens": 44,
+          "hyp_tokens": 17
+        }
+      },
+      "docling": {
+        "wer": 0.3773,
+        "cer": 0.3389,
+        "ref_words": 379,
+        "hyp_words": 248,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.6818,
+          "f1": 0.8108,
+          "tp": 30,
+          "ref_n": 44,
+          "hyp_n": 30,
+          "ref_tokens": 44,
+          "hyp_tokens": 30
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p4": {
+      "stratum": "statement",
+      "page": 4,
+      "traditional": {
+        "wer": 0.3667,
+        "cer": 0.3148,
+        "ref_words": 210,
+        "hyp_words": 179,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.8941,
+          "f1": 0.9441,
+          "tp": 76,
+          "ref_n": 85,
+          "hyp_n": 76,
+          "ref_tokens": 85,
+          "hyp_tokens": 76
+        }
+      },
+      "docling": {
+        "wer": 0.2238,
+        "cer": 0.2058,
+        "ref_words": 210,
+        "hyp_words": 211,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9059,
+          "f1": 0.9506,
+          "tp": 77,
+          "ref_n": 85,
+          "hyp_n": 77,
+          "ref_tokens": 85,
+          "hyp_tokens": 77
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p6": {
+      "stratum": "statement",
+      "page": 6,
+      "traditional": {
+        "wer": 0.7606,
+        "cer": 0.7385,
+        "ref_words": 213,
+        "hyp_words": 281,
+        "numeric": {
+          "precision": 0.8169,
+          "recall": 0.9062,
+          "f1": 0.8593,
+          "tp": 58,
+          "ref_n": 64,
+          "hyp_n": 71,
+          "ref_tokens": 64,
+          "hyp_tokens": 71
+        }
+      },
+      "docling": {
+        "wer": 0.2723,
+        "cer": 0.3203,
+        "ref_words": 213,
+        "hyp_words": 235,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9375,
+          "f1": 0.9677,
+          "tp": 60,
+          "ref_n": 64,
+          "hyp_n": 60,
+          "ref_tokens": 64,
+          "hyp_tokens": 60
+        }
+      },
+      "managed": {
+        "wer": 0.0563,
+        "cer": 0.0348,
+        "ref_words": 213,
+        "hyp_words": 217,
+        "numeric": {
+          "precision": 0.9552,
+          "recall": 1.0,
+          "f1": 0.9771,
+          "tp": 64,
+          "ref_n": 64,
+          "hyp_n": 67,
+          "ref_tokens": 64,
+          "hyp_tokens": 67
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p9": {
+      "stratum": "statement",
+      "page": 9,
+      "traditional": {
+        "wer": 0.8289,
+        "cer": 0.8404,
+        "ref_words": 263,
+        "hyp_words": 426,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9344,
+          "f1": 0.9661,
+          "tp": 57,
+          "ref_n": 61,
+          "hyp_n": 57,
+          "ref_tokens": 61,
+          "hyp_tokens": 57
+        }
+      },
+      "docling": {
+        "wer": 0.3764,
+        "cer": 0.4174,
+        "ref_words": 263,
+        "hyp_words": 340,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.9344,
+          "f1": 0.9661,
+          "tp": 57,
+          "ref_n": 61,
+          "hyp_n": 57,
+          "ref_tokens": 61,
+          "hyp_tokens": 57
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p11": {
+      "stratum": "notes",
+      "page": 11,
+      "traditional": {
+        "wer": 0.757,
+        "cer": 0.6712,
+        "ref_words": 321,
+        "hyp_words": 148,
+        "numeric": {
+          "precision": 0.8919,
+          "recall": 0.2821,
+          "f1": 0.4286,
+          "tp": 33,
+          "ref_n": 117,
+          "hyp_n": 37,
+          "ref_tokens": 117,
+          "hyp_tokens": 37
+        }
+      },
+      "docling": {
+        "wer": 0.4766,
+        "cer": 0.405,
+        "ref_words": 321,
+        "hyp_words": 215,
+        "numeric": {
+          "precision": 0.7419,
+          "recall": 0.3932,
+          "f1": 0.514,
+          "tp": 46,
+          "ref_n": 117,
+          "hyp_n": 62,
+          "ref_tokens": 117,
+          "hyp_tokens": 62
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p16": {
+      "stratum": "notes",
+      "page": 16,
+      "traditional": {
+        "wer": 0.7844,
+        "cer": 0.6855,
+        "ref_words": 385,
+        "hyp_words": 130,
+        "numeric": {
+          "precision": 0.8,
+          "recall": 0.186,
+          "f1": 0.3019,
+          "tp": 24,
+          "ref_n": 129,
+          "hyp_n": 30,
+          "ref_tokens": 129,
+          "hyp_tokens": 30
+        }
+      },
+      "docling": {
+        "wer": 0.3221,
+        "cer": 0.3345,
+        "ref_words": 385,
+        "hyp_words": 303,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.7829,
+          "f1": 0.8783,
+          "tp": 101,
+          "ref_n": 129,
+          "hyp_n": 101,
+          "ref_tokens": 129,
+          "hyp_tokens": 101
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p17": {
+      "stratum": "prose",
+      "page": 17,
+      "traditional": {
+        "wer": 0.2672,
+        "cer": 0.2604,
+        "ref_words": 655,
+        "hyp_words": 485,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.7273,
+          "f1": 0.8421,
+          "tp": 16,
+          "ref_n": 22,
+          "hyp_n": 16,
+          "ref_tokens": 22,
+          "hyp_tokens": 16
+        }
+      },
+      "docling": {
+        "wer": 0.2229,
+        "cer": 0.1923,
+        "ref_words": 655,
+        "hyp_words": 540,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 22,
+          "ref_n": 22,
+          "hyp_n": 22,
+          "ref_tokens": 22,
+          "hyp_tokens": 22
+        }
+      }
+    },
+    "AAPL_10Q_20260627_p22": {
+      "stratum": "prose",
+      "page": 22,
+      "traditional": {
+        "wer": 0.2273,
+        "cer": 0.2229,
+        "ref_words": 572,
+        "hyp_words": 448,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.8947,
+          "f1": 0.9444,
+          "tp": 51,
+          "ref_n": 57,
+          "hyp_n": 51,
+          "ref_tokens": 57,
+          "hyp_tokens": 51
+        }
+      },
+      "docling": {
+        "wer": 0.1888,
+        "cer": 0.1794,
+        "ref_words": 572,
+        "hyp_words": 465,
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.8596,
+          "f1": 0.9245,
+          "tp": 49,
+          "ref_n": 57,
+          "hyp_n": 49,
+          "ref_tokens": 57,
+          "hyp_tokens": 49
+        }
+      }
+    },
+    "multicol_p1": {
+      "stratum": "multicolumn",
+      "page": 1
+    },
+    "scanned_p1": {
+      "stratum": "scanned",
+      "page": 1
+    }
+  },
+  "tables": {
+    "AAPL_10K_20250927_p32_t1": {
+      "page": 32,
+      "gt_columns": [
+        "September 27, 2025",
+        "September 28, 2024",
+        "September 30, 2023"
+      ],
+      "traditional": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "FY ended 2025-09-27",
+            "FY ended 2024-09-28",
+            "FY ended 2023-09-30"
+          ]
+        ],
+        "extractor": [
+          "camelot-stream"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        },
+        "cell": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        },
+        "value": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        }
+      },
+      "docling": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "FY ended 2025-09-27",
+            "FY ended 2024-09-28",
+            "FY ended 2023-09-30"
+          ]
+        ],
+        "extractor": [
+          "docling"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        },
+        "cell": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        },
+        "value": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        }
+      },
+      "managed": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "col1",
+            "col2",
+            "col3"
+          ]
+        ],
+        "extractor": [
+          "aws-textract"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 57,
+          "ref_n": 57,
+          "hyp_n": 57
+        }
+      },
+      "cell": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 57,
+        "ref_n": 57,
+        "hyp_n": 57
+      },
+      "value": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 57,
+        "ref_n": 57,
+        "hyp_n": 57
+      }
+    },
+    "AAPL_10Q_20260627_p6_t1": {
+      "page": 6,
+      "gt_columns": [
+        "June 27, 2026",
+        "September 27, 2025"
+      ],
+      "traditional": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "2026-06-27",
+            "2025-09-27"
+          ]
+        ],
+        "extractor": [
+          "pdfplumber-text"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 0.9643,
+          "f1": 0.9818,
+          "tp": 54,
+          "ref_n": 56,
+          "hyp_n": 54
+        },
+        "cell": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
+          "ref_n": 56,
+          "hyp_n": 56
+        },
+        "value": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 54,
+          "ref_n": 54,
+          "hyp_n": 54
+        }
+      },
+      "docling": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "2026-06-27",
+            "2025-09-27"
+          ]
+        ],
+        "extractor": [
+          "docling"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
+          "ref_n": 56,
+          "hyp_n": 56
+        },
+        "cell": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
+          "ref_n": 56,
+          "hyp_n": 56
+        },
+        "value": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 54,
+          "ref_n": 54,
+          "hyp_n": 54
+        }
+      },
+      "managed": {
+        "tables_found": 1,
+        "columns": [
+          [
+            "",
+            "col1",
+            "col2"
+          ]
+        ],
+        "extractor": [
+          "aws-textract"
+        ],
+        "cell_raw": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 56,
+          "ref_n": 56,
+          "hyp_n": 56
+        }
+      },
+      "cell": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 56,
+        "ref_n": 56,
+        "hyp_n": 56
+      },
+      "value": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 54,
+        "ref_n": 54,
+        "hyp_n": 54
+      }
+    }
+  },
+  "by_stratum": {
+    "traditional": {
+      "cover": {
+        "n_pages": 2,
+        "wer_mean": 0.5898,
+        "wer_max": 0.6308,
+        "cer_mean": 0.5608,
+        "numeric_f1_mean": 0.4816,
+        "numeric_f1_min": 0.4058
+      },
+      "prose": {
+        "n_pages": 4,
+        "wer_mean": 0.2597,
+        "wer_max": 0.3153,
+        "cer_mean": 0.2571,
+        "numeric_f1_mean": 0.6966,
+        "numeric_f1_min": 0.0
+      },
+      "statement": {
+        "n_pages": 6,
+        "wer_mean": 0.6283,
+        "wer_max": 0.8289,
+        "cer_mean": 0.6085,
+        "numeric_f1_mean": 0.9365,
+        "numeric_f1_min": 0.8593
+      },
+      "notes": {
+        "n_pages": 4,
+        "wer_mean": 0.658,
+        "wer_max": 0.7844,
+        "cer_mean": 0.5944,
+        "numeric_f1_mean": 0.5149,
+        "numeric_f1_min": 0.3019
+      }
+    },
+    "docling": {
+      "cover": {
+        "n_pages": 2,
+        "wer_mean": 0.3907,
+        "wer_max": 0.4041,
+        "cer_mean": 0.3583,
+        "numeric_f1_mean": 0.789,
+        "numeric_f1_min": 0.7671
+      },
+      "prose": {
+        "n_pages": 4,
+        "wer_mean": 0.2022,
+        "wer_max": 0.2229,
+        "cer_mean": 0.1876,
+        "numeric_f1_mean": 0.7311,
+        "numeric_f1_min": 0.0
+      },
+      "statement": {
+        "n_pages": 6,
+        "wer_mean": 0.2965,
+        "wer_max": 0.398,
+        "cer_mean": 0.3158,
+        "numeric_f1_mean": 0.9583,
+        "numeric_f1_min": 0.9486
+      },
+      "notes": {
+        "n_pages": 4,
+        "wer_mean": 0.3466,
+        "wer_max": 0.4766,
+        "cer_mean": 0.327,
+        "numeric_f1_mean": 0.7936,
+        "numeric_f1_min": 0.514
+      }
+    },
+    "managed": {
+      "statement": {
+        "n_pages": 2,
+        "wer_mean": 0.0579,
+        "wer_max": 0.0595,
+        "cer_mean": 0.0372,
+        "numeric_f1_mean": 0.9769,
+        "numeric_f1_min": 0.9767
+      }
+    }
+  },
+  "by_path": {
+    "traditional": {
+      "n_pages": 16,
+      "wer_mean": 0.5388,
+      "cer_mean": 0.5112,
+      "numeric_f1_mean": 0.7143
+    },
+    "docling": {
+      "n_pages": 16,
+      "wer_mean": 0.2972,
+      "cer_mean": 0.2918,
+      "numeric_f1_mean": 0.8392
+    },
+    "managed": {
+      "n_pages": 2,
+      "wer_mean": 0.0579,
+      "cer_mean": 0.0372,
+      "numeric_f1_mean": 0.9769
+    }
+  },
+  "missing": {},
+  "unmeasured": {
+    "traditional": [
+      "multicol_p1",
+      "scanned_p1"
+    ],
+    "docling": [
+      "multicol_p1",
+      "scanned_p1"
+    ]
+  },
+  "side_by_side": {
+    "AAPL_10K_20250927_p32": {
+      "stratum": "statement",
+      "traditional": {
+        "wer": 0.6786,
+        "cer": 0.6107,
+        "numeric_f1": 0.95
+      },
+      "docling": {
+        "wer": 0.2262,
+        "cer": 0.211,
+        "numeric_f1": 0.95
+      },
+      "managed": {
+        "wer": 0.0595,
+        "cer": 0.0396,
+        "numeric_f1": 0.9767
+      }
+    },
+    "AAPL_10Q_20260627_p6": {
+      "stratum": "statement",
+      "traditional": {
+        "wer": 0.7606,
+        "cer": 0.7385,
+        "numeric_f1": 0.8593
+      },
+      "docling": {
+        "wer": 0.2723,
+        "cer": 0.3203,
+        "numeric_f1": 0.9677
+      },
+      "managed": {
+        "wer": 0.0563,
+        "cer": 0.0348,
+        "numeric_f1": 0.9771
+      }
+    },
+    "AAPL_10K_20250927_p32_t1": {
+      "traditional": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      },
+      "docling": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      },
+      "managed": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      }
+    },
+    "AAPL_10Q_20260627_p6_t1": {
+      "traditional": {
+        "cell_raw_f1": 0.9818,
+        "tables_found": 1
+      },
+      "docling": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      },
+      "managed": {
+        "cell_raw_f1": 1.0,
+        "tables_found": 1
+      }
+    }
+  },
+  "drift": {
+    "ocr": {
+      "AAPL_10K_20250927": {
+        "pages": 60,
+        "ocr_pages": 0,
+        "ocr_share": 0.0
+      },
+      "AAPL_10Q_20260627": {
+        "pages": 28,
+        "ocr_pages": 0,
+        "ocr_share": 0.0
+      }
+    },
+    "chunk_chars_mean": 229.5,
+    "chunk_chars_n": 717
+  }
+}

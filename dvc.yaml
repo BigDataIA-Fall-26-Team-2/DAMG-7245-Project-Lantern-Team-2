@@ -38,10 +38,13 @@ stages:
     cmd: python src/tables.py --params params.yaml --input data/rendered --output data/tables
     deps:
       - src/tables.py
+      - src/managed
       - requirements.txt
       - data/rendered
+      - data/managed
     params:
       - tables
+      - managed
     outs:
       - data/tables
 
@@ -90,6 +93,22 @@ stages:
     outs:
       - ${export.out_dir}
 
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - data/ground_truth
+      - data/export
+      - data/managed
+    params:
+      - evaluate
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    plots:
+      - reports/plots/drift.png:
+          cache: false
+
   xbrl:
     cmd: >-
       python src/xbrl.py --input data/rendered/manifest.csv --output data/xbrl &&
@@ -107,3 +126,23 @@ stages:
       - xbrl
     outs:
       - data/xbrl
+
+  bench:
+    cmd: python src/bench.py --params params.yaml --input data/rendered --output data/bench
+    deps:
+      - src/bench.py
+      - src/parse_text.py
+      - src/tables.py
+      - src/layout.py
+      - src/docling_parse.py
+      - requirements.txt
+      - tests/fixtures/scanned.pdf
+      - data/rendered
+    params:
+      - bench
+      - ocr
+      - tables
+      - layout
+      - docling
+    outs:
+      - data/bench
