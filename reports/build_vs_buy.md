@@ -348,8 +348,8 @@ Assumptions, each one written so it can be replaced:
   tier. Our two filings average 45.5 pages (61 and 30), so this is a
   conservative upper bound.
 - Self-hosted compute, from Part 10's EC2 CPU timings
-  (`reports/ec2_benchmark_observed.csv`): traditional 1.863 s/page (text 0.315 +
-  tables 0.527 + layout 1.021) and Docling 6.536 s/page, with Part 10's
+  (`reports/ec2_benchmark_observed.csv`): traditional 1.854 s/page (text 0.293 +
+  tables 0.540 + layout 1.021) and Docling 6.503 s/page, with Part 10's
   assumptions of 4 workers on a $0.357/h CPU VM (`params.yaml: bench`). That is
   about **$0.05 per 1,000 pages** traditional and **$0.16** Docling. Part 10
   states these are extrapolations: 4-way scaling and the VM type were not
@@ -362,7 +362,7 @@ Assumptions, each one written so it can be replaced:
 | Textract on every page (Tables) | $15.00 | $7,500 | $3,413 |
 | Textract OCR only (no tables) | $1.50 | $750 | $341 |
 | Google Form Parser on every page | $30.00 | $15,000 | $6,825 |
-| Self-hosted traditional, compute only | $0.05 | $23 | $11 |
+| Self-hosted traditional, compute only | $0.05 | $23 | $10 |
 | Self-hosted Docling, compute only | $0.16 | $81 | $37 |
 | Hybrid: Textract on 5% of pages | $0.75 blended | $375 | $171 |
 | Hybrid: Textract on 1% of pages | $0.15 blended | $75 | $34 |

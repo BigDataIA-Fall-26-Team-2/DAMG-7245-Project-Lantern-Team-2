@@ -547,6 +547,53 @@ directly gets the mixed order.
   add a new one. It is there so the comparison can run on a machine without the
   filings, which CI needs, it is not separate evidence.
 
+
+## Version-to-version drift
+
+`reports/metrics_diff_versions.md` compares the first evaluation (3cd465a) with
+the final one (HEAD), made with:
+
+    dvc metrics diff 3cd465a HEAD --targets reports/metrics.json --md
+
+Drift signal: text blocks went from 717 to 655 and the mean block length from
+283.6 to 301.4 characters. Most likely from the Part 3 fix (#124), it removed
+the short duplicate row-label blocks, so fewer blocks and a longer average.
+
+Main metric moves and why:
+
+- Docling WER 0.5314 to 0.2119 and numeric F1 0.3453 to 0.8512. At first the
+  export dropped Docling's tables, fixed in e9b6ccd (#111).
+- Traditional WER 0.485 to 0.4332, mostly from the same Part 3 fix (#124), the
+  row labels stopped getting exported two times.
+- Traditional numeric F1 0.7497 to 0.733. This is not the parser getting worse,
+  the metric got stricter, it now counts repeated numbers (finding 8).
+- The managed path rows are new, added in Part 7.
+
+Some of these moves are the pipeline changing and some are the metric
+changing, so this diff should be read with the commit history, not alone.
+
+## Ground truth tracking
+
+data/ground_truth is in git, not DVC like the brief asks, because CI tests read
+it (tests/test_quality.py checks the pages and tables are there, have the right
+columns and keep full precision) and CI has no DVC access. It is still a
+dependency of the evaluate stage in dvc.yaml, so its hash is in dvc.lock and any
+change to a ground truth file reruns evaluate.
+
+## Known gaps against the brief
+
+- Ground truth has 16 filing pages, not 10 per filing, plus the scanned and
+  multi-column fixtures.
+- drift.png compares the two paths, not two versions. The version-to-version
+  drift is above, as numbers from dvc metrics diff, not as a plot.
+- Docling is not scored on the fixtures. With do_ocr false it gives no text
+  for the scanned fixture.
+- The filing gates in tests/test_quality.py are set from the EC2 render that is
+  in DVC. A PDF rendered again on another machine can come out different (fonts,
+  page breaks): one local re-render gave mean prose CER 0.1233 against the 0.12
+  gate. So the gates should run on the pulled artifacts (dvc pull), not on a
+  fresh local render.
+
 ### Open items
 
 - **`data/ground_truth/` is in git and not DVC-tracked**, against the
