@@ -6,10 +6,12 @@ data/bench/summary.csv (p50/p95 s/page, peak RSS, failures) and data/bench/machi
 """
 import argparse
 import csv
+import hashlib
 import importlib.util
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -168,6 +170,8 @@ def summarize(out_dir, stages):
         if not path.exists():
             continue
         recs = list(csv.DictReader(open(path)))
+        if not recs:
+            continue
         secs = np.array([float(r["seconds"]) for r in recs])
         meta = json.loads((out_dir / f"{stage}.meta.json").read_text())
         rows.append({"stage": stage, "device": meta["device"], "pages": len(recs),
@@ -179,7 +183,9 @@ def summarize(out_dir, stages):
                      "errors": sum(r["status"].startswith("error") for r in recs),
                      "empty": sum(r["status"] == "empty" for r in recs)})
     with open(out_dir / "summary.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w = csv.DictWriter(f, fieldnames=["stage", "device", "pages", "s_per_page_p50",
+                                        "s_per_page_p95", "s_per_page_mean", "total_s",
+                                        "setup_s", "peak_rss_mb", "errors", "empty"])
         w.writeheader()
         w.writerows(rows)
     for r in rows:
@@ -194,12 +200,17 @@ def cost_table(out_dir, params):
     The GPU rows use the Mac GPU (MPS) timing as a stand-in for the cloud GPU, and workers_per_vm is an
     assumption; both are stated in benchmarks.md."""
     b = params["bench"]
-    mean = {r["stage"]: float(r["s_per_page_mean"]) for r in csv.DictReader(open(out_dir / "summary.csv"))}
+    mean = {}
+    for r in csv.DictReader(open(out_dir / "summary.csv")):
+        if int(r.get("errors", 0)) or int(r.get("pages", 1)) <= 0:
+            print(f"cost excluded: {r['stage']} has errors or no measured pages")
+            continue
+        mean[r["stage"]] = float(r["s_per_page_mean"])
     trad_stages = ["parse_pdfplumber", "tables", "layout"]
     opts, skipped = [], []
     if all(s in mean for s in trad_stages):
         trad = sum(mean[s] for s in trad_stages)
-        opts += [("traditional (P1+P2+P3)", "laptop M3 Pro", trad, 1, 0.0),
+        opts += [("traditional (P1+P2+P3)", "measurement host (compute charge excluded)", trad, 1, 0.0),
                  ("traditional (P1+P2+P3)", b["vm_cpu"]["name"], trad, b["workers_per_vm"], b["vm_cpu"]["usd_per_hour"])]
     else:
         skipped.append("traditional (needs " + ", ".join(s for s in trad_stages if s not in mean) + ")")
@@ -209,7 +220,7 @@ def cost_table(out_dir, params):
     else:
         skipped.append("docling on CPU VM (needs parse_docling_cpu)")
     if "parse_docling_mps" in mean:
-        opts += [("docling", "laptop M3 Pro (MPS)", mean["parse_docling_mps"], 1, 0.0),
+        opts += [("docling", "measurement host (MPS; compute charge excluded)", mean["parse_docling_mps"], 1, 0.0),
                  ("docling", b["vm_gpu"]["name"] + " (MPS timing as proxy)", mean["parse_docling_mps"], 1,
                   b["vm_gpu"]["usd_per_hour"])]
     else:
@@ -234,7 +245,23 @@ def cost_table(out_dir, params):
     for r in rows:
         print(r)
     if skipped:
-        print("cost rows skipped (stages not in summary.csv):", "; ".join(skipped))
+        print("cost rows skipped (no successful measurement):", "; ".join(skipped))
+
+
+def archive_results(out_dir):
+    """Preserve prior CSV evidence and machine metadata before replacing a run."""
+    files = sorted(p for p in out_dir.iterdir() if p.is_file() and p.suffix in {".csv", ".json"})
+    if not files:
+        return
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(path.name.encode() + b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    archive = out_dir / "history" / digest.hexdigest()
+    archive.mkdir(parents=True, exist_ok=True)
+    for path in files:
+        shutil.copy2(path, archive / path.name)
+    print(f"Previous benchmark evidence preserved in {archive}", flush=True)
 
 
 def main(params_path, input_dir, output, stages, limit):
@@ -242,12 +269,27 @@ def main(params_path, input_dir, output, stages, limit):
     out_dir.mkdir(parents=True, exist_ok=True)
     params = load_params(params_path)
     stages = stages or stages_for(params)
-    (out_dir / "machine.json").write_text(json.dumps(machine_info(), indent=2))
+    archive_results(out_dir)
+    machine = machine_info()
+    (out_dir / "machine.json").write_text(json.dumps(machine, indent=2))
+    skipped = {}
+    for device in ("mps", "cuda"):
+        stage = f"parse_docling_{device}"
+        if not machine.get(f"{device}_available", False):
+            if stage in stages:
+                skipped[stage] = f"{device.upper()} unavailable on this host"
+                print(f"{stage}: skipped ({skipped[stage]})", flush=True)
+            # Do not reuse timings from a previous host when output directories are reused.
+            for suffix in (".csv", ".meta.json"):
+                (out_dir / f"{stage}{suffix}").unlink(missing_ok=True)
+    (out_dir / "skipped.json").write_text(json.dumps(skipped, indent=2))
     for stage in stages:                                   # one fresh process per stage (clean peak RSS)
+        if stage in skipped:
+            continue
         cmd = [sys.executable, __file__, "--child", stage, "--params", params_path,
                "--input", input_dir, "--output", output] + (["--limit", str(limit)] if limit else [])
         subprocess.run(cmd, check=True)
-    summarize(out_dir, stages_for(params))   # every stage with results, not only this run's
+    summarize(out_dir, [s for s in stages if s not in skipped])
     cost_table(out_dir, params)
 
 

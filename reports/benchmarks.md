@@ -1,86 +1,126 @@
-# Part 10: Benchmarks and cost
+# Part 10: EC2 CPU benchmarks and cost
 
-All numbers come from `python src/bench.py` (stage CSVs, `summary.csv`, `cost.csv` and `machine.json` in `data/bench/`)
-or from the cited price pages. Prices and assumptions live in `params.yaml: bench`.
+## Evidence and status
+
+This report uses the successful CPU measurements from the team's EC2 reproduction.
+[ec2_benchmark_observed.csv](ec2_benchmark_observed.csv) is a transcription of the
+benchmark summary printed in the EC2 terminal and supplied by Lokesh; it is not a
+new execution or a downloaded copy of `data/bench/summary.csv`.
+
+**Final verification pending:** after merging the device-handling fix, run
+`dvc repro bench` on EC2, inspect `data/bench/summary.csv`, `cost.csv`, `machine.json`,
+and `skipped.json`, and update this report to match that run before the final DVC
+push. The measurements below describe the earlier successful CPU jobs, not the
+pending corrected run. Mac/MPS performance comparisons are not used in this report.
 
 ## Hardware and method
 
-**Machine:** Apple M3 Pro, 11 cores (11 logical), 18 GB RAM, macOS 14.8.4, Python 3.11.16, PyTorch with MPS (Mac GPU)
-available, no CUDA. LayoutParser runs on CPU. Docling is benchmarked twice, pinned with `docling.device`: `cpu` (comparable
-to a CPU-only VM) and `mps` (the Mac GPU).
+The recorded reproduction environment is Ubuntu 24.04.4 LTS on an x86_64 EC2
+m7i-flex.large instance, approximately 8 GiB RAM, Python 3.11 and CPU-only
+PyTorch 2.14.1+cpu. Environment setup is recorded in
+[Lokesh's engineering log](../docs/ai_log/lokesh.md); retain the final run's
+`data/bench/machine.json` alongside its CSVs for machine-level provenance.
 
-**Batch:** all 91 rendered Apple pages (10-K 61, 10-Q 30: cover, prose, statements, notes) plus the 3 image-only pages of
-`tests/fixtures/scanned.pdf`, so OCR is measured (Apple pages never need it): **94 pages**.
+The workload is 94 pages per stage: 61 rendered Apple 10-K pages, 30 rendered
+10-Q pages, and the three-page scanned fixture. Input selection and device options
+are in [params.yaml](../params.yaml), under `bench`.
 
-**Method:** each stage runs in its own process, so peak memory isn't inflated by another stage's models. Model loading is
-timed separately as setup (cold start). Per page: wall-clock seconds, process RSS, output count, and status (`ok`,
-`empty` = no output, `error` = exception). Process RSS is used because PyTorch, Tesseract and OpenCV allocate outside Python.
+Each stage runs in its own subprocess. Setup/model loading is timed separately.
+Per-page records contain elapsed seconds, process RSS, output count, and status.
+Text extraction writes text and word boxes; tables include normalization; layout
+includes text/table routing; Docling includes conversion and its export functions.
+These per-page benchmarks are not a measurement of the entire DVC pipeline.
 
-Each benchmark times the **same per-page work as the real stage, including its outputs**: `parse_pdfplumber` extracts and
-writes text and word boxes; `tables` calls `extract_best_df`, which includes `to_long` normalization; `layout` includes text
-and table routing; `parse_docling` converts the page and then runs the stage's own export functions (Markdown, JSON,
-blocks with converted boxes, raw tables and `to_long`-normalized tables). Outputs go to a scratch folder, not `data/`.
-(After review on #107: an earlier conversion-only Docling timing understated it by 4% on CPU and 16% on MPS.)
+## Observed CPU results
 
-## Results (94 pages)
+Every row below maps to the same-named stage in
+[ec2_benchmark_observed.csv](ec2_benchmark_observed.csv).
+RSS values are labeled MB by the script but are calculated as bytes divided by 2^20 (MiB).
 
-| Stage | Device | s/page p50 | s/page p95 | s/page mean | Setup (cold) | Peak RSS (MB) | Errors | Empty | Notes |
-|---|---|---|---|---|---|---|---|---|---|
-| parse_pdfplumber | CPU | 0.051 | 0.235 | 0.114 | 0.16 s | 710 | 0 | 1 | OCR pages 1.2-2.7 s vs ~0.05 s native; peak RSS from OCR |
-| tables | CPU | 0.234 | 0.440 | 0.235 | 0.25 s | 218 | 0 | 62 | empty = no table on the page |
-| layout | CPU | 0.465 | 1.492 | 0.631 | 1.60 s | 1,960 | 0 | 1 | includes text + table routing |
-| parse_docling | CPU | 0.925 | 3.428 | 1.332 | 2.26 s | 1,682 | 0 | 3 | p95 = table-heavy pages (TableFormer + normalization) |
-| parse_docling | MPS | 0.730 | 3.533 | 1.092 | 2.33 s | 1,323* | 0 | 3 | 18% less total time than CPU |
+| Stage | Pages | p50 s/page | p95 s/page | Mean s/page | Total page time (s) | Setup (s) | Peak RSS (MiB) | Errors | Empty |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| parse_pdfplumber | 94 | 0.114 | 0.505 | 0.315 | 29.6 | 0.27 | 632.4 | 0 | 1 |
+| tables | 94 | 0.532 | 0.976 | 0.527 | 49.6 | 0.64 | 235.1 | 0 | 62 |
+| layout | 94 | 0.748 | 2.284 | 1.021 | 96.0 | 3.45 | 1611.2 | 0 | 1 |
+| parse_docling_cpu | 94 | 4.798 | 16.658 | 6.536 | 614.4 | 3.88 | 1624.7 | 0 | 3 |
 
-\* GPU memory is not fully counted in process RSS, so the MPS peak is likely an underestimate.
+All CPU jobs completed without page errors. `empty` means no extracted output;
+it is distinct from an exception and does not alone establish whether a page was
+correctly processed. Empty outputs need interpretation against the source and
+evaluation evidence in [eval.md](eval.md).
 
-**Failures:** 0 errors in every stage. Empty pages are expected: the blank 10-Q p7 is empty in all three of pdfplumber,
-layout and Docling (pdfplumber spends extra time there because a 0-character page triggers its OCR fallback). Docling also
-returns nothing for scanned p1 and p3 because `do_ocr: false`; on scanned p2 its layout model still detects regions,
-without text.
+The earlier EC2 attempt also ran MPS despite its being unavailable. Those failure
+timings are excluded here. The corrected benchmark records unsupported devices as
+skipped, and excludes any stage with errors or no measured pages from cost estimates.
 
-**Cold vs warm:** model loading takes 1.6-2.3 s, small next to 59-125 s of per-page work per stage, so warm workers matter
-for latency but not for batch cost.
+## Cost model
 
-## Cost (5,000 filings/year, ~100 pages each = 500,000 pages)
+The scenario inputs are in `params.yaml: bench`: 500,000 pages/year, four assumed
+workers, a named CPU VM price of $0.357/hour, and Textract OCR/table rates of
+$0.0015/$0.015 per page. These are configured modeling assumptions, not a fresh
+price quote or an EC2 billing measurement. The configured sources are
+[CPU price reference](https://doit.com/compute/spot/us-east-1/c7i.2xlarge) and
+[AWS Textract pricing](https://aws.amazon.com/textract/pricing/).
 
-| Option | Hardware | s/page | Workers | Hours/year | $ / 1,000 pages | **$ / year** |
-|---|---|---|---|---|---|---|
-| Traditional (P1+P2+P3) | laptop M3 Pro | 0.980 | 1 | 136.1 | 0 | **0** |
-| Docling | laptop M3 Pro (MPS) | 1.092 | 1 | 151.7 | 0 | **0** |
-| Traditional (P1+P2+P3) | c7i.2xlarge (8 vCPU, 16 GiB) | 0.980 | 4 | 34.0 | 0.024 | **12.15** |
-| Docling | c7i.2xlarge | 1.332 | 4 | 46.2 | 0.033 | **16.51** |
-| Docling | g4dn.2xlarge (T4 GPU) | 1.092 | 1 | 151.7 | 0.228 | **114.05** |
-| Textract OCR only | managed API | | | | 1.50 | **750** |
-| Textract with tables | managed API | | | | 15.00 | **7,500** |
+The traditional mean is the sum of the text, tables, and layout CSV means:
+`0.315 + 0.527 + 1.021 = 1.863 seconds/page`. Docling uses `6.536 seconds/page`.
+For each measured path:
 
-**Prices (on-demand, us-east-1):** c7i.2xlarge $0.357/h (doit.com/compute/spot/us-east-1/c7i.2xlarge), g4dn.2xlarge
-$0.752/h (devzero.io/instances/aws/g4dn.2xlarge), Textract DetectDocumentText $0.0015/page and AnalyzeDocument Tables
-$0.015/page for the first 1M pages a month, layout included free with Tables (aws.amazon.com/textract/pricing). The EC2 prices
-come from price trackers; confirm in the AWS Pricing Calculator before budgeting.
+```text
+hours/year = seconds/page × pages/year ÷ 3600 ÷ assumed workers
+cost/year = hours/year × configured hourly price
+managed cost/year = pages/year × configured per-page service price
+```
 
-**Assumptions:** traditional s/page = sum of the three stage means (all run on every page). 4 workers on an 8 vCPU / 16 GiB
-VM (peak ~2 GB per worker) is an assumption, not measured; PyTorch already uses several cores per process, so real scaling
-will be less than 4x. The cloud GPU row uses the Mac GPU timing as a proxy for a T4. VM per-core speed is assumed similar
-to the M3 Pro. Engineering time, storage and data transfer are excluded. `cost.csv` only includes options whose stages
-were benchmarked.
+These formulas are implemented in [bench.py](../src/bench.py). Final numeric cost
+rows will be taken from the corrected EC2 `cost.csv` after the pending rerun.
+Applying these timings to the configured c7i.2xlarge is a hardware extrapolation:
+that instance type was not benchmarked here. Four-way scaling is unmeasured and
+may be optimistic because each process can already use multiple CPU threads.
+No GPU estimate is supported by this CPU-only run.
+
+The measurement-host row excludes compute charges by construction; a zero in
+that row must not be interpreted as free EC2 hosting. Storage, network, idle
+instance time, engineering, and maintenance are outside this model.
 
 ## Bottlenecks and recommendation
 
-- **Bottlenecks:** Docling on table-heavy pages (p95 3.4 s CPU, 3.5 s MPS), then layout (p95 1.5 s, mostly table routing
-  through Camelot). Text extraction is negligible except on OCR pages (25-50x slower), so OCR only pages that need it, as P1 does.
-- **Hardware:** a CPU VM. The Mac GPU cut Docling's total time by only 18%, because exports and table normalization run on
-  the CPU, while the cloud GPU costs ~2x per hour, so at this volume the GPU raises cost per page (~$0.23 vs ~$0.03 per
-  1,000 pages). Revisit only if volume grows by orders of magnitude or latency matters.
-- **Concurrency:** process-level workers, one model copy each (~2 GB), so about 4 per 16 GiB VM; keep workers warm to avoid
-  the ~2 s model load per job. Cache outputs by document hash so reruns skip unchanged filings.
-- **Download limit:** SEC EDGAR allows 10 requests/second. At an estimated few requests per filing (not measured), 5,000
-  filings take well under an hour to fetch at full rate, so downloading is not the bottleneck; parsing is.
-- **Build vs buy:** compute for either open-source path is ~$12-17 a year, against $7,500 for Textract with tables. Textract
-  is only cheaper if it saves more than $7,500 a year of engineering and maintenance time; at FinTrust's volume, engineering
-  hours, not compute, decide the choice.
+Docling dominates the observed page-processing time: 614.4 seconds versus 96.0
+for layout, 49.6 for tables, and 29.6 for text/OCR. Its p95 is 16.658 seconds/page.
+Setup is smaller than total page time in each measured stage; retaining warm
+workers can reduce repeated setup, but concurrency needs a separate measurement.
+
+Use the demonstrated CPU configuration for this submission. The measurements do
+not establish whether a GPU would improve performance or reduce cost. Keep DVC
+caching for unchanged filings and selective OCR for pages that need it. Decide
+between managed and local extraction using quality, maintenance effort, and the
+explicit cost assumptions, not failed GPU timings. See [build_vs_buy.md](build_vs_buy.md)
+for the managed-service quality comparison.
+
+## Reproduction and evidence preservation
+
+```bash
+dvc repro bench
+cat data/bench/skipped.json
+cat data/bench/summary.csv
+cat data/bench/cost.csv
+```
+
+Before replacing current outputs, the benchmark copies existing top-level CSV and
+JSON files to `data/bench/history/<content-sha256>/`, preserving prior machine
+metadata and raw measurements. That history is inside the DVC-managed output.
+Current summaries include only requested, available stages. Historical files do
+not feed the current cost calculations. An all-skipped run produces an empty
+summary and only configured managed-service price scenarios.
+
+Historical Mac files may be retained if available, but this EC2-only report does
+not rely on them. Never relabel an EC2 archive as Mac evidence.
 
 ## Limitations
-- One run per stage on one machine; no repeated trials or variance.
-- Peak RSS is sampled after each page, so short spikes inside a page can be missed.
-- Docling per-page timing uses `page_range=(n, n)`, so each page pays a small per-call overhead.
+
+- One observed run on one host; repeated-trial variability was not measured.
+- RSS is sampled after pages, so brief memory spikes can be missed.
+- Docling converts individual page ranges, which adds per-call overhead.
+- Full pipeline success and passing tests do not validate cost-model assumptions.
+- The corrected EC2 rerun, final generated CSV comparison, and artifact upload are
+  still pending; the transcription above preserves the supplied observations.
