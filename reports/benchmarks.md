@@ -103,7 +103,7 @@ between managed and local extraction using quality, maintenance effort, and the
 explicit cost assumptions, not failed GPU timings. See [build_vs_buy.md](build_vs_buy.md)
 for the managed-service quality comparison.
 
-**Download limit (EDGAR).** SEC EDGAR allows at most 10 requests per second per client, and requires a
+**Download limit (EDGAR).** SEC EDGAR allows at most 10 requests per second per user, across all clients/machines ([SEC policy](https://www.sec.gov/about/privacy-information)), and requires a
 declared User-Agent (set in `params.yaml: download`). Downloading is therefore rate-limited, not compute-limited:
 at an estimated 2 to 3 requests per filing (index plus full submission; not measured), 5,000 filings need about
 10,000 to 15,000 requests, or roughly 17 to 25 minutes at the full rate. Parsing is the real bottleneck: at the
