@@ -1,0 +1,3 @@
+path,cells,mapped,coverage,right,precision,wrong_labels,unmapped_labels
+traditional,388,342,0.8814,314,0.9181,Products; Services,"50,400,000 shares authorized; 14,608,963 and 14,773,260 shar; 50,400,000 shares authorized; 14,773,260 and 15,116,786 shar; Basic; Diluted; Total cost of sales; Total net sales"
+docling,388,339,0.8737,311,0.9174,Products; Services,"50,400,000 shares authorized; 14,608,963 and 14,773,260 shar; 50,400,000 shares authorized; 14,773,260 and 15,116,786 shar; Basic; Cash, cash equivalents, and restricted cash and cash equival; Diluted; Total cost of sales; Total net sales"
