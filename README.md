@@ -10,14 +10,10 @@ The inputs are pinned in [params.yaml](params.yaml): Apple 10-K accession `00003
 |---|---|
 | Source repository | [Team repository](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2) |
 | Reports and measured results | [Part-to-file map](#part-to-file-map) below |
-| Codelab | [Project LANTERN Codelab](https://bigdataia-fall-26-team-2.github.io/DAMG-7245-Project-Lantern-Team-2/lantern-case-study-1/) (source: [docs/codelab.md](docs/codelab.md), exported with claat) |
-| Demo video | Recording/publication pending — [#76](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/76), [#79](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/79) |
+| Codelab | [Google Docs walkthrough](https://docs.google.com/document/d/1UfLZZwyC2D44Uf5YMita2s0hHpX88bJcP-SLJkTxXvw/edit?usp=sharing) · [Published Codelab](https://bigdataia-fall-26-team-2.github.io/DAMG-7245-Project-Lantern-Team-2/lantern-case-study-1/) · [Codelab preview](https://codelabs-preview.appspot.com/?file_id=1UfLZZwyC2D44Uf5YMita2s0hHpX88bJcP-SLJkTxXvw) · [Markdown source](docs/codelab.md) |
+| Demo video | [Watch the LANTERN demo on SharePoint](https://northeastern-my.sharepoint.com/:v:/g/personal/nandavarapu_s_northeastern_edu/IQAjV9zBHo7mQYO8hrWoXAjSAQ0jpHO7v9DcHQpobaDvdX4?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=rF3wxQ) |
 | Public Streamlit app | [LANTERN explorer](http://184.196.23.157:8501) — available while the team EC2 instance is running; [operations](#ec2-deployment-and-operations) |
 | Final `submission` tag | Pending final fresh-cache verification and release — [#78](https://github.com/BigDataIA-Fall-26-Team-2/DAMG-7245-Project-Lantern-Team-2/issues/78) |
-| Codelab | [LANTERN Codelab](https://codelabs-preview.appspot.com/?file_id=1UfLZZwyC2D44Uf5YMita2s0hHpX88bJcP-SLJkTxXvw) |
-| Demo video | Pending |
-| Public Streamlit app | [LANTERN explorer](http://184.196.23.157:8501), available while the team EC2 instance is running; [operations](#ec2-deployment-and-operations) |
-| Final `submission` tag | Pending |
 
 **Integration status:** the ten-stage EC2 reproduction completed, followed by the corrected CPU benchmark run. The recorded EC2 validation passed 183 tests; DVC reported the pipeline up to date and the S3 cache in sync after upload. The managed cache is uploaded and the refreshed lockfile and evaluation artifacts are committed. See the [EC2 validation log](docs/ai_log/lokesh.md) and [metrics](reports/metrics.json). The final check, a fresh clone of the `submission` tag on EC2 running the reproduction contract, is done after tagging.
 

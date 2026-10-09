@@ -168,3 +168,10 @@
 - Verification: checked all three SHA-256 values, byte counts, page counts, text-layer presence, and relative documentation links against local files. Existing fixture quality tests: 5 passed. Used the existing Python 3.11 environment with the previously installed temporary jiwer dependency via PYTHONPATH. `git diff --check` passed. No new persistent tests were added.
 - Failure/limitation: the historical README referenced a removed builder and tests; this update describes them as historical, not runnable current commands. Only scanned page 1 has a committed transcription. No new external-source download, full Linux reproduction, or S3 retrieval was performed. Prior full-suite review found 5 failures against stale local corpus outputs; passing fixture tests do not certify those outputs.
 - Confidence: high for fixture provenance recovered from preparation history and checked artifact structure; final integrated artifacts remain subject to EC2 validation. Draft AI Engineering Log for the author's review before any PR.
+
+
+### README submission links — October 9, 2026
+- Tool: OpenAI Codex. Added Lokesh's Google Docs Codelab and SharePoint demo links, retained the supplied Streamlit URL and existing published/preview Codelab links, and consolidated duplicate submission rows. Removed the obsolete video-pending placeholders.
+- Verification: checked unique deliverable rows, exact document/video identifiers, URL query parsing, and `git diff --check`. Documentation only; application tests and DVC reproduction were not rerun.
+- Failure/limitation: copied links included a “Links to an external site” suffix and HTML-escaped ampersand; these were normalized. Destination availability and course-staff sharing permissions were not verified. Final tag/reproduction status is unchanged.
+- Confidence: high for the requested link edits and table cleanup; author remains responsible for audience access.
