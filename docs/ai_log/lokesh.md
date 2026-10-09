@@ -138,3 +138,12 @@
 - At Lokesh's request, replaced the Mac/MPS benchmark comparisons with the successful EC2 CPU observations supplied in this conversation. Added reports/ec2_benchmark_observed.csv as an explicitly labeled transcription of those terminal summary rows; it is not claimed as a downloaded/generated artifact.
 - Removed unsupported GPU cost/performance conclusions. Cost formulas and configured assumptions remain documented; final numeric cost rows and report refresh await the corrected EC2 rerun. Original Mac data is no longer required to support this report's measurements.
 - Verification: checked the four report rows against the transcribed CSV and original supplied CPU summaries; CSV error counts are zero, each has 94 pages. git diff --check passed. No new execution or final S3 upload claimed.
+
+### Final EC2 reproduction validation
+- Reproduced the pipeline on Ubuntu 24.04 EC2 using CPU execution.
+- Validation: 183 tests passed; DVC reports data and pipelines up to date.
+- Uploaded generated DVC objects to S3; cache and remote are in sync.
+- MPS was explicitly skipped because it is unavailable on this host.
+- GPU cost estimates were omitted because no successful GPU measurement exists.
+- Recorded regenerated metrics, bounding-box fallback evidence, layout previews,
+  and drift plot. Metrics include both improvements and regressions.
