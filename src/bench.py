@@ -6,10 +6,12 @@ data/bench/summary.csv (p50/p95 s/page, peak RSS, failures) and data/bench/machi
 """
 import argparse
 import csv
+import hashlib
 import importlib.util
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -246,11 +248,28 @@ def cost_table(out_dir, params):
         print("cost rows skipped (no successful measurement):", "; ".join(skipped))
 
 
+def archive_results(out_dir):
+    """Preserve prior CSV evidence and machine metadata before replacing a run."""
+    files = sorted(p for p in out_dir.iterdir() if p.is_file() and p.suffix in {".csv", ".json"})
+    if not files:
+        return
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(path.name.encode() + b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    archive = out_dir / "history" / digest.hexdigest()
+    archive.mkdir(parents=True, exist_ok=True)
+    for path in files:
+        shutil.copy2(path, archive / path.name)
+    print(f"Previous benchmark evidence preserved in {archive}", flush=True)
+
+
 def main(params_path, input_dir, output, stages, limit):
     out_dir = Path(output)
     out_dir.mkdir(parents=True, exist_ok=True)
     params = load_params(params_path)
     stages = stages or stages_for(params)
+    archive_results(out_dir)
     machine = machine_info()
     (out_dir / "machine.json").write_text(json.dumps(machine, indent=2))
     skipped = {}

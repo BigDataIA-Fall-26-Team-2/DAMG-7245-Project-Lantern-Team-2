@@ -90,8 +90,19 @@ were benchmarked.
 The measurements above are the recorded Mac experiment, not fresh EC2 measurements.
 The benchmark checks PyTorch device availability before launching MPS or CUDA runs.
 Unavailable configured devices are recorded in `data/bench/skipped.json`; their stale
-per-stage CSV/meta files are removed from the current output directory. Preserve a
-previous machine's artifacts through its Git/DVC revision or a separate output directory.
+per-stage CSV/meta files are removed from the current output directory **only after
+archiving**. Before any run overwrites files, all existing top-level CSV/JSON files
+(including summary, costs, and machine metadata) are copied byte-for-byte to
+`data/bench/history/<content-sha256>/`. This directory is included in the existing
+DVC `data/bench` output. The printed archive path identifies the preserved run.
+
+For the Mac results quoted above, use the archive whose `machine.json` identifies
+Apple M3 Pro/macOS, and its `summary.csv`, `cost.csv`, and stage CSVs. A rerun can
+only archive files actually present locally: if the original Mac evidence was
+never transferred, obtain that original bundle from its author before claiming
+these report numbers are reproduced. An EC2 archive is not evidence for the Mac
+figures. Preserve that original bundle in its own `data/bench/history/` folder
+with its machine metadata before the final DVC push.
 
 `summary.csv` summarizes only stages requested in the current run. Page failures
 remain visible as error counts, but any stage with errors or no measured pages is
