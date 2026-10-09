@@ -12,6 +12,7 @@ from adapters import (
     table_from_csv_rows,
     table_methods,
 )
+from schema import Block
 
 PARAMS = yaml.safe_load(open("params.yaml", encoding="utf-8"))
 EXPORT = PARAMS.get("export", {})
@@ -22,6 +23,9 @@ LAYOUT_DIR = Path(EXPORT.get("layout_dir", "data/layout"))
 DOCLING_DIR = Path(EXPORT.get("docling_dir", "data/docling"))
 TABLES_DIR = Path(EXPORT.get("tables_dir", "data/tables"))
 DOCLING_TABLES_DIR = Path(EXPORT.get("docling_tables_dir", str(DOCLING_DIR / "tables")))
+# Part 7: tables the managed fallback read for pages Part 2 rejected
+MANAGED_TABLES_DIR = Path(EXPORT.get("managed_tables_dir", str(TABLES_DIR / "managed")))
+MANAGED_LOG = Path(EXPORT.get("managed_log", "reports/export_managed_tables.csv"))
 EXPORT_DIR = Path(EXPORT.get("out_dir", "data/export"))
 FALLBACK_LOG = Path(EXPORT.get("bbox_fallback_log",
                                "reports/export_bbox_fallback.csv"))
@@ -173,6 +177,59 @@ def table_blocks(manifest_row, stem, table_bbox, sizes, tables_dir=TABLES_DIR,
     return blocks, fallbacks
 
 
+def managed_table_blocks(stem, managed_dir=MANAGED_TABLES_DIR):
+    """Part 7 fallback tables for one filing, as {page: [Table blocks]}.
+
+    The tables stage writes data/tables/managed/<stem>_p<NNNN>.blocks.jsonl
+    only when a real table on that page scored below
+    managed.trigger.min_table_score and the managed service returned an
+    answer. Only the Table blocks are taken: text comes from the layout stage.
+    """
+    by_page = {}
+    for path in sorted(Path(managed_dir).glob(f"{stem}_p*.blocks.jsonl")):
+        page = int(re.search(r"_p(\d+)\.blocks\.jsonl$", path.name).group(1))
+        for rec in read_jsonl(path):
+            if rec.get("block_type") == "Table":
+                by_page.setdefault(page, []).append(Block.model_validate(rec))
+    return by_page
+
+
+def merge_managed_tables(stem, tables, managed_by_page):
+    """Put the managed tables in, replacing Part 2's table on the same page.
+
+    The rule: a page that has a managed answer is a page where Part 2's own
+    table scored below the trigger, so Part 2's table there is the low-quality
+    result and the managed table replaces it. Never both, so a table is never
+    exported twice. Pages without a managed answer keep Part 2's tables.
+    Returns (tables, provenance rows), one row per replaced page.
+    """
+    kept = [b for b in tables if b.page not in managed_by_page]
+    rows = []
+    for page in sorted(managed_by_page):
+        replaced = [b.block_id for b in tables if b.page == page]
+        added = managed_by_page[page]
+        kept += added
+        rows.append({
+            "stem": stem, "page": page,
+            "replaced": " ".join(replaced),
+            "managed": " ".join(b.block_id for b in added),
+            "extractor": added[0].extractor if added else "",
+        })
+    return kept, rows
+
+
+def write_managed_log(rows, path=MANAGED_LOG):
+    """Every page where a managed table replaced or filled Part 2's, so the
+    change of extractor is visible outside the records themselves."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["stem", "page", "replaced", "managed", "extractor"]
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+
+
 def docling_table_boxes(stem):
     """Page -> Docling's own Table boxes, used to place the Docling table CSVs."""
     boxes = {}
@@ -281,12 +338,16 @@ def write_markdown(blocks, path, manifest_row):
 def main():
     manifest = load_manifest()
     all_fallbacks = []
+    all_managed = []
     for stem, row in manifest.items():
         layout_path = LAYOUT_DIR / f"{stem}.blocks.jsonl"
         if layout_path.exists():
             trad, table_bbox = layout_blocks(row, stem)
             sizes = page_sizes(stem)
             tbl, fallbacks = table_blocks(row, stem, table_bbox, sizes)
+            tbl, replaced = merge_managed_tables(stem, tbl,
+                                                 managed_table_blocks(stem))
+            all_managed += replaced
             trad += tbl
             all_fallbacks += fallbacks
             write_jsonl(trad, EXPORT_DIR / f"{stem}.jsonl")
@@ -316,6 +377,7 @@ def main():
         print(f"{stem}\ttraditional={len(trad)}\tdocling={len(doc)}")
 
     write_fallback_log(all_fallbacks)
+    write_managed_log(all_managed)
     by_precision = {}
     for r in all_fallbacks:
         by_precision[r["precision"]] = by_precision.get(r["precision"], 0) + 1
