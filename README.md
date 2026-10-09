@@ -198,7 +198,7 @@ Commit the reviewed lockfile and any changed `.dvc` pointers with the relevant c
 
 The corrected EC2 CPU benchmark covered 94 pages: the 91 filing pages plus the three-page scanned fixture. CPU-heavy stages can take several minutes without printing progress. MPS is unavailable on this Linux host and was explicitly skipped; no successful GPU timing or GPU cost estimate is claimed.
 
-The versioned `data/bench` artifacts contain the final run's timing, machine, cost, and skipped-device records and can be retrieved with `dvc pull`. [The benchmark report](reports/benchmarks.md) and its transcribed observation CSV still describe the earlier CPU run and need a final refresh. Per-page measurements are not full-pipeline wall time; cold downloads, setup, HTML conversion, export, XBRL, and evaluation add work. Final ten-stage wall time was not recorded.
+The versioned `data/bench` artifacts contain the final run's timing, machine, cost, and skipped-device records and can be retrieved with `dvc pull`. [The benchmark report](reports/benchmarks.md) and its observation CSV now match the final EC2 artifacts retrieved on October 9, 2026. Per-page measurements are not full-pipeline wall time; cold downloads, setup, HTML conversion, export, XBRL, and evaluation add work. Final ten-stage wall time was not recorded.
 
 ## Tests and quality
 

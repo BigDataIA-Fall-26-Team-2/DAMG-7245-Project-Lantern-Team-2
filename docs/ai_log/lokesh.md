@@ -155,3 +155,10 @@
 - Limitation: final fresh-cache retrieval and benchmark-report refresh remain pending; HTTP availability requires EC2 to be running. No TLS or continuous uptime is claimed.
 - Verification: reviewed the documentation diff and ran git diff --check. No application or pipeline code changed in this documentation update.
 - Confidence: high for the documented user-verified deployment; final release validation remains explicit.
+
+
+### Final EC2 benchmark report refresh — October 9, 2026
+- Tool: Codex. Retrieved final benchmark CSV/JSON artifacts over SSH from the deployed EC2 checkout and updated the observation CSV, report, and README status.
+- Verification: observation CSV matches every field of the retrieved summary (line endings normalized); all four stages cover 94 pages with zero errors. Final means are 0.293 / 0.540 / 1.021 / 6.503 seconds per page. Cost projections were copied from the accompanying cost.csv; MPS is explicitly skipped.
+- Limitation: local DVC retrieval returned S3 403. The original EC2 checkout lacked the outputs; the deployed checkout contained them. No benchmark rerun or fresh S3 retrieval is claimed. Cost projections retain unmeasured four-worker scaling and different VM hardware assumptions.
+- Confidence: high for transcription of retrieved evidence; cost projections remain assumptions. Author review pending.
